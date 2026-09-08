@@ -1,10 +1,26 @@
 # Check-In v2
 
-> ⚠️ **This project is currently in development and not ready for production.**
-> The environment below is configured for local development via Laravel Sail (Docker).
-> A separate production Docker environment will need to be configured before deploying.
+**[Live demo ↗](https://ci.thatdevjp.com)**
 
-A web application that manages truck drivers' check-ins across Martori Farms locations throughout the US.
+An appointment scheduling and check-in platform for operations that run on arrivals -
+drivers book a slot, arrive, and check in against it across sites. Built for produce
+distribution, where a truck idling on a dock waiting for a free bay is spoiled inventory.
+
+The first version shipped in 2018 and ran nine distribution centers across all four
+continental U.S. time zones. Every slot, reminder, and daylight-saving shift resolves in
+the site's local time rather than the server's. This is the rebuild.
+
+### What it does
+
+- **Appointments** - per-location weekly schedules with per-date overrides, resolved in the location's own timezone
+- **Check-in** - drivers check in against a booked slot, distance-gated so it happens on site rather than from the highway
+- **Notifications** - confirmations and reminders for guests and users, queued through Horizon and delivered over a custom notification channel with a swappable SMS sender
+- **Access control** - per-location employee scoping via `spatie/laravel-permission` teams, so a site manager sees their site
+- **Accounts** - passkeys (Fortify WebAuthn), email verification, password confirmation on sensitive actions, and per-user locale, theme, and default location
+- **Documents** - PDF rendering, Code 39 barcodes generated as inline SVG with no barcode dependency, and short links for anything sent by SMS
+
+> **Status:** actively developed, running on a staging environment. Local development is
+> configured via Laravel Sail (Docker); see below.
 
 ## Stack
 
@@ -47,7 +63,7 @@ brew install composer
 
 ```bash
 # 1. Clone the repository
-git clone git@github.com:jplaza88/check-in-v2.git && cd check-in-v2
+git clone git@github.com:juanplazadev/check-in-v2.git && cd check-in-v2
 
 # 2. Install PHP dependencies
 composer install
