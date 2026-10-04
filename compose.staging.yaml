@@ -1,7 +1,9 @@
 name: check-in
 
 x-app: &app
-  image: ghcr.io/jplaza88/check-in-v2:${IMAGE_TAG:-latest}
+  # IMAGE_REPO is set by the deploy workflow from github.repository, so a repo
+  # rename or transfer cannot leave this pointing at a stale GHCR package.
+  image: ${IMAGE_REPO:-ghcr.io/juanplazadev/check-in-v2}:${IMAGE_TAG:-latest}
   env_file: [.env]
   restart: unless-stopped
   depends_on:
