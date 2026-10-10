@@ -7,9 +7,14 @@ use App\CheckIn\CheckInScheduleResolver;
 use App\DTOs\CheckInLocationDTO;
 use App\Enums\CheckInErpStatus;
 use App\Enums\CheckInStatus;
+use App\Enums\Role;
+use App\Events\CheckInCreated;
 use App\Models\CheckIn;
 use App\Models\Location;
 use App\Models\User;
+use App\Notifications\CheckInReceived;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia;
 
 /**
@@ -391,4 +396,42 @@ it('redirects the form to location select when the coordinates are missing', fun
         ->get(route('checkIn.form', $location))
         ->assertRedirect(route('checkIn.selectLocation'))
         ->assertSessionHasErrors('userCoords');
+});
+
+it('broadcasts a submitted check-in to the dashboard', function (): void {
+    $location = Location::factory()->create();
+    Event::fake([CheckInCreated::class]);
+
+    $this->withSession(freshGatePass($location))
+        ->post(route('checkIn.store', $location), validCheckInPayload())
+        ->assertSessionHasNoErrors();
+
+    Event::assertDispatchedTimes(CheckInCreated::class, 1);
+    Event::assertDispatched(
+        CheckInCreated::class,
+        fn (CheckInCreated $event): bool => $event->checkIn->is(CheckIn::query()->sole())
+            && $event->broadcastWith()['checkIn']['purchaseOrders'] === ['PO-12345'],
+    );
+});
+
+it('notifies every verified staff member of a submitted check-in, and nobody else', function (): void {
+    $location = Location::factory()->create();
+    $staff = collect(Role::staff())->map(fn (Role $role): User => User::factory()->withRole($role)->create());
+    $driver = User::factory()->withRole(Role::Driver)->create();
+    $unverifiedStaff = User::factory()->withRole(Role::Shipping)->unverified()->create();
+    Notification::fake();
+
+    $this->withSession(freshGatePass($location))
+        ->post(route('checkIn.store', $location), validCheckInPayload())
+        ->assertSessionHasNoErrors();
+
+    $checkIn = CheckIn::query()->sole();
+
+    Notification::assertSentTo(
+        $staff,
+        CheckInReceived::class,
+        fn (CheckInReceived $notification, array $channels): bool => $notification->checkIn->is($checkIn)
+            && $channels === ['database', 'broadcast'],
+    );
+    Notification::assertNotSentTo([$driver, $unverifiedStaff], CheckInReceived::class);
 });

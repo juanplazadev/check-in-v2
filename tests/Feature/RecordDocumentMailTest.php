@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Role;
 use App\Mail\RecordDocumentMail;
 use App\Models\Appointment;
 use App\Models\CheckIn;
@@ -19,7 +20,7 @@ function mailDriver(string $email = 'driver@example.com'): User
         'email' => $email,
         'password' => 'secret-password',
         'email_verified_at' => now(),
-    ]);
+    ])->assignRole(Role::Driver);
 }
 
 function mailLocation(): Location

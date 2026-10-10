@@ -52,7 +52,7 @@ Route::middleware(['guest', 'setLocale'])->group(function (): void {
 */
 Route::middleware(['auth', 'setLocale'])->group(function (): void {
     Route::get('/email/verify', fn (Request $request) => $request->user()->hasVerifiedEmail()
-        ? redirect()->intended(HomeRedirect::for())
+        ? redirect()->intended(HomeRedirect::for($request->user()))
         : inertia('Auth/VerifyEmail', ['status' => session('status')]))
         ->name('verification.notice');
 

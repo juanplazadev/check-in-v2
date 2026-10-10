@@ -12,6 +12,6 @@ final class LoginResponse implements LoginResponseContract
 {
     public function toResponse($request): RedirectResponse
     {
-        return redirect()->intended(HomeRedirect::for());
+        return redirect()->intended(HomeRedirect::for($request->user()));
     }
 }

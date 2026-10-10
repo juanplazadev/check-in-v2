@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Role;
 use App\Models\User;
 use App\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Hash;
@@ -17,7 +18,7 @@ function makeDriver(array $attributes = []): User
         'email' => 'john@example.com',
         'password' => 'secret-password',
         ...$attributes,
-    ]);
+    ])->assignRole(Role::Driver);
 }
 
 /*

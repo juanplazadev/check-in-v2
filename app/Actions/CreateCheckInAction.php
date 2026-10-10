@@ -30,7 +30,8 @@ final readonly class CreateCheckInAction
     ) {}
 
     /**
-     * @param array<string, mixed> $validated
+     * @param  array<string, mixed>  $validated
+     *
      * @throws Throwable
      */
     public function handle(

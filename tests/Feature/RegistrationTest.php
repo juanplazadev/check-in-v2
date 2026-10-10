@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Auth\RegistrationGate;
+use App\Enums\Role;
 use App\Models\User;
 
 use function Pest\Laravel\post;
@@ -24,6 +25,15 @@ it('registers a driver and redirects them to their account', function (): void {
         ->assertRedirect(route('account'));
 
     expect(User::query()->where('email', 'john@example.com')->exists())->toBeTrue();
+});
+
+it('gives a newly registered user the driver role', function (): void {
+    $this->withSession([RegistrationGate::SESSION_KEY => now()->addMinutes(5)->timestamp])
+        ->post('/register', registrationPayload())
+        ->assertSessionHasNoErrors();
+
+    expect(User::query()->where('email', 'john@example.com')->sole()->hasRole(Role::Driver))
+        ->toBeTrue();
 });
 
 it('captures the carried cellphone onto the new account', function (): void {

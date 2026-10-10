@@ -4,19 +4,24 @@ declare(strict_types=1);
 
 namespace App\Auth;
 
+use App\Enums\Role;
+use App\Models\User;
+
 /**
- * Resolves where a user lands after authenticating. Centralized so login and
- * registration stay in sync.
+ * Resolves where a user lands after authenticating, and where the guest
+ * middleware sends an already signed-in user. Centralized so login,
+ * registration and the guest pages stay in sync.
  *
- * Drivers are role-less authenticated users (spatie roles/teams are reserved
- * for employees, who belong to location/manager/admin teams). Everyone lands
- * on their driver account for now; once the staff surface exists, users who
- * hold a team-scoped role will branch to the staff dashboard instead.
+ * Staff land on the dashboard; drivers, and anyone without a staff role,
+ * land on their driver account. A missing user also gets the account route,
+ * whose auth middleware bounces it to login.
  */
 final class HomeRedirect
 {
-    public static function for(): string
+    public static function for(?User $user): string
     {
-        return route('account');
+        return $user?->hasAnyRole(Role::staff())
+            ? route('dashboard')
+            : route('account');
     }
 }

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Illuminate\Foundation\Inspiring;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 
@@ -18,3 +19,9 @@ Schedule::command('horizon:snapshot')->everyFiveMinutes();
 // run instead of dropping a day of reminders. Idempotent either way - the
 // reminder_sent_at stamp is what actually prevents a second send.
 Schedule::command('appointments:send-reminders')->hourly()->withoutOverlapping();
+
+// The dashboard notification bell only ever shows the latest few, so anything
+// past a month is dead weight: one row per staff member per check-in adds up.
+Schedule::call(fn (): int => DatabaseNotification::query()
+    ->where('created_at', '<', now()->subDays(30))
+    ->delete())->daily()->name('notifications:prune');

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\DTOs\CheckInLocationDTO;
+use App\Events\CheckInCreated;
 use App\Models\CheckIn;
 use App\Models\User;
+use App\Notifications\CheckInReceived;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -17,6 +19,7 @@ final readonly class CompleteCheckInAction
         private CreatePurchaseOrdersAction $createPurchaseOrders,
         private SendCheckInCompletedEmailAction $sendCheckInCompletedEmail,
         private SendCheckInCopyAction $sendCheckInCopy,
+        private NotifyStaffAction $notifyStaff,
     ) {}
 
     /**
@@ -40,6 +43,12 @@ final readonly class CompleteCheckInAction
 
         // The driver's own copy, if they are signed in and have asked for it.
         $this->sendCheckInCopy->handle($checkIn);
+
+        // Onto every open staff dashboard, purchase orders included.
+        CheckInCreated::dispatch($checkIn);
+
+        // Into every staff member's notification bell.
+        $this->notifyStaff->handle(new CheckInReceived($checkIn));
 
         return $checkIn;
     }

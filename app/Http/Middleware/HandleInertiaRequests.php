@@ -4,12 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Queries\LiveQueueCheckIns;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 use Inertia\Middleware;
 use Override;
 
 final class HandleInertiaRequests extends Middleware
 {
+    private const int NOTIFICATIONS_SHOWN = 10;
+
     private const array PUBLIC_NAV_ROUTES = [
         'appointment.selectLocation',
         'appointment.form',
@@ -61,7 +65,10 @@ final class HandleInertiaRequests extends Middleware
             'commit' => $this->getShortCommit(...),
             'auth' => [
                 'user' => $request->user(...),
+                'roles' => fn (): array => $request->user()?->getRoleNames()->all() ?? [],
             ],
+            'dashboard' => $this->getDashboardCounts(...),
+            'notifications' => $this->getNotifications(...),
             'currentRoute' => $this->getCurrentRouteName(...),
             'hasLicense' => $this->getHasLicense(...),
             'userCoordsBrowserTtl' => $this->getUserCoordsBrowserTtl(...),
@@ -108,6 +115,54 @@ final class HandleInertiaRequests extends Middleware
         }
 
         return request()->user()?->drivers_license_number !== null;
+    }
+
+    /**
+     * Sidebar badge counts. Only the dashboard renders the sidebar, and the
+     * route group in front of it already requires a staff role. The live feed
+     * reloads this prop alone whenever a check-in arrives or changes.
+     *
+     * @return array{pendingCheckIns: int}|null
+     */
+    private function getDashboardCounts(): ?array
+    {
+        if (! str_starts_with((string) request()->route()?->getName(), 'dashboard')) {
+            return null;
+        }
+
+        return [
+            'pendingCheckIns' => resolve(LiveQueueCheckIns::class)->count(),
+        ];
+    }
+
+    /**
+     * The header notification bell. Dashboard routes only, like the counts
+     * above; the bell reloads this prop alone when a notification is broadcast.
+     *
+     * @return array{unreadCount: int, items: list<array{id: string, type: string, data: array<string, mixed>, readAt: string|null, createdAt: string}>}|null
+     */
+    private function getNotifications(): ?array
+    {
+        $user = request()->user();
+
+        if ($user === null || ! str_starts_with((string) request()->route()?->getName(), 'dashboard')) {
+            return null;
+        }
+
+        return [
+            'unreadCount' => $user->unreadNotifications()->count(),
+            'items' => array_values($user->notifications()
+                ->limit(self::NOTIFICATIONS_SHOWN)
+                ->get()
+                ->map(fn (DatabaseNotification $notification): array => [
+                    'id' => $notification->id,
+                    'type' => $notification->type,
+                    'data' => $notification->data,
+                    'readAt' => $notification->read_at?->toIso8601String(),
+                    'createdAt' => (string) $notification->created_at?->toIso8601String(),
+                ])
+                ->all()),
+        ];
     }
 
     private function getUserCoordsBrowserTtl(): ?int

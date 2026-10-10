@@ -48,6 +48,22 @@ services:
         depends_on:
             - pgsql
             - redis
+    reverb:
+        image: 'sail-8.5/app'
+        command: php artisan reverb:start --host=0.0.0.0 --port=8080
+        environment:
+            WWWUSER: '${WWWUSER:-501}'
+            LARAVEL_SAIL: 1
+            TZ: '${APP_TIMEZONE:-UTC}'
+        volumes:
+            - '.:/var/www/html'
+        networks:
+            sail:
+                aliases:
+                    - reverb
+        restart: unless-stopped
+        depends_on:
+            - redis
     pgsql:
         image: 'postgres:18-alpine'
         ports:

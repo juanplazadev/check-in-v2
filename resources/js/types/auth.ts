@@ -1,3 +1,5 @@
+import type { Role } from '@/types/staff';
+
 export type User = {
     id: number;
     name: string;
@@ -11,4 +13,6 @@ export type User = {
 
 export type Auth = {
     user: User;
+    /** The signed-in user's Spatie role names; empty for guests. */
+    roles: Role[];
 };

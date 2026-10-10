@@ -2,11 +2,16 @@
 
 declare(strict_types=1);
 
+use App\Enums\Role;
+use App\Events\AppointmentCreated;
 use App\Models\Appointment;
 use App\Models\Location;
 use App\Models\PurchaseOrder;
 use App\Models\User;
+use App\Notifications\AppointmentReceived;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 use function Pest\Laravel\actingAs;
@@ -144,4 +149,40 @@ it('rejects a valid +1 phone number from outside the US and PR', function (): vo
     ]))->assertSessionHasErrors([
         'drivers_cellphone' => __('messages.appointmentForm.cellphoneRegion'),
     ]);
+});
+
+it('notifies every verified staff member of a booked appointment, and nobody else', function (): void {
+    $location = Location::factory()->appointmentsOnly()->create();
+    $staff = collect(Role::staff())->map(fn (Role $role): User => User::factory()->withRole($role)->create());
+    $driver = User::factory()->withRole(Role::Driver)->create();
+    $unverifiedStaff = User::factory()->withRole(Role::Shipping)->unverified()->create();
+    passGate($location);
+    Notification::fake();
+
+    post(route('appointment.store', $location->uuid), validPayload())->assertSessionHasNoErrors();
+
+    $appointment = Appointment::query()->sole();
+
+    Notification::assertSentTo(
+        $staff,
+        AppointmentReceived::class,
+        fn (AppointmentReceived $notification, array $channels): bool => $notification->appointment->is($appointment)
+            && $channels === ['database', 'broadcast'],
+    );
+    Notification::assertNotSentTo([$driver, $unverifiedStaff], AppointmentReceived::class);
+});
+
+it('broadcasts a booked appointment to the live queue', function (): void {
+    $location = Location::factory()->appointmentsOnly()->create();
+    passGate($location);
+    Event::fake([AppointmentCreated::class]);
+
+    post(route('appointment.store', $location->uuid), validPayload())->assertSessionHasNoErrors();
+
+    Event::assertDispatchedTimes(AppointmentCreated::class, 1);
+    Event::assertDispatched(
+        AppointmentCreated::class,
+        fn (AppointmentCreated $event): bool => $event->appointment->is(Appointment::query()->sole())
+            && $event->broadcastWith()['appointment']['purchaseOrders'] === ['SO-00001'],
+    );
 });

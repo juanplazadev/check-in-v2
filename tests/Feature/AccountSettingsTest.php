@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\NotificationChannel;
+use App\Enums\Role;
 use App\Models\Location;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia;
@@ -17,7 +18,7 @@ function settingsDriver(array $attributes = []): User
         'password' => 'secret-password',
         'email_verified_at' => now(),
         ...$attributes,
-    ]);
+    ])->assignRole(Role::Driver);
 }
 
 /*

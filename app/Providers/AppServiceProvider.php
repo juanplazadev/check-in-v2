@@ -6,6 +6,8 @@ namespace App\Providers;
 
 use App\Actions\RecordHistoryAction;
 use App\Enums\RecordHistoryEvent;
+use App\Events\AppointmentUpdated;
+use App\Events\CheckInUpdated;
 use App\Models\Appointment;
 use App\Models\AppointmentSchedule;
 use App\Models\AppointmentScheduleOverride;
@@ -133,6 +135,8 @@ final class AppServiceProvider extends ServiceProvider
         $this->flushScheduleCacheOnDataChanges();
 
         $this->recordStatusTransitions();
+        $this->broadcastCheckInStatusChanges();
+        $this->broadcastAppointmentChanges();
     }
 
     /*
@@ -189,6 +193,36 @@ final class AppServiceProvider extends ServiceProvider
                 }
             });
         }
+    }
+
+    /**
+     * Push status and ERP status changes to open staff dashboards.
+     *
+     * Like {@see self::recordStatusTransitions()}, this misses mass
+     * Query::update(); a future bulk status update has to dispatch
+     * CheckInUpdated itself.
+     */
+    private function broadcastCheckInStatusChanges(): void
+    {
+        CheckIn::updated(static function (CheckIn $checkIn): void {
+            if ($checkIn->wasChanged(['status', 'erp_status'])) {
+                CheckInUpdated::dispatch($checkIn);
+            }
+        });
+    }
+
+    /**
+     * Push status and time changes to the live queue's arriving rail, so a
+     * cancelled, missed or arrived booking leaves it. Misses mass
+     * Query::update() for the same reason as above.
+     */
+    private function broadcastAppointmentChanges(): void
+    {
+        Appointment::updated(static function (Appointment $appointment): void {
+            if ($appointment->wasChanged(['status', 'scheduled_for'])) {
+                AppointmentUpdated::dispatch($appointment);
+            }
+        });
     }
 
     /**

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\NotificationChannel;
+use App\Enums\Role;
 use App\Enums\Theme;
 use App\Models\Location;
 use App\Models\User;
@@ -16,7 +17,7 @@ function updateDriver(): User
         'email' => 'driver@example.com',
         'password' => 'secret-password',
         'email_verified_at' => now(),
-    ]);
+    ])->assignRole(Role::Driver);
 }
 
 function bookableLocation(): Location

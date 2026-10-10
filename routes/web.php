@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Role;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AccountPdfController;
 use App\Http\Controllers\AccountSettingsController;
@@ -9,10 +10,15 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\CheckInController;
 use App\Http\Controllers\CheckInDistanceController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\Dashboard\AppointmentController as DashboardAppointmentController;
+use App\Http\Controllers\Dashboard\CheckInController as DashboardCheckInController;
+use App\Http\Controllers\Dashboard\LiveQueueController;
+use App\Http\Controllers\Dashboard\NotificationController as DashboardNotificationController;
 use App\Http\Controllers\GeoController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ScheduleController;
 use Illuminate\Support\Facades\Route;
+use Spatie\Permission\Middleware\RoleMiddleware;
 
 Route::prefix('locale')->group(function (): void {
 
@@ -59,8 +65,11 @@ Route::middleware('setLocale')->group(function (): void {
      * typo becomes a support ticket. Fortify's own user/profile-information,
      * user/password and logout endpoints carry no verified middleware either,
      * for the same reason.
+     *
+     * Drivers and admins only (Role::accountHolders()); the other staff roles
+     * have no driver account and get a 403.
      */
-    Route::middleware('auth')->group(function (): void {
+    Route::middleware(['auth', RoleMiddleware::using(Role::accountHolders())])->group(function (): void {
         // password.confirm, not verified: this page decrypts and displays the
         // driver's licence number - the one field encrypted at rest - and is
         // also where the email that guards the account is changed. A live
@@ -87,7 +96,7 @@ Route::middleware('setLocale')->group(function (): void {
      * attaches the driver's guest check-in or appointment once the Verified
      * event fires, so an unverified account genuinely has no history to show.
      */
-    Route::middleware(['auth', 'verified'])->group(function (): void {
+    Route::middleware(['auth', 'verified', RoleMiddleware::using(Role::accountHolders())])->group(function (): void {
         Route::get('/account', [AccountController::class, 'index'])->name('account');
         Route::get('/account/settings', [AccountSettingsController::class, 'index'])->name('account.settings');
 
@@ -133,6 +142,43 @@ Route::middleware('setLocale')->group(function (): void {
             Route::post('/account/history/appointment/{uuid}/email', [AccountPdfController::class, 'emailAppointment'])
                 ->whereUuid('uuid')
                 ->name('account.history.appointment.email');
+        });
+    });
+
+    /**
+     * Staff dashboard, for every staff role. Check-ins and the live queue run on
+     * real data; the other pages still render mock data until their backend
+     * pass. User management is admin-only.
+     */
+    Route::middleware(['auth', 'verified', RoleMiddleware::using(Role::staff())])->group(function (): void {
+        Route::inertia('/dashboard', 'Dashboard/Index')->name('dashboard');
+
+        Route::prefix('dashboard')->name('dashboard.')->group(function (): void {
+
+            Route::get('/queue', LiveQueueController::class)->name('queue');
+
+            Route::get('/check-ins', [DashboardCheckInController::class, 'index'])->name('checkIns');
+            Route::get('/check-ins/{uuid}', [DashboardCheckInController::class, 'show'])
+                ->whereUuid('uuid')
+                ->name('checkIns.show');
+
+            Route::post('/notifications/read-all', [DashboardNotificationController::class, 'readAll'])
+                ->name('notifications.readAll');
+            Route::post('/notifications/{id}/read', [DashboardNotificationController::class, 'read'])
+                ->whereUuid('id')
+                ->name('notifications.read');
+
+            Route::inertia('/appointments', 'Dashboard/Appointments/Index')->name('appointments');
+            Route::get('/appointments/{uuid}', [DashboardAppointmentController::class, 'show'])
+                ->whereUuid('uuid')
+                ->name('appointments.show');
+
+            Route::middleware(RoleMiddleware::using(Role::Admin))->group(function (): void {
+                Route::inertia('/users', 'Dashboard/Users/Index')->name('users');
+                Route::inertia('/users/{id}', 'Dashboard/Users/Show')
+                    ->whereNumber('id')
+                    ->name('users.show');
+            });
         });
     });
 

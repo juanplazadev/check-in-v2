@@ -11,10 +11,12 @@ use App\Notifications\Channels\SmsChannel;
 use App\Notifications\ResetPassword;
 use App\Notifications\VerifyEmail;
 use Carbon\CarbonImmutable;
+use Database\Factories\UserFactory;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -55,6 +57,9 @@ use Spatie\Permission\Traits\HasRoles;
 #[Hidden(['password', 'remember_token', 'drivers_license_number', 'location_id'])]
 final class User extends Authenticatable implements MustVerifyEmail
 {
+    /** @use HasFactory<UserFactory> */
+    use HasFactory;
+
     use HasRoles;
     use Notifiable;
 
