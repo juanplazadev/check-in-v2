@@ -1,8 +1,12 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { BadgeCheck } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 import AdminOnly from '@/components/dashboard/AdminOnly';
-import { DataTableProvider } from '@/components/dashboard/data-table/context';
+import {
+    DataTableProvider,
+    useDataTableContext,
+} from '@/components/dashboard/data-table/context';
 import DataTable from '@/components/dashboard/data-table/DataTable';
 import DataTableFilter from '@/components/dashboard/data-table/DataTableFilter';
 import DataTableSearch from '@/components/dashboard/data-table/DataTableSearch';
@@ -13,9 +17,32 @@ import RoleChips from '@/components/dashboard/RoleChips';
 import type { DashboardUser } from '@/components/dashboard/types';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { formatDate, formatRelative, initialsOf } from '@/lib/dashboard/format';
-import { MOCK_USERS } from '@/lib/dashboard/mock';
 import dashboardRoutes from '@/routes/dashboard';
+import type { Role } from '@/types/staff';
 import { STAFF_ROLE_LABELS, STAFF_ROLES } from '@/types/staff';
+
+type UserType = 'staff' | 'driver';
+
+interface UserFilters {
+    search: string | null;
+    type: UserType | null;
+    roles: Role[];
+}
+
+interface UsersIndexProps {
+    users: {
+        data: DashboardUser[];
+        current_page: number;
+        per_page: number;
+        total: number;
+    };
+    typeCounts: Record<'all' | UserType, number>;
+    filters: UserFilters;
+}
+
+/** Props a filter or page change reloads. */
+const TABLE_PROPS = ['users', 'typeCounts', 'filters'];
+const SEARCH_DEBOUNCE_MS = 300;
 
 const column = createDashboardColumnHelper<DashboardUser>();
 
@@ -50,22 +77,16 @@ const columns = column.columns([
             </span>
         ),
     }),
-    // Drivers have no roles, so filter on a flat list that names them too.
-    column.accessor((user) => (user.roles.length ? user.roles : ['driver']), {
-        id: 'roles',
+    column.accessor('roles', {
         header: 'Roles',
-        enableSorting: false,
-        filterFn: 'inList',
-        cell: ({ row }) => <RoleChips roles={row.original.roles} />,
+        cell: ({ getValue }) => <RoleChips roles={getValue()} />,
     }),
+    // Backs the tabs only; the server does the filtering.
     column.accessor((user) => (user.roles.length ? 'staff' : 'driver'), {
         id: 'type',
-        enableSorting: false,
-        filterFn: 'inList',
     }),
     column.accessor('lastActiveAt', {
         header: 'Last active',
-        sortUndefined: 'last',
         cell: ({ getValue }) => {
             const value = getValue();
 
@@ -82,18 +103,6 @@ const columns = column.columns([
     }),
 ]);
 
-const staffCount = MOCK_USERS.filter((user) => user.roles.length > 0).length;
-
-const tabs = [
-    { label: 'All', value: null, count: MOCK_USERS.length },
-    { label: 'Staff', value: 'staff', count: staffCount },
-    {
-        label: 'Drivers',
-        value: 'driver',
-        count: MOCK_USERS.length - staffCount,
-    },
-];
-
 const roleOptions = [
     ...STAFF_ROLES.map((role) => ({
         label: STAFF_ROLE_LABELS[role],
@@ -102,15 +111,101 @@ const roleOptions = [
     { label: 'Driver', value: 'driver' },
 ];
 
-function searchText(user: DashboardUser): string {
-    return [user.name, user.email, user.cellphone ?? ''].join(' ');
+function queryFor(
+    search: string,
+    type: string | undefined,
+    roles: string[],
+    page = 1,
+): Record<string, string | number | string[]> {
+    return {
+        ...(search.trim() !== '' && { search: search.trim() }),
+        ...(type !== undefined && { type }),
+        ...(roles.length > 0 && { roles }),
+        ...(page > 1 && { page }),
+    };
 }
 
-export default function UsersIndex() {
+/**
+ * Turns the toolbar's search, tabs and role filter into a server visit. The table runs in server
+ * mode, so nothing filters on the client.
+ */
+function ServerFilterSync() {
+    const { globalFilter, getColumnFilter } = useDataTableContext();
+    const type = getColumnFilter('type')[0];
+    const roles = getColumnFilter('roles');
+    const rolesKey = roles.join(',');
+    const isFirstRun = useRef(true);
+
+    useEffect(() => {
+        if (isFirstRun.current) {
+            isFirstRun.current = false;
+
+            return;
+        }
+
+        const timer = window.setTimeout(
+            () =>
+                router.get(
+                    dashboardRoutes.users.url(),
+                    queryFor(
+                        globalFilter,
+                        type,
+                        rolesKey ? rolesKey.split(',') : [],
+                    ),
+                    {
+                        only: TABLE_PROPS,
+                        preserveState: true,
+                        preserveScroll: true,
+                        replace: true,
+                    },
+                ),
+            SEARCH_DEBOUNCE_MS,
+        );
+
+        return () => window.clearTimeout(timer);
+    }, [globalFilter, type, rolesKey]);
+
+    return null;
+}
+
+export default function UsersIndex({
+    users,
+    typeCounts,
+    filters,
+}: UsersIndexProps) {
+    const tabs = [
+        { label: 'All', value: null, count: typeCounts.all },
+        { label: 'Staff', value: 'staff', count: typeCounts.staff },
+        { label: 'Drivers', value: 'driver', count: typeCounts.driver },
+    ];
+
+    const changePage = (pageIndex: number) =>
+        router.get(
+            dashboardRoutes.users.url(),
+            queryFor(
+                filters.search ?? '',
+                filters.type ?? undefined,
+                filters.roles,
+                pageIndex + 1,
+            ),
+            { only: TABLE_PROPS, preserveState: true },
+        );
+
     return (
         <AdminOnly>
-            <DataTableProvider>
+            <DataTableProvider
+                initialGlobalFilter={filters.search ?? ''}
+                initialColumnFilters={[
+                    ...(filters.type !== null
+                        ? [{ id: 'type', value: [filters.type] }]
+                        : []),
+                    ...(filters.roles.length > 0
+                        ? [{ id: 'roles', value: filters.roles }]
+                        : []),
+                ]}
+            >
                 <Head title="Users" />
+                <ServerFilterSync />
 
                 <PageHeader
                     title="Users"
@@ -131,13 +226,18 @@ export default function UsersIndex() {
                 </div>
 
                 <DataTable
-                    data={MOCK_USERS}
+                    data={users.data}
                     columns={columns}
                     getRowId={(user) => String(user.id)}
-                    getSearchText={searchText}
                     title="All users"
                     hiddenColumns={['type']}
                     emptyMessage="No users match these filters."
+                    server={{
+                        pageIndex: users.current_page - 1,
+                        pageSize: users.per_page,
+                        totalRows: users.total,
+                        onPageChange: changePage,
+                    }}
                 />
             </DataTableProvider>
         </AdminOnly>

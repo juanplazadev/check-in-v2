@@ -1,3 +1,4 @@
+import { usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
 import { useEffect, useRef } from 'react';
 
@@ -5,8 +6,12 @@ import type { AppointmentRecord } from '@/components/dashboard/types';
 import type { FeedStatus } from '@/hooks/useFeedConnection';
 import { useFeedConnection } from '@/hooks/useFeedConnection';
 
-/** Mirrors App\Dashboard\BroadcastChannels::APPOINTMENTS. */
-const CHANNEL = 'dashboard.appointments';
+/**
+ * Mirrors App\Dashboard\BroadcastChannels::APPOINTMENTS. Each staff member has their own channel, and
+ * the server pushes to it only records at locations they may see.
+ */
+const channelFor = (userId: number): string =>
+    `dashboard.appointments.${userId}`;
 
 /** Mirrors broadcastAs() on App\Events\AppointmentCreated and AppointmentUpdated. */
 const CREATED = '.appointment.created';
@@ -35,16 +40,17 @@ export function useAppointmentFeed({
     onEvent,
     onReconnect,
 }: AppointmentFeedOptions): FeedStatus {
+    const channel = channelFor(usePage().props.auth.user.id);
     const onEventRef = useRef(onEvent);
 
     useEffect(() => {
         onEventRef.current = onEvent;
     });
 
-    useEcho<FeedPayload>(CHANNEL, CREATED, ({ appointment }) =>
+    useEcho<FeedPayload>(channel, CREATED, ({ appointment }) =>
         onEventRef.current({ type: 'created', appointment }),
     );
-    useEcho<FeedPayload>(CHANNEL, UPDATED, ({ appointment }) =>
+    useEcho<FeedPayload>(channel, UPDATED, ({ appointment }) =>
         onEventRef.current({ type: 'updated', appointment }),
     );
 

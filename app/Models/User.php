@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Casts\Encrypted;
+use App\Dashboard\MatchesSearchTerm;
 use App\Enums\NotificationChannel;
+use App\Enums\Role;
 use App\Enums\Theme;
 use App\Notifications\Channels\SmsChannel;
 use App\Notifications\ResetPassword;
@@ -18,6 +20,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -42,6 +45,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read NotificationChannel $notification_channel
  * @property-read int|null $location_id
  * @property-read Location|null $location
+ * @property-read Collection<int, Location> $locations
  * @property-read int|null $pending_check_in_id
  * @property-read int|null $pending_appointment_id
  * @property-read string|null $two_factor_secret
@@ -61,6 +65,7 @@ final class User extends Authenticatable implements MustVerifyEmail
     use HasFactory;
 
     use HasRoles;
+    use MatchesSearchTerm;
     use Notifiable;
 
     /**
@@ -106,6 +111,39 @@ final class User extends Authenticatable implements MustVerifyEmail
     public function location(): BelongsTo
     {
         return $this->belongsTo(Location::class);
+    }
+
+    /**
+     * The locations a staff member works at. Only the location-scoped roles are
+     * limited by it; see {@see self::dashboardLocationIds()}.
+     *
+     * Not to be confused with {@see self::location()}, a driver's booking
+     * default.
+     *
+     * @return BelongsToMany<Location, $this>
+     */
+    public function locations(): BelongsToMany
+    {
+        return $this->belongsToMany(Location::class)->withTimestamps();
+    }
+
+    /**
+     * The locations whose check-ins and appointments this user may see on the
+     * staff dashboard, or null for every location.
+     *
+     * Any all-locations role wins, so an admin who also holds shipping is not
+     * narrowed by it. Everyone else gets their attached locations, which fails
+     * closed: a shipping user attached to nothing sees nothing.
+     *
+     * @return list<int>|null
+     */
+    public function dashboardLocationIds(): ?array
+    {
+        if ($this->hasAnyRole(Role::allLocations())) {
+            return null;
+        }
+
+        return array_values($this->locations()->pluck('locations.id')->map(intval(...))->all());
     }
 
     /**

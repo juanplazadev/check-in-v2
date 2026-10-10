@@ -7,11 +7,12 @@ namespace App\Queries;
 use App\Dashboard\CheckInRecordResolver;
 use App\Enums\CheckInStatus;
 use App\Models\CheckIn;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
- * The staff check-ins table: every check-in, newest first, filtered on the
+ * The staff check-ins table: every check-in the user may see, newest first, filtered on the
  * server so the page never ships more than one page of rows.
  */
 final readonly class DashboardCheckIns
@@ -22,9 +23,9 @@ final readonly class DashboardCheckIns
      * @param  array{search: string|null, status: string|null, locations: list<int>}  $filters
      * @return LengthAwarePaginator<int, CheckIn>
      */
-    public function execute(array $filters): LengthAwarePaginator
+    public function execute(User $user, array $filters): LengthAwarePaginator
     {
-        return $this->filtered($filters)
+        return $this->filtered($user, $filters)
             ->when($filters['status'], fn (Builder $query, string $status): Builder => $query->where('status', $status))
             ->with(CheckInRecordResolver::RELATIONS)
             ->latest()
@@ -40,10 +41,10 @@ final readonly class DashboardCheckIns
      * @param  array{search: string|null, status: string|null, locations: list<int>}  $filters
      * @return array<string, int>
      */
-    public function statusCounts(array $filters): array
+    public function statusCounts(User $user, array $filters): array
     {
         /** @var array<string, int> $counts */
-        $counts = $this->filtered($filters)
+        $counts = $this->filtered($user, $filters)
             ->toBase()
             ->selectRaw('status, count(*) as aggregate')
             ->groupBy('status')
@@ -64,18 +65,19 @@ final readonly class DashboardCheckIns
      * @param  array{search: string|null, status: string|null, locations: list<int>}  $filters
      * @return Builder<CheckIn>
      */
-    private function filtered(array $filters): Builder
+    private function filtered(User $user, array $filters): Builder
     {
         return CheckIn::query()
+            ->visibleTo($user)
             ->when($filters['locations'], fn (Builder $query, array $locations): Builder => $query->whereIn('location_id', $locations))
             ->when($filters['search'], fn (Builder $query, string $search): Builder => $query->where(
                 fn (Builder $query): Builder => $query
-                    ->whereLike('reference_number', "%{$search}%")
-                    ->orWhereLike('drivers_name', "%{$search}%")
-                    ->orWhereLike('customer', "%{$search}%")
-                    ->orWhereLike('truck_plate', "%{$search}%")
-                    ->orWhereLike('trailer_plate', "%{$search}%")
-                    ->orWhereHas('purchaseOrders', fn (Builder $query): Builder => $query->whereLike('number', "%{$search}%")),
+                    ->whereContains('reference_number', $search)
+                    ->orWhereContains('drivers_name', $search)
+                    ->orWhereContains('customer', $search)
+                    ->orWhereContains('truck_plate', $search)
+                    ->orWhereContains('trailer_plate', $search)
+                    ->orWhereHas('purchaseOrders', fn (Builder $query): Builder => $query->whereContains('number', $search)),
             ));
     }
 }

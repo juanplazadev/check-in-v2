@@ -14,6 +14,8 @@ use App\Http\Controllers\Dashboard\AppointmentController as DashboardAppointment
 use App\Http\Controllers\Dashboard\CheckInController as DashboardCheckInController;
 use App\Http\Controllers\Dashboard\LiveQueueController;
 use App\Http\Controllers\Dashboard\NotificationController as DashboardNotificationController;
+use App\Http\Controllers\Dashboard\SearchController as DashboardSearchController;
+use App\Http\Controllers\Dashboard\UserController as DashboardUserController;
 use App\Http\Controllers\GeoController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ScheduleController;
@@ -146,9 +148,9 @@ Route::middleware('setLocale')->group(function (): void {
     });
 
     /**
-     * Staff dashboard, for every staff role. Check-ins and the live queue run on
-     * real data; the other pages still render mock data until their backend
-     * pass. User management is admin-only.
+     * Staff dashboard, for every staff role. Check-ins, the live queue and users
+     * run on real data; the other pages still render mock data until their
+     * backend pass. User management is admin-only.
      */
     Route::middleware(['auth', 'verified', RoleMiddleware::using(Role::staff())])->group(function (): void {
         Route::inertia('/dashboard', 'Dashboard/Index')->name('dashboard');
@@ -156,6 +158,10 @@ Route::middleware('setLocale')->group(function (): void {
         Route::prefix('dashboard')->name('dashboard.')->group(function (): void {
 
             Route::get('/queue', LiveQueueController::class)->name('queue');
+
+            Route::middleware('throttle:60,1')
+                ->get('/search', DashboardSearchController::class)
+                ->name('search');
 
             Route::get('/check-ins', [DashboardCheckInController::class, 'index'])->name('checkIns');
             Route::get('/check-ins/{uuid}', [DashboardCheckInController::class, 'show'])
@@ -174,8 +180,8 @@ Route::middleware('setLocale')->group(function (): void {
                 ->name('appointments.show');
 
             Route::middleware(RoleMiddleware::using(Role::Admin))->group(function (): void {
-                Route::inertia('/users', 'Dashboard/Users/Index')->name('users');
-                Route::inertia('/users/{id}', 'Dashboard/Users/Show')
+                Route::get('/users', [DashboardUserController::class, 'index'])->name('users');
+                Route::get('/users/{id}', [DashboardUserController::class, 'show'])
                     ->whereNumber('id')
                     ->name('users.show');
             });

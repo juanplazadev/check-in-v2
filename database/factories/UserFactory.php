@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Enums\Role;
+use App\Models\Location;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -52,5 +53,16 @@ final class UserFactory extends Factory
     public function withRole(Role $role): static
     {
         return $this->afterCreating(fn (User $user): User => $user->assignRole($role));
+    }
+
+    /**
+     * Attach the user to the locations once it has been persisted. Only the
+     * location-scoped roles are limited by it.
+     */
+    public function worksAt(Location ...$locations): static
+    {
+        return $this->afterCreating(fn (User $user) => $user->locations()->attach(
+            array_map(fn (Location $location): int => $location->id, $locations),
+        ));
     }
 }

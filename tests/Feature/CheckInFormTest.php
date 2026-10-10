@@ -414,9 +414,10 @@ it('broadcasts a submitted check-in to the dashboard', function (): void {
     );
 });
 
-it('notifies every verified staff member of a submitted check-in, and nobody else', function (): void {
+it('notifies every verified staff member who works the location of a submitted check-in, and nobody else', function (): void {
     $location = Location::factory()->create();
-    $staff = collect(Role::staff())->map(fn (Role $role): User => User::factory()->withRole($role)->create());
+    $staff = collect(Role::staff())->map(fn (Role $role): User => User::factory()->withRole($role)->worksAt($location)->create());
+    $shippingElsewhere = User::factory()->withRole(Role::Shipping)->worksAt(Location::factory()->create())->create();
     $driver = User::factory()->withRole(Role::Driver)->create();
     $unverifiedStaff = User::factory()->withRole(Role::Shipping)->unverified()->create();
     Notification::fake();
@@ -433,5 +434,5 @@ it('notifies every verified staff member of a submitted check-in, and nobody els
         fn (CheckInReceived $notification, array $channels): bool => $notification->checkIn->is($checkIn)
             && $channels === ['database', 'broadcast'],
     );
-    Notification::assertNotSentTo([$driver, $unverifiedStaff], CheckInReceived::class);
+    Notification::assertNotSentTo([$driver, $unverifiedStaff, $shippingElsewhere], CheckInReceived::class);
 });

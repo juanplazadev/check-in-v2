@@ -15,8 +15,9 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Pushes an appointment's status or time change to every open staff
- * dashboard, so it moves on or leaves the live queue's arriving rail.
+ * Pushes an appointment's status or time change to the open dashboards of
+ * staff who work its location, so it moves on or leaves the live queue's
+ * arriving rail.
  */
 final class AppointmentUpdated implements ShouldBroadcast, ShouldDispatchAfterCommit
 {
@@ -26,9 +27,12 @@ final class AppointmentUpdated implements ShouldBroadcast, ShouldDispatchAfterCo
 
     public function __construct(public readonly Appointment $appointment) {}
 
-    public function broadcastOn(): PrivateChannel
+    /**
+     * @return list<PrivateChannel>
+     */
+    public function broadcastOn(): array
     {
-        return new PrivateChannel(BroadcastChannels::APPOINTMENTS);
+        return BroadcastChannels::appointmentsAt($this->appointment->location_id);
     }
 
     public function broadcastAs(): string

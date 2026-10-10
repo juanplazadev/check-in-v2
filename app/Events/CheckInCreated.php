@@ -15,7 +15,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Pushes a new check-in to every open staff dashboard.
+ * Pushes a new check-in to the open dashboards of staff who work its location.
  */
 final class CheckInCreated implements ShouldBroadcast, ShouldDispatchAfterCommit
 {
@@ -25,9 +25,12 @@ final class CheckInCreated implements ShouldBroadcast, ShouldDispatchAfterCommit
 
     public function __construct(public readonly CheckIn $checkIn) {}
 
-    public function broadcastOn(): PrivateChannel
+    /**
+     * @return list<PrivateChannel>
+     */
+    public function broadcastOn(): array
     {
-        return new PrivateChannel(BroadcastChannels::CHECK_INS);
+        return BroadcastChannels::checkInsAt($this->checkIn->location_id);
     }
 
     public function broadcastAs(): string

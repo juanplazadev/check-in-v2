@@ -21,7 +21,8 @@ final class CheckInIndexRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'search' => ['sometimes', 'nullable', 'string', 'max:100'],
+            // See SearchRequest: no control characters or invalid UTF-8.
+            'search' => ['sometimes', 'nullable', 'string', 'max:100', 'regex:/^[^\p{C}]+$/u'],
             'status' => ['sometimes', 'nullable', Rule::enum(CheckInStatus::class)],
             'locations' => ['sometimes', 'array', 'max:50'],
             'locations.*' => ['integer'],

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Actions\RecordHistoryAction;
+use App\Encryption\BlindIndex;
 use App\Enums\RecordHistoryEvent;
 use App\Events\AppointmentUpdated;
 use App\Events\CheckInUpdated;
@@ -27,6 +28,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Encryption\Encrypter;
+use Illuminate\Foundation\DevCommands;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
@@ -69,6 +71,18 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureDevCommands();
+    }
+
+    /**
+     * Under Sail the containers already run Octane, Horizon and Reverb, so
+     * `artisan dev` only starts Vite and Pail.
+     */
+    private function configureDevCommands(): void
+    {
+        if (env('LARAVEL_SAIL')) {
+            DevCommands::only('vite', 'logs');
+        }
     }
 
     /**
@@ -78,11 +92,7 @@ final class AppServiceProvider extends ServiceProvider
     private function registerDatabaseEncrypter(): void
     {
         $this->app->singleton('db.encrypter', function (): Encrypter {
-            $key = (string) config('app.db_encryption_key');
-
-            throw_if($key === '', RuntimeException::class, 'DB_ENCRYPTION_KEY is not set. Generate one with: php -r "echo \'base64:\'.base64_encode(random_bytes(32));"');
-
-            $encrypter = new Encrypter($this->parseEncryptionKey($key), config('app.cipher'));
+            $encrypter = new Encrypter($this->databaseEncryptionKey(), config('app.cipher'));
 
             $previousKeys = array_map(
                 $this->parseEncryptionKey(...),
@@ -91,6 +101,23 @@ final class AppServiceProvider extends ServiceProvider
 
             return $previousKeys === [] ? $encrypter : $encrypter->previousKeys($previousKeys);
         });
+
+        // A subkey, so the hash key is never the encryption key itself.
+        $this->app->singleton(BlindIndex::class, fn (): BlindIndex => new BlindIndex(
+            hash_hkdf('sha256', $this->databaseEncryptionKey(), 32, 'blind-index'),
+        ));
+    }
+
+    /**
+     * The raw bytes of DB_ENCRYPTION_KEY, failing loudly when it is unset.
+     */
+    private function databaseEncryptionKey(): string
+    {
+        $key = (string) config('app.db_encryption_key');
+
+        throw_if($key === '', RuntimeException::class, 'DB_ENCRYPTION_KEY is not set. Generate one with: php -r "echo \'base64:\'.base64_encode(random_bytes(32));"');
+
+        return $this->parseEncryptionKey($key);
     }
 
     /**

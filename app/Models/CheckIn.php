@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Casts\Encrypted;
+use App\Dashboard\MatchesSearchTerm;
+use App\Dashboard\VisibleOnDashboard;
+use App\Encryption\BlindIndex;
 use App\Enums\CheckInErpStatus;
 use App\Enums\CheckInStatus;
 use App\Enums\TrailerChute;
@@ -46,6 +49,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read string $drivers_cellphone
  * @property-read string|null $drivers_email
  * @property-read string $drivers_license_number
+ * @property-read string|null $drivers_license_hash
  * @property-read string|null $drivers_license_expiration_date
  * @property-read string|null $drivers_license_state
  * @property-read string|null $drivers_license_country
@@ -67,14 +71,16 @@ use Illuminate\Database\Eloquent\SoftDeletes;
     'drivers_license_expiration_date', 'drivers_license_state', 'drivers_license_country', 'loading_instructions',
     'locale', 'claimed_at', 'claimed_via'])
 ]
-#[Hidden(['id'])]
+#[Hidden(['id', 'drivers_license_hash'])]
 final class CheckIn extends Model
 {
     /** @use HasFactory<CheckInFactory> */
     use HasFactory;
 
     use HasShortLink;
+    use MatchesSearchTerm;
     use SoftDeletes;
+    use VisibleOnDashboard;
 
     /**
      * @return BelongsTo<Location, $this>
@@ -124,6 +130,20 @@ final class CheckIn extends Model
     public function getRouteKeyName(): string
     {
         return 'uuid';
+    }
+
+    /**
+     * Keep the license blind index in step with the encrypted number, on every
+     * write path, so search never misses a check-in. Like any model event this
+     * misses mass Query::update().
+     */
+    protected static function booted(): void
+    {
+        self::saving(static function (CheckIn $checkIn): void {
+            if ($checkIn->isDirty('drivers_license_number')) {
+                $checkIn->setAttribute('drivers_license_hash', resolve(BlindIndex::class)->hash($checkIn->drivers_license_number));
+            }
+        });
     }
 
     protected function casts(): array

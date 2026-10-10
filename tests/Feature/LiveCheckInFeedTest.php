@@ -6,18 +6,22 @@ use App\Enums\AppointmentStatus;
 use App\Enums\CheckInErpStatus;
 use App\Enums\CheckInStatus;
 use App\Enums\Role;
+use App\Events\AppointmentCreated;
 use App\Events\AppointmentUpdated;
 use App\Events\CheckInCreated;
 use App\Events\CheckInUpdated;
 use App\Models\Appointment;
 use App\Models\CheckIn;
+use App\Models\Location;
 use App\Models\User;
+use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Support\Facades\Event;
 
 /*
  * The websocket feeds behind the live queue: who may subscribe to the
- * check-in and appointment channels, what gets pushed, and that the payload
- * never carries the full license number.
+ * per-user check-in and appointment channels, who each record is pushed to,
+ * what gets pushed, and that the payload never carries the full license
+ * number.
  */
 
 /**
@@ -36,11 +40,11 @@ function useReverbBroadcaster(): void
     require base_path('routes/channels.php');
 }
 
-function authorizeCheckInFeed(User $user, string $channel = 'private-dashboard.check-ins'): Illuminate\Testing\TestResponse
+function authorizeCheckInFeed(User $user, string $feed = 'check-ins', ?User $owner = null): Illuminate\Testing\TestResponse
 {
     return test()->actingAs($user)->post('/broadcasting/auth', [
         'socket_id' => '1234.5678',
-        'channel_name' => $channel,
+        'channel_name' => "private-dashboard.{$feed}.".($owner ?? $user)->id,
     ]);
 }
 
@@ -51,6 +55,34 @@ it('lets every staff role subscribe to the check-in feed', function (Role $role)
         ->assertSuccessful()
         ->assertJsonStructure(['auth']);
 })->with(Role::staff());
+
+it('refuses another staff member\'s feed', function (string $feed): void {
+    useReverbBroadcaster();
+
+    authorizeCheckInFeed(
+        User::factory()->withRole(Role::Admin)->create(),
+        $feed,
+        owner: User::factory()->withRole(Role::Shipping)->create(),
+    )->assertForbidden();
+})->with(['check-ins', 'appointments']);
+
+it('pushes a record only to the staff who work its location', function (string $feed, Closure $eventAt): void {
+    $location = Location::factory()->create();
+    $admin = User::factory()->withRole(Role::Admin)->create();
+    $shippingHere = User::factory()->withRole(Role::Shipping)->worksAt($location)->create();
+    User::factory()->withRole(Role::Shipping)->worksAt(Location::factory()->create())->create();
+    User::factory()->withRole(Role::Shipping)->worksAt($location)->unverified()->create();
+
+    $channels = array_map(fn (PrivateChannel $channel): string => $channel->name, $eventAt($location)->broadcastOn());
+
+    expect($channels)->toEqualCanonicalizing([
+        "private-dashboard.{$feed}.{$admin->id}",
+        "private-dashboard.{$feed}.{$shippingHere->id}",
+    ]);
+})->with([
+    'check-in' => ['check-ins', fn (Location $location): CheckInCreated => new CheckInCreated(CheckIn::factory()->atLocation($location)->create())],
+    'appointment' => ['appointments', fn (Location $location): AppointmentCreated => new AppointmentCreated(Appointment::factory()->atLocation($location)->create())],
+]);
 
 it('refuses the check-in feed to drivers', function (): void {
     useReverbBroadcaster();
@@ -97,7 +129,7 @@ it('pushes only the last four digits of the license', function (): void {
 it('lets every staff role subscribe to the appointment feed', function (Role $role): void {
     useReverbBroadcaster();
 
-    authorizeCheckInFeed(User::factory()->withRole($role)->create(), 'private-dashboard.appointments')
+    authorizeCheckInFeed(User::factory()->withRole($role)->create(), 'appointments')
         ->assertSuccessful()
         ->assertJsonStructure(['auth']);
 })->with(Role::staff());
@@ -105,7 +137,7 @@ it('lets every staff role subscribe to the appointment feed', function (Role $ro
 it('refuses the appointment feed to drivers and unverified staff', function (User $user): void {
     useReverbBroadcaster();
 
-    authorizeCheckInFeed($user, 'private-dashboard.appointments')->assertForbidden();
+    authorizeCheckInFeed($user, 'appointments')->assertForbidden();
 })->with([
     'driver' => fn (): User => User::factory()->withRole(Role::Driver)->create(),
     'unverified staff' => fn (): User => User::factory()->withRole(Role::Shipping)->unverified()->create(),

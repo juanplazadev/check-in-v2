@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -35,6 +36,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read CarbonImmutable $updated_at
  * @property-read CarbonImmutable|null $deleted_at
  * @property-read Address $address
+ * @property-read Collection<int, User> $users
  * @property-read Collection<int, CheckInSchedule> $checkinSchedule
  * @property-read Collection<int, CheckInScheduleOverride> $checkinScheduleOverrides
  * @property-read Collection<int, AppointmentSchedule> $appointmentSchedule
@@ -55,6 +57,16 @@ final class Location extends Model
     public function address(): BelongsTo
     {
         return $this->belongsTo(Address::class);
+    }
+
+    /**
+     * Staff attached to this location; see {@see User::locations()}.
+     *
+     * @return BelongsToMany<User, $this>
+     */
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class)->withTimestamps();
     }
 
     /**

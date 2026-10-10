@@ -7,10 +7,12 @@ namespace App\Queries;
 use App\Dashboard\AppointmentRecordResolver;
 use App\Enums\AppointmentStatus;
 use App\Models\Appointment;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
- * Scheduled appointments for the live queue's arriving rail, soonest first.
+ * Scheduled appointments at the user's locations for the live queue's
+ * arriving rail, soonest first.
  *
  * A rolling window rather than "today": every location keeps its own timezone,
  * so there is no single today. Late bookings stay for a grace period, then
@@ -28,9 +30,10 @@ final readonly class LiveQueueAppointments
     /**
      * @return Collection<int, Appointment>
      */
-    public function execute(): Collection
+    public function execute(User $user): Collection
     {
         return Appointment::query()
+            ->visibleTo($user)
             ->where('status', AppointmentStatus::Scheduled)
             ->whereBetween('scheduled_for', [
                 now()->subHours(self::LATE_GRACE_HOURS),

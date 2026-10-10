@@ -15,12 +15,15 @@ use Inertia\Testing\AssertableInertia;
 /*
  * The check-in data behind the staff dashboard: the live queue shipping keeps
  * open, the searchable table, and the detail page. Gates are pinned in
- * DashboardPagesTest.
+ * DashboardPagesTest, location scoping in DashboardLocationScopeTest.
  */
 
-function shippingStaff(): User
+/**
+ * Sees every location, so these tests are about the queries, not the scope.
+ */
+function allLocationsStaff(): User
 {
-    return User::factory()->withRole(Role::Shipping)->create();
+    return User::factory()->withRole(Role::Admin)->create();
 }
 
 it('queues only recent pending check-ins, oldest first', function (): void {
@@ -30,7 +33,7 @@ it('queues only recent pending check-ins, oldest first', function (): void {
     CheckIn::factory()->completed()->createdAt(now()->subMinutes(10))->create();
     CheckIn::factory()->pending()->createdAt(now()->subHours(LiveQueueCheckIns::WINDOW_HOURS + 1))->create();
 
-    $this->actingAs(shippingStaff())
+    $this->actingAs(allLocationsStaff())
         ->get(route('dashboard.queue'))
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->component('Dashboard/Queue/Index')
@@ -48,7 +51,7 @@ it('lists scheduled appointments inside the arriving window, soonest first', fun
     Appointment::factory()->scheduled()->scheduledFor(now()->subHours(LiveQueueAppointments::LATE_GRACE_HOURS + 1))->create();
     Appointment::factory()->scheduled()->scheduledFor(now()->addHours(LiveQueueAppointments::AHEAD_HOURS + 1))->create();
 
-    $this->actingAs(shippingStaff())
+    $this->actingAs(allLocationsStaff())
         ->get(route('dashboard.queue'))
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->has('appointments', 2)
@@ -64,7 +67,7 @@ it('pages the check-in table newest first', function (): void {
         ->create();
     $newest = CheckIn::query()->latest()->first();
 
-    $this->actingAs(shippingStaff())
+    $this->actingAs(allLocationsStaff())
         ->get(route('dashboard.checkIns'))
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->has('checkIns.data', DashboardCheckIns::PER_PAGE)
@@ -78,7 +81,7 @@ it('filters the check-in table by status and location, counting tabs without the
     CheckIn::factory()->pending()->atLocation($dock)->create();
     CheckIn::factory()->completed()->create();
 
-    $this->actingAs(shippingStaff())
+    $this->actingAs(allLocationsStaff())
         ->get(route('dashboard.checkIns', ['status' => 'completed', 'locations' => [$dock->id]]))
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->has('checkIns.data', 1)
@@ -94,15 +97,30 @@ it('searches the check-in table across driver, plates and purchase orders', func
     $match->purchaseOrders()->create(['number' => 'PO-77310']);
     CheckIn::factory()->create(['drivers_name' => 'Someone Else', 'truck_plate' => 'ZZZ0000']);
 
-    $this->actingAs(shippingStaff())
+    $this->actingAs(allLocationsStaff())
         ->get(route('dashboard.checkIns', ['search' => $term]))
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->has('checkIns.data', 1)
             ->where('checkIns.data.0.uuid', $match->uuid));
 })->with(['driver' => 'quintero', 'plate' => 'trk48', 'purchase order' => '77310']);
 
+it('treats LIKE wildcards in the table search as literal characters', function (): void {
+    CheckIn::factory()->create();
+
+    $this->actingAs(allLocationsStaff())
+        ->get(route('dashboard.checkIns', ['search' => '%%']))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->has('checkIns.data', 0));
+});
+
+it('rejects a table search with control characters', function (): void {
+    $this->actingAs(allLocationsStaff())
+        ->get(route('dashboard.checkIns', ['search' => "ab\0cd"]))
+        ->assertSessionHasErrors('search');
+});
+
 it('rejects an unknown status filter', function (): void {
-    $this->actingAs(shippingStaff())
+    $this->actingAs(allLocationsStaff())
         ->get(route('dashboard.checkIns', ['status' => 'lost']))
         ->assertSessionHasErrors('status');
 });
@@ -111,7 +129,7 @@ it('shows a check-in with its history', function (): void {
     $checkIn = CheckIn::factory()->create();
     $checkIn->update(['status' => 'completed']);
 
-    $this->actingAs(shippingStaff())
+    $this->actingAs(allLocationsStaff())
         ->get(route('dashboard.checkIns.show', ['uuid' => $checkIn->uuid]))
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->where('checkIn.uuid', $checkIn->uuid)
@@ -120,7 +138,7 @@ it('shows a check-in with its history', function (): void {
 });
 
 it('returns not found for a check-in that does not exist', function (): void {
-    $this->actingAs(shippingStaff())
+    $this->actingAs(allLocationsStaff())
         ->get(route('dashboard.checkIns.show', ['uuid' => fake()->uuid()]))
         ->assertNotFound();
 });

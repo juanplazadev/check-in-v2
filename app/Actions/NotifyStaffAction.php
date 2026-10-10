@@ -4,25 +4,20 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
-use App\Enums\Role;
-use App\Models\User;
+use App\Queries\DashboardAudience;
 use Illuminate\Notifications\Notification as BaseNotification;
 use Illuminate\Support\Facades\Notification;
 
 final readonly class NotifyStaffAction
 {
-    /**
-     * Drop a notification into every staff member's dashboard bell.
-     *
-     * Same audience as the live check-in channel: verified users holding any
-     * staff role. Splits per location once staff are tied to locations.
-     */
-    public function handle(BaseNotification $notification): void
-    {
-        $staff = User::role(Role::staff())
-            ->whereNotNull('email_verified_at')
-            ->get();
+    public function __construct(private DashboardAudience $audience) {}
 
-        Notification::send($staff, $notification);
+    /**
+     * Drop a notification into the dashboard bell of every staff member who
+     * can see records at the location. Same audience as the live feeds.
+     */
+    public function handle(BaseNotification $notification, int $locationId): void
+    {
+        Notification::send($this->audience->execute($locationId), $notification);
     }
 }

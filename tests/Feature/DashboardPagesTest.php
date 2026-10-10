@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\Role;
 use App\Models\Appointment;
 use App\Models\CheckIn;
+use App\Models\Location;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia;
 
@@ -13,8 +14,8 @@ use function Pest\Laravel\get;
 /*
  * These pin the dashboard's route-to-page wiring and the gates in front of it: auth, verified, a
  * staff role for every page, and admin for user management. Check-in data has its own tests in
- * DashboardCheckInsTest, the appointment detail in DashboardAppointmentsTest; the other pages still
- * render mock data.
+ * DashboardCheckInsTest, the appointment detail in DashboardAppointmentsTest, users in
+ * DashboardUsersTest; the other pages still render mock data. Location scoping is pinned in DashboardLocationScopeTest.
  */
 
 function dashboardUser(Role $role = Role::Admin, bool $verified = true): User
@@ -35,7 +36,7 @@ $operationalPages = [
 
 $userManagementPages = [
     'users' => [fn (): string => route('dashboard.users'), 'Dashboard/Users/Index'],
-    'user' => [fn (): string => route('dashboard.users.show', ['id' => 1]), 'Dashboard/Users/Show'],
+    'user' => [fn (): string => route('dashboard.users.show', ['id' => User::factory()->create()->id]), 'Dashboard/Users/Show'],
 ];
 
 dataset('operational pages', $operationalPages);
@@ -45,8 +46,13 @@ dataset('dashboard pages', [...$operationalPages, ...$userManagementPages]);
 dataset('non-admin staff', array_values(array_filter(Role::staff(), fn (Role $role): bool => $role !== Role::Admin)));
 
 it('renders the operational pages for every staff role', function (Role $role, Closure $url, string $component): void {
-    $this->actingAs(dashboardUser($role))
-        ->get($url())
+    $target = $url();
+    $user = dashboardUser($role);
+    // Every location, so a location-scoped role is not 404'd on the detail pages.
+    $user->locations()->attach(Location::query()->pluck('id'));
+
+    $this->actingAs($user)
+        ->get($target)
         ->assertSuccessful()
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page->component($component));
 })->with(Role::staff())->with('operational pages');

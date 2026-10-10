@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Dashboard\MatchesSearchTerm;
+use App\Dashboard\VisibleOnDashboard;
 use App\Enums\AppointmentStatus;
 use App\ShortLink\HasShortLink;
 use Carbon\CarbonImmutable;
@@ -48,7 +50,9 @@ final class Appointment extends Model
     use HasFactory;
 
     use HasShortLink;
+    use MatchesSearchTerm;
     use SoftDeletes;
+    use VisibleOnDashboard;
 
     /**
      * @return BelongsTo<Location, $this>

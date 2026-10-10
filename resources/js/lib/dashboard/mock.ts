@@ -14,7 +14,6 @@ import type {
     RecordHistoryEntry,
     TrailerChute,
 } from '@/components/dashboard/types';
-import type { StaffRole } from '@/types/staff';
 
 export const MOCK_NOW = new Date('2026-10-04T16:00:00Z');
 
@@ -342,30 +341,17 @@ function makeAppointment(): AppointmentRecord {
     };
 }
 
-function makeUser(id: number, roles: StaffRole[]): DashboardUser {
+/** Only what the search modal reads; the users pages run on real data. */
+type MockUser = Pick<DashboardUser, 'id' | 'name' | 'email' | 'createdAt'>;
+
+function makeUser(id: number): MockUser {
     const name = driverName();
-    const createdAt = MOCK_NOW.getTime() - between(5, 400) * DAY;
-    const isStaff = roles.length > 0;
 
     return {
         id,
         name,
         email: `${name.toLowerCase().replace(' ', '.')}${id}@example.com`,
-        cellphone: random() > 0.2 ? cellphone() : null,
-        roles,
-        locations: roles.includes('shipping')
-            ? [pick(MOCK_LOCATIONS)]
-            : roles.includes('shipping-manager')
-              ? MOCK_LOCATIONS.slice(0, between(2, 4))
-              : [],
-        emailVerifiedAt: random() > 0.15 ? iso(createdAt + HOUR) : null,
-        createdAt: iso(createdAt),
-        lastActiveAt:
-            random() > 0.1
-                ? iso(MOCK_NOW.getTime() - between(0, 30) * DAY)
-                : null,
-        checkInsCount: isStaff ? 0 : between(0, 40),
-        appointmentsCount: isStaff ? 0 : between(0, 15),
+        createdAt: iso(MOCK_NOW.getTime() - between(5, 400) * DAY),
     };
 }
 
@@ -382,14 +368,8 @@ export const MOCK_APPOINTMENTS: AppointmentRecord[] = Array.from(
     makeAppointment,
 ).sort((a, b) => b.scheduledFor.localeCompare(a.scheduledFor));
 
-export const MOCK_USERS: DashboardUser[] = [
-    makeUser(1, ['admin']),
-    makeUser(2, ['shipping-manager']),
-    makeUser(3, ['sales']),
-    ...Array.from({ length: 5 }, (_, index) =>
-        makeUser(4 + index, ['shipping']),
-    ),
-    ...Array.from({ length: 40 }, (_, index) => makeUser(9 + index, [])),
+export const MOCK_USERS: MockUser[] = [
+    ...Array.from({ length: 48 }, (_, index) => makeUser(1 + index)),
 ].sort(byNewest);
 
 /** Check-ins per day for the last `days` days, oldest first, as `[YYYY-MM-DD, count]`. */

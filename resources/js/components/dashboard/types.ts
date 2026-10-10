@@ -95,6 +95,20 @@ export interface AppointmentRecord {
     history: RecordHistoryEntry[];
 }
 
+/** A location as the users pages show it: enough for a summary card. */
+export interface UserLocation extends LocationSummary {
+    abbreviation: string;
+    city: string;
+    state: string;
+    timezone: string;
+    phone: string;
+    phoneExt: string | null;
+    isActive: boolean;
+    isCheckInsEnabled: boolean;
+    isAppointmentsEnabled: boolean;
+}
+
+/** Mirrors App\Dashboard\UserRecordResolver::record(). */
 export interface DashboardUser {
     id: number;
     name: string;
@@ -102,7 +116,12 @@ export interface DashboardUser {
     cellphone: string | null;
     /** Empty for drivers. */
     roles: StaffRole[];
-    locations: LocationSummary[];
+    /** Holds a role that sees every location, whatever is attached. */
+    hasAllLocations: boolean;
+    /** The locations a staff member works at (location_user). */
+    locations: UserLocation[];
+    /** A driver's appointment booking default. */
+    defaultLocation: UserLocation | null;
     emailVerifiedAt: string | null;
     createdAt: string;
     lastActiveAt: string | null;

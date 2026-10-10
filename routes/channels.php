@@ -12,20 +12,16 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 });
 
 /*
- * Live check-in feed for the staff dashboard. Every staff role sees every
- * location until staff are tied to locations; then this splits per location.
- * Same gate as the dashboard routes: verified, with a staff role.
+ * The staff dashboard's live feeds, one channel per staff member: each event
+ * is pushed only to its location's audience (App\Dashboard\BroadcastChannels),
+ * so the gate here is just "your own channel, verified, with a staff role".
  */
 Broadcast::channel(
     BroadcastChannels::CHECK_INS,
-    fn (User $user): bool => $user->hasVerifiedEmail() && $user->hasAnyRole(Role::staff()),
+    fn (User $user, string $userId): bool => $user->id === (int) $userId && $user->hasVerifiedEmail() && $user->hasAnyRole(Role::staff()),
 );
 
-/*
- * Live appointment feed for the live queue's arriving rail. Same audience as
- * the check-in feed.
- */
 Broadcast::channel(
     BroadcastChannels::APPOINTMENTS,
-    fn (User $user): bool => $user->hasVerifiedEmail() && $user->hasAnyRole(Role::staff()),
+    fn (User $user, string $userId): bool => $user->id === (int) $userId && $user->hasVerifiedEmail() && $user->hasAnyRole(Role::staff()),
 );

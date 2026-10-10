@@ -119,19 +119,22 @@ final class HandleInertiaRequests extends Middleware
 
     /**
      * Sidebar badge counts. Only the dashboard renders the sidebar, and the
-     * route group in front of it already requires a staff role. The live feed
-     * reloads this prop alone whenever a check-in arrives or changes.
+     * route group in front of it already requires a staff role. Counts only the
+     * user's locations. The live feed reloads this prop alone whenever a
+     * check-in arrives or changes.
      *
      * @return array{pendingCheckIns: int}|null
      */
     private function getDashboardCounts(): ?array
     {
-        if (! str_starts_with((string) request()->route()?->getName(), 'dashboard')) {
+        $user = request()->user();
+
+        if ($user === null || ! str_starts_with((string) request()->route()?->getName(), 'dashboard')) {
             return null;
         }
 
         return [
-            'pendingCheckIns' => resolve(LiveQueueCheckIns::class)->count(),
+            'pendingCheckIns' => resolve(LiveQueueCheckIns::class)->count($user),
         ];
     }
 

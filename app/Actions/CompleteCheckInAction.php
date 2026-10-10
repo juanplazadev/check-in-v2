@@ -47,8 +47,8 @@ final readonly class CompleteCheckInAction
         // Onto every open staff dashboard, purchase orders included.
         CheckInCreated::dispatch($checkIn);
 
-        // Into every staff member's notification bell.
-        $this->notifyStaff->handle(new CheckInReceived($checkIn));
+        // Into the notification bell of every staff member who works this location.
+        $this->notifyStaff->handle(new CheckInReceived($checkIn), $checkIn->location_id);
 
         return $checkIn;
     }

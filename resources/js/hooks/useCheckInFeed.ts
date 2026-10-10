@@ -1,3 +1,4 @@
+import { usePage } from '@inertiajs/react';
 import { useEcho } from '@laravel/echo-react';
 import { useEffect, useRef } from 'react';
 
@@ -5,8 +6,11 @@ import type { CheckInRecord } from '@/components/dashboard/types';
 import type { FeedStatus } from '@/hooks/useFeedConnection';
 import { useFeedConnection } from '@/hooks/useFeedConnection';
 
-/** Mirrors App\Dashboard\BroadcastChannels::CHECK_INS. */
-const CHANNEL = 'dashboard.check-ins';
+/**
+ * Mirrors App\Dashboard\BroadcastChannels::CHECK_INS. Each staff member has their own channel, and
+ * the server pushes to it only records at locations they may see.
+ */
+const channelFor = (userId: number): string => `dashboard.check-ins.${userId}`;
 
 /** Mirrors broadcastAs() on App\Events\CheckInCreated and CheckInUpdated. */
 const CREATED = '.check-in.created';
@@ -38,6 +42,7 @@ export function useCheckInFeed({
     onEvent,
     onReconnect,
 }: CheckInFeedOptions): FeedStatus {
+    const channel = channelFor(usePage().props.auth.user.id);
     const onEventRef = useRef(onEvent);
 
     useEffect(() => {
@@ -45,10 +50,10 @@ export function useCheckInFeed({
     });
 
     // One listener per event: Echo does not tell a multi-event callback which one fired.
-    useEcho<FeedPayload>(CHANNEL, CREATED, ({ checkIn }) =>
+    useEcho<FeedPayload>(channel, CREATED, ({ checkIn }) =>
         onEventRef.current({ type: 'created', checkIn }),
     );
-    useEcho<FeedPayload>(CHANNEL, UPDATED, ({ checkIn }) =>
+    useEcho<FeedPayload>(channel, UPDATED, ({ checkIn }) =>
         onEventRef.current({ type: 'updated', checkIn }),
     );
 

@@ -7,9 +7,11 @@ namespace App\Http\Controllers\Dashboard;
 use App\Dashboard\AppointmentRecordResolver;
 use App\Dashboard\CheckInRecordResolver;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Queries\DashboardLocations;
 use App\Queries\LiveQueueAppointments;
 use App\Queries\LiveQueueCheckIns;
+use Illuminate\Container\Attributes\CurrentUser;
 use Inertia\Response;
 
 /**
@@ -20,6 +22,7 @@ use Inertia\Response;
 final class LiveQueueController extends Controller
 {
     public function __invoke(
+        #[CurrentUser] User $user,
         LiveQueueCheckIns $checkIns,
         LiveQueueAppointments $appointments,
         DashboardLocations $locations,
@@ -27,14 +30,14 @@ final class LiveQueueController extends Controller
         AppointmentRecordResolver $appointmentResolver,
     ): Response {
         return inertia('Dashboard/Queue/Index', [
-            'checkIns' => $checkIns->execute()->map($checkInResolver->record(...))->all(),
+            'checkIns' => $checkIns->execute($user)->map($checkInResolver->record(...))->all(),
             'windowHours' => LiveQueueCheckIns::WINDOW_HOURS,
-            'appointments' => $appointments->execute()->map($appointmentResolver->record(...))->all(),
+            'appointments' => $appointments->execute($user)->map($appointmentResolver->record(...))->all(),
             'appointmentWindow' => [
                 'lateGraceHours' => LiveQueueAppointments::LATE_GRACE_HOURS,
                 'aheadHours' => LiveQueueAppointments::AHEAD_HOURS,
             ],
-            'locations' => fn (): array => $locations->execute(),
+            'locations' => fn (): array => $locations->execute($user),
         ]);
     }
 }

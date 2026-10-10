@@ -15,8 +15,9 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Pushes a check-in's status or ERP status change to every open staff
- * dashboard, so a card leaves the live queue and table rows stay current.
+ * Pushes a check-in's status or ERP status change to the open dashboards of
+ * staff who work its location, so a card leaves the live queue and table rows
+ * stay current.
  */
 final class CheckInUpdated implements ShouldBroadcast, ShouldDispatchAfterCommit
 {
@@ -26,9 +27,12 @@ final class CheckInUpdated implements ShouldBroadcast, ShouldDispatchAfterCommit
 
     public function __construct(public readonly CheckIn $checkIn) {}
 
-    public function broadcastOn(): PrivateChannel
+    /**
+     * @return list<PrivateChannel>
+     */
+    public function broadcastOn(): array
     {
-        return new PrivateChannel(BroadcastChannels::CHECK_INS);
+        return BroadcastChannels::checkInsAt($this->checkIn->location_id);
     }
 
     public function broadcastAs(): string

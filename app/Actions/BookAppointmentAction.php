@@ -44,8 +44,8 @@ final readonly class BookAppointmentAction
         // The driver's own copy, if they are signed in and have asked for it.
         $this->sendAppointmentCopy->handle($appointment);
 
-        // Into every staff member's notification bell.
-        $this->notifyStaff->handle(new AppointmentReceived($appointment));
+        // Into the notification bell of every staff member who works this location.
+        $this->notifyStaff->handle(new AppointmentReceived($appointment), $appointment->location_id);
 
         // Onto the live queue's arriving rail.
         AppointmentCreated::dispatch($appointment);

@@ -1,19 +1,52 @@
-import { Link } from '@inertiajs/react';
+import { Link, useHttp } from '@inertiajs/react';
 import { CalendarClock, Search, Truck, User } from 'lucide-react';
 import { Dialog } from 'radix-ui';
-import { useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 
-import { hasAnyRole, useStaffRoles } from '@/hooks/useStaffRoles';
 import {
-    MOCK_APPOINTMENTS,
-    MOCK_CHECK_INS,
-    MOCK_USERS,
-} from '@/lib/dashboard/mock';
+    formatDateTime,
+    formatLabel,
+    formatPhone,
+} from '@/lib/dashboard/format';
 import dashboardRoutes from '@/routes/dashboard';
 
 interface SearchModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+}
+
+type MatchField =
+    | 'purchaseOrder'
+    | 'truckPlate'
+    | 'trailerPlate'
+    | 'email'
+    | 'cellphone'
+    | 'customer'
+    | 'license';
+
+/** Which field a record matched on; null when it was the reference or name, which the row already shows. */
+type SearchMatch = { field: MatchField; value: string } | null;
+
+/** Mirrors App\Queries\DashboardSearch::execute(). */
+interface SearchResponse {
+    checkIns: {
+        uuid: string;
+        referenceNumber: string;
+        driverName: string;
+        location: string;
+        status: string;
+        match: SearchMatch;
+    }[];
+    appointments: {
+        uuid: string;
+        referenceNumber: string;
+        driverName: string;
+        location: string;
+        status: string;
+        scheduledFor: string;
+        match: SearchMatch;
+    }[];
+    users: { id: number; name: string; email: string }[];
 }
 
 interface SearchResult {
@@ -22,69 +55,138 @@ interface SearchResult {
     detail: string;
     href: string;
     icon: typeof Truck;
+    match: SearchMatch;
 }
 
-const RESULT_LIMIT = 8;
+interface SearchGroup {
+    heading: string;
+    results: SearchResult[];
+}
 
-function matches(query: string, ...fields: string[]): boolean {
-    return fields.some((field) => field.toLowerCase().includes(query));
+const MATCH_LABELS: Record<MatchField, string> = {
+    purchaseOrder: 'PO',
+    truckPlate: 'Truck plate',
+    trailerPlate: 'Trailer plate',
+    email: 'Email',
+    cellphone: 'Phone',
+    customer: 'Customer',
+    license: 'License',
+};
+
+const MIN_LENGTH = 2;
+const DEBOUNCE_MS = 250;
+
+function groupsFrom(response: SearchResponse): SearchGroup[] {
+    return [
+        {
+            heading: 'Check-ins',
+            results: response.checkIns.map((checkIn) => ({
+                key: `check-in-${checkIn.uuid}`,
+                label: checkIn.referenceNumber,
+                detail: `${checkIn.driverName} · ${checkIn.location} · ${formatLabel(checkIn.status)}`,
+                href: dashboardRoutes.checkIns.show.url(checkIn.uuid),
+                icon: Truck,
+                match: checkIn.match,
+            })),
+        },
+        {
+            heading: 'Appointments',
+            results: response.appointments.map((appointment) => ({
+                key: `appointment-${appointment.uuid}`,
+                label: appointment.referenceNumber,
+                detail: `${appointment.driverName} · ${appointment.location} · ${formatDateTime(appointment.scheduledFor)}`,
+                href: dashboardRoutes.appointments.show.url(appointment.uuid),
+                icon: CalendarClock,
+                match: appointment.match,
+            })),
+        },
+        {
+            heading: 'Users',
+            results: response.users.map((user) => ({
+                key: `user-${user.id}`,
+                label: user.name,
+                detail: user.email,
+                href: dashboardRoutes.users.show.url(user.id),
+                icon: User,
+                match: null,
+            })),
+        },
+    ].filter((group) => group.results.length > 0);
 }
 
 /**
- * Mosaic's ModalSearch on a Radix dialog. Searches the mock records client-side; the backend
- * version will hit a search endpoint instead.
+ * The matched value as the user should read it. The server only ever sends
+ * a license's last four characters.
+ */
+function displayValue(match: NonNullable<SearchMatch>): string {
+    if (match.field === 'cellphone') {
+        return formatPhone(match.value);
+    }
+
+    return match.field === 'license' ? `•••• ${match.value}` : match.value;
+}
+
+/** Bolds the first case-insensitive occurrence of the term in the value. */
+function Highlighted({ value, term }: { value: string; term: string }) {
+    const start = value.toLowerCase().indexOf(term.toLowerCase());
+
+    if (start === -1) {
+        return <span className="font-medium">{value}</span>;
+    }
+
+    const end = start + term.length;
+
+    return (
+        <span>
+            {value.slice(0, start)}
+            <mark className="bg-transparent font-semibold text-gray-800 dark:text-gray-100">
+                {value.slice(start, end)}
+            </mark>
+            {value.slice(end)}
+        </span>
+    );
+}
+
+/**
+ * Mosaic's ModalSearch on a Radix dialog, backed by the dashboard search
+ * endpoint. Scoping to the user's locations, and users for admins only, happen
+ * on the server.
  */
 export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
-    const roles = useStaffRoles();
     const [query, setQuery] = useState('');
-    const needle = query.trim().toLowerCase();
+    const [settled, setSettled] = useState<{
+        term: string;
+        groups: SearchGroup[];
+    } | null>(null);
+    const { get, cancel } = useHttp<Record<string, never>, SearchResponse>({});
+    const needle = query.trim();
+    const searchable = needle.length >= MIN_LENGTH;
 
-    const results: SearchResult[] =
-        needle.length < 2
-            ? []
-            : [
-                  ...MOCK_CHECK_INS.filter((checkIn) =>
-                      matches(
-                          needle,
-                          checkIn.referenceNumber,
-                          checkIn.driver.name,
-                          checkIn.truck.plate,
-                          checkIn.trailer.plate,
-                      ),
-                  ).map((checkIn) => ({
-                      key: `check-in-${checkIn.uuid}`,
-                      label: checkIn.referenceNumber,
-                      detail: `Check-in · ${checkIn.driver.name}`,
-                      href: dashboardRoutes.checkIns.show.url(checkIn.uuid),
-                      icon: Truck,
-                  })),
-                  ...MOCK_APPOINTMENTS.filter((appointment) =>
-                      matches(
-                          needle,
-                          appointment.referenceNumber,
-                          appointment.driver.name,
-                      ),
-                  ).map((appointment) => ({
-                      key: `appointment-${appointment.uuid}`,
-                      label: appointment.referenceNumber,
-                      detail: `Appointment · ${appointment.driver.name}`,
-                      href: dashboardRoutes.appointments.show.url(
-                          appointment.uuid,
-                      ),
-                      icon: CalendarClock,
-                  })),
-                  ...(hasAnyRole(roles, ['admin'])
-                      ? MOCK_USERS.filter((user) =>
-                            matches(needle, user.name, user.email),
-                        ).map((user) => ({
-                            key: `user-${user.id}`,
-                            label: user.name,
-                            detail: `User · ${user.email}`,
-                            href: dashboardRoutes.users.show.url(user.id),
-                            icon: User,
-                        }))
-                      : []),
-              ].slice(0, RESULT_LIMIT);
+    // A response for an older term is ignored, so a slow request that lands
+    // after a newer one never overwrites it.
+    const groups = settled?.term === needle ? settled.groups : null;
+
+    const search = useEffectEvent((term: string) => {
+        cancel();
+        get(dashboardRoutes.search.url({ query: { q: term } }))
+            .then((response) =>
+                setSettled({ term, groups: groupsFrom(response) }),
+            )
+            .catch(() => {
+                // Cancelled by a newer keystroke, or failed; the row keeps loading
+                // until the next term rather than showing a misleading empty state.
+            });
+    });
+
+    useEffect(() => {
+        if (!searchable) {
+            return;
+        }
+
+        const timer = setTimeout(() => search(needle), DEBOUNCE_MS);
+
+        return () => clearTimeout(timer);
+    }, [needle, searchable]);
 
     return (
         <Dialog.Root
@@ -93,6 +195,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
                 onOpenChange(next);
 
                 if (!next) {
+                    cancel();
                     setQuery('');
                 }
             }}
@@ -103,7 +206,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
                     <Dialog.Title className="sr-only">Search</Dialog.Title>
                     <Dialog.Description className="sr-only">
                         Search check-ins, appointments and users by reference,
-                        driver, plate or email.
+                        name, phone, email, PO, plate or license.
                     </Dialog.Description>
 
                     <form
@@ -121,7 +224,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
                                 id="dashboard-search"
                                 className="w-full appearance-none border-0 bg-white py-3 pr-4 pl-10 text-gray-800 placeholder-gray-400 focus:ring-transparent focus:outline-none dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500"
                                 type="search"
-                                placeholder="Reference, driver, plate or email…"
+                                placeholder="Reference, name, phone, email, PO, plate or license…"
                                 value={query}
                                 onChange={(event) =>
                                     setQuery(event.target.value)
@@ -133,37 +236,82 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
                     </form>
 
                     <div className="px-2 py-4">
-                        <div className="mb-2 px-2 text-xs font-semibold text-gray-400 uppercase dark:text-gray-500">
-                            {needle.length < 2 ? 'Type to search' : 'Results'}
-                        </div>
-                        {needle.length >= 2 && results.length === 0 && (
+                        {!searchable && (
+                            <div className="px-2 text-xs font-semibold text-gray-400 uppercase dark:text-gray-500">
+                                Type to search
+                            </div>
+                        )}
+                        {searchable && groups === null && (
+                            <div
+                                className="animate-pulse space-y-3 px-2 py-1"
+                                aria-label="Searching"
+                            >
+                                <div className="h-3 w-24 rounded bg-gray-200 dark:bg-gray-700" />
+                                <div className="h-4 w-3/4 rounded bg-gray-200 dark:bg-gray-700" />
+                                <div className="h-4 w-1/2 rounded bg-gray-200 dark:bg-gray-700" />
+                            </div>
+                        )}
+                        {groups?.length === 0 && (
                             <p className="px-2 text-sm text-gray-500 dark:text-gray-400">
-                                Nothing matches “{query}”.
+                                Nothing matches “{needle}”.
                             </p>
                         )}
-                        <ul className="text-sm">
-                            {results.map((result) => {
-                                const Icon = result.icon;
+                        {groups?.map((group) => (
+                            <div key={group.heading} className="mb-3 last:mb-0">
+                                <div className="mb-2 px-2 text-xs font-semibold text-gray-400 uppercase dark:text-gray-500">
+                                    {group.heading}
+                                </div>
+                                <ul className="text-sm">
+                                    {group.results.map((result) => {
+                                        const Icon = result.icon;
 
-                                return (
-                                    <li key={result.key}>
-                                        <Link
-                                            href={result.href}
-                                            onClick={() => onOpenChange(false)}
-                                            className="group flex items-center rounded-lg p-2 text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700/20"
-                                        >
-                                            <Icon className="mr-3 size-4 shrink-0 text-gray-400 dark:text-gray-500" />
-                                            <span className="font-medium">
-                                                {result.label}
-                                            </span>
-                                            <span className="ml-2 truncate text-gray-500 dark:text-gray-400">
-                                                {result.detail}
-                                            </span>
-                                        </Link>
-                                    </li>
-                                );
-                            })}
-                        </ul>
+                                        return (
+                                            <li key={result.key}>
+                                                <Link
+                                                    href={result.href}
+                                                    onClick={() =>
+                                                        onOpenChange(false)
+                                                    }
+                                                    className="group flex items-center rounded-lg p-2 text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700/20"
+                                                >
+                                                    <Icon className="mt-0.5 mr-3 size-4 shrink-0 self-start text-gray-400 dark:text-gray-500" />
+                                                    <div className="min-w-0">
+                                                        <div className="flex">
+                                                            <span className="font-medium">
+                                                                {result.label}
+                                                            </span>
+                                                            <span className="ml-2 truncate text-gray-500 dark:text-gray-400">
+                                                                {result.detail}
+                                                            </span>
+                                                        </div>
+                                                        {result.match && (
+                                                            <div className="truncate text-xs text-gray-500 dark:text-gray-400">
+                                                                {
+                                                                    MATCH_LABELS[
+                                                                        result
+                                                                            .match
+                                                                            .field
+                                                                    ]
+                                                                }
+                                                                :{' '}
+                                                                <Highlighted
+                                                                    value={displayValue(
+                                                                        result.match,
+                                                                    )}
+                                                                    term={
+                                                                        needle
+                                                                    }
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </Link>
+                                            </li>
+                                        );
+                                    })}
+                                </ul>
+                            </div>
+                        ))}
                     </div>
                 </Dialog.Content>
             </Dialog.Portal>

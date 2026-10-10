@@ -10,7 +10,7 @@ use Inertia\Testing\AssertableInertia;
 
 /*
  * The appointment detail page on the staff dashboard. Gates are pinned in
- * DashboardPagesTest.
+ * DashboardPagesTest, location scoping in DashboardLocationScopeTest.
  */
 
 it('shows an appointment with its history and the check-in it became', function (): void {
@@ -18,7 +18,7 @@ it('shows an appointment with its history and the check-in it became', function 
     $appointment->update(['status' => 'checked-in']);
     $checkIn = CheckIn::factory()->create(['appointment_id' => $appointment->id]);
 
-    $this->actingAs(User::factory()->withRole(Role::Shipping)->create())
+    $this->actingAs(User::factory()->withRole(Role::Admin)->create())
         ->get(route('dashboard.appointments.show', ['uuid' => $appointment->uuid]))
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->component('Dashboard/Appointments/Show')
@@ -33,7 +33,7 @@ it('shows an appointment with its history and the check-in it became', function 
 });
 
 it('returns not found for an appointment that does not exist', function (): void {
-    $this->actingAs(User::factory()->withRole(Role::Shipping)->create())
+    $this->actingAs(User::factory()->withRole(Role::Admin)->create())
         ->get(route('dashboard.appointments.show', ['uuid' => fake()->uuid()]))
         ->assertNotFound();
 });

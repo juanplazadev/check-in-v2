@@ -151,9 +151,10 @@ it('rejects a valid +1 phone number from outside the US and PR', function (): vo
     ]);
 });
 
-it('notifies every verified staff member of a booked appointment, and nobody else', function (): void {
+it('notifies every verified staff member who works the location of a booked appointment, and nobody else', function (): void {
     $location = Location::factory()->appointmentsOnly()->create();
-    $staff = collect(Role::staff())->map(fn (Role $role): User => User::factory()->withRole($role)->create());
+    $staff = collect(Role::staff())->map(fn (Role $role): User => User::factory()->withRole($role)->worksAt($location)->create());
+    $shippingElsewhere = User::factory()->withRole(Role::Shipping)->worksAt(Location::factory()->create())->create();
     $driver = User::factory()->withRole(Role::Driver)->create();
     $unverifiedStaff = User::factory()->withRole(Role::Shipping)->unverified()->create();
     passGate($location);
@@ -169,7 +170,7 @@ it('notifies every verified staff member of a booked appointment, and nobody els
         fn (AppointmentReceived $notification, array $channels): bool => $notification->appointment->is($appointment)
             && $channels === ['database', 'broadcast'],
     );
-    Notification::assertNotSentTo([$driver, $unverifiedStaff], AppointmentReceived::class);
+    Notification::assertNotSentTo([$driver, $unverifiedStaff, $shippingElsewhere], AppointmentReceived::class);
 });
 
 it('broadcasts a booked appointment to the live queue', function (): void {

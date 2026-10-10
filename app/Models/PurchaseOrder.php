@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Dashboard\MatchesSearchTerm;
 use Carbon\CarbonImmutable;
 use Database\Factories\PurchaseOrderFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -27,6 +28,8 @@ final class PurchaseOrder extends Model
 {
     /** @use HasFactory<PurchaseOrderFactory> */
     use HasFactory;
+
+    use MatchesSearchTerm;
 
     /**
      * @return MorphTo<Model, $this>

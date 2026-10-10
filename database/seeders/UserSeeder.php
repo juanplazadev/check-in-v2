@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Database\Seeders;
 
 use App\Enums\Role;
+use App\Models\Location;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\App;
@@ -51,6 +52,8 @@ final class UserSeeder extends Seeder
         $admin->forceFill(['email_verified_at' => Date::now()])->save();
         $admin->assignRole(Role::Admin);
 
+        $locationIds = Location::query()->orderBy('id')->pluck('id');
+
         foreach (Role::cases() as $role) {
             foreach (range(1, self::USERS_PER_ROLE) as $number) {
                 $email = self::roleUserEmail($role, $number);
@@ -59,9 +62,15 @@ final class UserSeeder extends Seeder
                     continue;
                 }
 
-                User::factory()
+                $user = User::factory()
                     ->withRole($role)
                     ->create(['email' => $email, 'password' => $password]);
+
+                // Round-robin, so every location has local shipping accounts
+                // to sign in as and none of them sees everything.
+                if (in_array($role, Role::locationScoped(), true) && $locationIds->isNotEmpty()) {
+                    $user->locations()->attach($locationIds[($number - 1) % $locationIds->count()]);
+                }
             }
         }
     }
