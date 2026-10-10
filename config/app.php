@@ -47,6 +47,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Running Under Sail
+    |--------------------------------------------------------------------------
+    |
+    | Set by Sail's containers. Read through config for the same reason as the
+    | commit above. Decides which processes `artisan dev` starts.
+    |
+    */
+
+    'sail' => (bool) env('LARAVEL_SAIL', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

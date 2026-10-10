@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react';
 import { Clock, Package } from 'lucide-react';
 
 import { formatWait, waitTone } from '@/components/dashboard/queue/wait';
+import RegionLabel from '@/components/dashboard/RegionLabel';
 import type { CheckInRecord } from '@/components/dashboard/types';
 import dashboardRoutes from '@/routes/dashboard';
 
@@ -73,10 +74,12 @@ export default function QueueCard({
                             Truck
                         </dt>
                         <dd className="font-semibold text-gray-700 dark:text-gray-200">
-                            {checkIn.truck.plate}{' '}
-                            <span className="text-gray-400">
-                                {checkIn.truck.plateState}
-                            </span>
+                            <div>{checkIn.truck.plate}</div>
+                            <RegionLabel
+                                state={checkIn.truck.plateState}
+                                country={checkIn.truck.plateCountry}
+                                className="font-sans text-[11px] font-normal text-gray-400"
+                            />
                         </dd>
                     </div>
                     <div className="rounded-md bg-gray-50 px-2 py-1.5 dark:bg-gray-700/40">
@@ -84,10 +87,12 @@ export default function QueueCard({
                             Trailer
                         </dt>
                         <dd className="font-semibold text-gray-700 dark:text-gray-200">
-                            {checkIn.trailer.plate}{' '}
-                            <span className="text-gray-400">
-                                {checkIn.trailer.plateState}
-                            </span>
+                            <div>{checkIn.trailer.plate}</div>
+                            <RegionLabel
+                                state={checkIn.trailer.plateState}
+                                country={checkIn.trailer.plateCountry}
+                                className="font-sans text-[11px] font-normal text-gray-400"
+                            />
                         </dd>
                     </div>
                 </dl>

@@ -147,7 +147,16 @@ const TRUCKS = [
     'Mack Anthem',
 ];
 const COLORS = ['White', 'Red', 'Blue', 'Black', 'Silver', 'Green'];
-const STATES = ['FL', 'CA', 'TX', 'PA', 'AZ', 'GA', 'NJ', 'NC'];
+const STATES = [
+    'Florida',
+    'California',
+    'Texas',
+    'Pennsylvania',
+    'Arizona',
+    'Georgia',
+    'New Jersey',
+    'North Carolina',
+];
 const DESTINATIONS: [string, string][] = [
     ['Atlanta', 'GA'],
     ['Dallas', 'TX'],
@@ -253,7 +262,7 @@ function makeCheckIn(index: number): CheckInRecord {
         referenceNumber: reference('C'),
         status,
         erpStatus,
-        location: pick(MOCK_LOCATIONS),
+        location: { ...pick(MOCK_LOCATIONS), uuid: uuid() },
         customer: pick(CUSTOMERS),
         driver: {
             name,
@@ -262,18 +271,23 @@ function makeCheckIn(index: number): CheckInRecord {
                 ? `${name.toLowerCase().replace(' ', '.')}@example.com`
                 : null,
             licenseState: pick(STATES),
+            licenseCountry: 'US',
+            licenseExpirationDate: null,
             licenseLastFour: String(between(1000, 9999)),
             hasAccount,
+            userUuid: hasAccount ? uuid() : null,
         },
         truck: {
             name: pick(TRUCKS),
             plate: plate(),
             plateState: pick(STATES),
+            plateCountry: 'US',
             color: pick(COLORS),
         },
         trailer: {
             plate: plate(),
             plateState: pick(STATES),
+            plateCountry: 'US',
             chute: pick<TrailerChute>(['n/a', 'center-chute', 'side-chute']),
         },
         emptyWeightLbs: random() > 0.3 ? between(28000, 36000) : null,
@@ -285,6 +299,9 @@ function makeCheckIn(index: number): CheckInRecord {
                 : null,
         appointmentReference: random() > 0.7 ? reference('A') : null,
         createdAt: iso(createdAt),
+        completedAt: status === 'completed' ? iso(createdAt + HOUR) : null,
+        erpSyncedAt: erpStatus === 'synced' ? iso(createdAt + 2 * HOUR) : null,
+        archivedAt: null,
         history: checkInHistory(createdAt, status, erpStatus),
     };
 }
@@ -342,15 +359,15 @@ function makeAppointment(): AppointmentRecord {
 }
 
 /** Only what the search modal reads; the users pages run on real data. */
-type MockUser = Pick<DashboardUser, 'id' | 'name' | 'email' | 'createdAt'>;
+type MockUser = Pick<DashboardUser, 'uuid' | 'name' | 'email' | 'createdAt'>;
 
-function makeUser(id: number): MockUser {
+function makeUser(index: number): MockUser {
     const name = driverName();
 
     return {
-        id,
+        uuid: uuid(),
         name,
-        email: `${name.toLowerCase().replace(' ', '.')}${id}@example.com`,
+        email: `${name.toLowerCase().replace(' ', '.')}${index}@example.com`,
         createdAt: iso(MOCK_NOW.getTime() - between(5, 400) * DAY),
     };
 }

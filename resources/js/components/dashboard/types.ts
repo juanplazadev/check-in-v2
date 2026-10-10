@@ -13,6 +13,29 @@ export type AppointmentStatus =
 /** Mirrors App\Enums\TrailerChute. */
 export type TrailerChute = 'n/a' | 'center-chute' | 'side-chute';
 
+/** Mirrors App\Enums\CheckInColumn: the check-in table columns a user may toggle. */
+export type CheckInColumn =
+    | 'reference'
+    | 'driver'
+    | 'customer'
+    | 'location'
+    | 'equipment'
+    | 'erpStatus'
+    | 'status'
+    | 'date'
+    | 'cellphone'
+    | 'truckName'
+    | 'trailerChute'
+    | 'destination'
+    | 'purchaseOrders'
+    | 'appointmentReference'
+    | 'truckColor'
+    | 'emptyWeight'
+    | 'truckPlateRegion'
+    | 'trailerPlateRegion'
+    | 'licenseRegion'
+    | 'licenseExpiration';
+
 /** Mirrors App\Enums\RecordHistoryEvent. */
 export type RecordHistoryEvent =
     | 'created'
@@ -41,26 +64,33 @@ export interface CheckInRecord {
     referenceNumber: string;
     status: CheckInStatus;
     erpStatus: CheckInErpStatus;
-    location: LocationSummary;
+    location: LocationSummary & { uuid: string };
     customer: string;
     driver: {
         name: string;
         cellphone: string;
         email: string | null;
         licenseState: string;
+        licenseCountry: string;
+        /** A calendar date (Y-m-d), or null where the location does not collect it. */
+        licenseExpirationDate: string | null;
         /** Only the last four digits ever reach the browser. */
         licenseLastFour: string;
         hasAccount: boolean;
+        /** The driver's account, for linking to their user page. Null for guests. */
+        userUuid: string | null;
     };
     truck: {
         name: string;
         plate: string;
         plateState: string;
+        plateCountry: string;
         color: string;
     };
     trailer: {
         plate: string;
         plateState: string;
+        plateCountry: string;
         chute: TrailerChute;
     };
     emptyWeightLbs: number | null;
@@ -73,6 +103,10 @@ export interface CheckInRecord {
     loadingInstructions: string | null;
     appointmentReference: string | null;
     createdAt: string;
+    completedAt: string | null;
+    erpSyncedAt: string | null;
+    /** Set when the check-in is soft-deleted. */
+    archivedAt: string | null;
     history: RecordHistoryEntry[];
 }
 
@@ -110,7 +144,7 @@ export interface UserLocation extends LocationSummary {
 
 /** Mirrors App\Dashboard\UserRecordResolver::record(). */
 export interface DashboardUser {
-    id: number;
+    uuid: string;
     name: string;
     email: string;
     cellphone: string | null;
@@ -127,4 +161,50 @@ export interface DashboardUser {
     lastActiveAt: string | null;
     checkInsCount: number;
     appointmentsCount: number;
+}
+
+/** Mirrors App\Dashboard\LocationRecordResolver::summary(). */
+export interface DashboardLocationSummary {
+    uuid: string;
+    name: string;
+    abbreviation: string;
+    city: string;
+    state: string;
+    timezone: string;
+    phone: string;
+    phoneExt: string | null;
+    isActive: boolean;
+    isCheckInsEnabled: boolean;
+    isAppointmentsEnabled: boolean;
+    staffCount: number;
+}
+
+export interface LocationStaffMember {
+    uuid: string;
+    name: string;
+    email: string;
+    roles: StaffRole[];
+}
+
+/** Mirrors App\Dashboard\LocationRecordResolver::record(). */
+export interface DashboardLocation extends DashboardLocationSummary {
+    email: string;
+    address: {
+        street1: string;
+        street2: string | null;
+        city: string;
+        state: string;
+        zipCode: string;
+        country: string;
+    };
+    /** Miles from the dock a driver may check in. */
+    maxDistanceAllowed: number;
+    appointmentBooking: {
+        maxDaysAhead: number;
+        slotIntervalMinutes: number;
+        minLeadTimeMinutes: number;
+        bufferBeforeCloseMinutes: number;
+    };
+    createdAt: string;
+    staff: LocationStaffMember[];
 }

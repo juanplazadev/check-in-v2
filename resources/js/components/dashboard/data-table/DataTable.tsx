@@ -1,4 +1,9 @@
-import type { ColumnDef, SortingState } from '@tanstack/react-table';
+import type {
+    ColumnDef,
+    ColumnOrderState,
+    SortingState,
+    ColumnVisibilityState,
+} from '@tanstack/react-table';
 import { useTable } from '@tanstack/react-table';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
@@ -13,6 +18,9 @@ import {
 
 /** Hidden column the toolbar search runs against; see `getSearchText`. */
 const SEARCH_COLUMN_ID = '__search';
+
+/** Stable default, so a table without a saved order does not get new state every render. */
+const DEFINITION_ORDER: ColumnOrderState = [];
 
 interface DataTableProps<TData extends object> {
     data: TData[];
@@ -30,6 +38,13 @@ interface DataTableProps<TData extends object> {
     /** Columns that exist only to be filtered on (by tabs, say) and are never shown. */
     hiddenColumns?: string[];
     /**
+     * Columns the user chose to show or hide. Ids left out stay visible; `hiddenColumns` always
+     * win, so this cannot reveal them.
+     */
+    columnVisibility?: ColumnVisibilityState;
+    /** Column ids in the order the user arranged them. Ids left out follow in definition order. */
+    columnOrder?: ColumnOrderState;
+    /**
      * Server-side mode: `data` is one page the backend already searched, filtered and sorted, so
      * the table only renders it and hands page changes back.
      */
@@ -43,6 +58,15 @@ export interface ServerPagination {
     pageSize: number;
     totalRows: number;
     onPageChange: (pageIndex: number) => void;
+    /** Both or neither: offers a rows-per-page picker, whose change the page sends back to the server. */
+    pageSizeOptions?: number[];
+    onPageSizeChange?: (pageSize: number) => void;
+    /**
+     * Both or neither: makes the headers sortable, one column at a time, and hands each change
+     * back so the page can ask the server for the newly ordered rows.
+     */
+    sorting?: SortingState;
+    onSortingChange?: (sorting: SortingState) => void;
 }
 
 function SortIndicator({ sort }: { sort: false | 'asc' | 'desc' }) {
@@ -70,9 +94,37 @@ function SortIndicator({ sort }: { sort: false | 'asc' | 'desc' }) {
     );
 }
 
+function PageSizePicker({
+    pageSize,
+    options,
+    onChange,
+}: {
+    pageSize: number;
+    options: number[];
+    onChange: (pageSize: number) => void;
+}) {
+    return (
+        <label className="flex items-center gap-2 text-sm whitespace-nowrap text-gray-500">
+            Rows per page
+            <select
+                value={pageSize}
+                onChange={(event) => onChange(Number(event.target.value))}
+                className="form-select bg-white py-1 dark:bg-gray-800"
+            >
+                {options.map((option) => (
+                    <option key={option} value={option}>
+                        {option}
+                    </option>
+                ))}
+            </select>
+        </label>
+    );
+}
+
 /**
  * Mosaic's card table on TanStack Table v9. Search, filters, sorting and paging run client-side
- * over the rows it is given; when the backend paginates, pass one page and `server`.
+ * over the rows it is given; when the backend paginates, pass one page and `server`, plus its
+ * sorting pair for sortable headers.
  */
 export default function DataTable<TData extends object>({
     data,
@@ -84,6 +136,8 @@ export default function DataTable<TData extends object>({
     emptyMessage = 'No results.',
     initialSorting = [],
     hiddenColumns = [],
+    columnVisibility,
+    columnOrder = DEFINITION_ORDER,
     server,
     getRowClassName,
 }: DataTableProps<TData>) {
@@ -93,7 +147,9 @@ export default function DataTable<TData extends object>({
 
     const { globalFilter, setGlobalFilter, columnFilters, setColumnFilters } =
         useDataTableContext();
-    const [sorting, setSorting] = useState<SortingState>(initialSorting);
+    const [clientSorting, setSorting] = useState<SortingState>(initialSorting);
+    const serverSorts = server?.onSortingChange !== undefined;
+    const sorting = server?.sorting ?? clientSorting;
 
     const allColumns = useMemo(() => {
         if (getSearchText === undefined) {
@@ -111,7 +167,7 @@ export default function DataTable<TData extends object>({
         ];
     }, [columns, getSearchText]);
 
-    const [initialVisibility] = useState(() =>
+    const [alwaysHidden] = useState(() =>
         Object.fromEntries(
             [...hiddenColumns, SEARCH_COLUMN_ID].map((id) => [id, false]),
         ),
@@ -126,6 +182,8 @@ export default function DataTable<TData extends object>({
             sorting,
             globalFilter,
             columnFilters,
+            columnVisibility: { ...columnVisibility, ...alwaysHidden },
+            columnOrder,
             ...(server && {
                 pagination: {
                     pageIndex: server.pageIndex,
@@ -136,16 +194,25 @@ export default function DataTable<TData extends object>({
         manualPagination: server !== undefined,
         manualFiltering: server !== undefined,
         manualSorting: server !== undefined,
-        enableSorting: server === undefined,
+        enableSorting: server === undefined || serverSorts,
+        enableMultiSort: !serverSorts,
         rowCount: server?.totalRows,
-        onSortingChange: setSorting,
+        onSortingChange: (updater) => {
+            const next =
+                typeof updater === 'function' ? updater(sorting) : updater;
+
+            if (server?.onSortingChange) {
+                server.onSortingChange(next);
+            } else {
+                setSorting(next);
+            }
+        },
         onGlobalFilterChange: setGlobalFilter,
         onColumnFiltersChange: setColumnFilters,
         globalFilterFn: 'includesString',
         getColumnCanGlobalFilter: (column) => column.id === SEARCH_COLUMN_ID,
         initialState: {
             pagination: { pageIndex: 0, pageSize },
-            columnVisibility: initialVisibility,
         },
     });
 
@@ -153,18 +220,31 @@ export default function DataTable<TData extends object>({
     const visibleColumnCount = table.getVisibleLeafColumns().length;
     const totalRows =
         server?.totalRows ?? table.getFilteredRowModel().rows.length;
+    const pageSizePicker = server?.pageSizeOptions &&
+        server.onPageSizeChange && (
+            <PageSizePicker
+                pageSize={server.pageSize}
+                options={server.pageSizeOptions}
+                onChange={server.onPageSizeChange}
+            />
+        );
 
     return (
         <>
             <div className="relative rounded-xl bg-white shadow-sm dark:bg-gray-800">
-                {title !== undefined && (
-                    <header className="px-5 py-4">
-                        <h2 className="font-semibold text-gray-800 dark:text-gray-100">
-                            {title}{' '}
-                            <span className="font-medium text-gray-400 dark:text-gray-500">
-                                {totalRows}
-                            </span>
-                        </h2>
+                {(title !== undefined || pageSizePicker) && (
+                    <header className="flex items-center justify-between gap-4 px-5 py-4">
+                        {title !== undefined && (
+                            <h2 className="font-semibold text-gray-800 dark:text-gray-100">
+                                {title}{' '}
+                                <span className="font-medium text-gray-400 dark:text-gray-500">
+                                    {totalRows}
+                                </span>
+                            </h2>
+                        )}
+                        {pageSizePicker && (
+                            <div className="ml-auto">{pageSizePicker}</div>
+                        )}
                     </header>
                 )}
                 <div className="overflow-x-auto">
@@ -263,25 +343,16 @@ export default function DataTable<TData extends object>({
                         pageIndex={server.pageIndex}
                         pageSize={server.pageSize}
                         totalRows={server.totalRows}
-                        canPrevious={server.pageIndex > 0}
-                        canNext={
-                            (server.pageIndex + 1) * server.pageSize <
-                            server.totalRows
-                        }
-                        onPrevious={() =>
-                            server.onPageChange(server.pageIndex - 1)
-                        }
-                        onNext={() => server.onPageChange(server.pageIndex + 1)}
+                        onPageChange={server.onPageChange}
                     />
                 ) : (
                     <DataTablePagination
                         pageIndex={table.state.pagination.pageIndex}
                         pageSize={table.state.pagination.pageSize}
                         totalRows={totalRows}
-                        canPrevious={table.getCanPreviousPage()}
-                        canNext={table.getCanNextPage()}
-                        onPrevious={() => table.previousPage()}
-                        onNext={() => table.nextPage()}
+                        onPageChange={(pageIndex) =>
+                            table.setPageIndex(pageIndex)
+                        }
                     />
                 )}
             </div>

@@ -1,5 +1,5 @@
 import { Link, useHttp } from '@inertiajs/react';
-import { CalendarClock, Search, Truck, User } from 'lucide-react';
+import { CalendarClock, MapPin, Search, Truck, User } from 'lucide-react';
 import { Dialog } from 'radix-ui';
 import { useEffect, useEffectEvent, useState } from 'react';
 
@@ -22,7 +22,8 @@ type MatchField =
     | 'email'
     | 'cellphone'
     | 'customer'
-    | 'license';
+    | 'license'
+    | 'uuid';
 
 /** Which field a record matched on; null when it was the reference or name, which the row already shows. */
 type SearchMatch = { field: MatchField; value: string } | null;
@@ -46,14 +47,17 @@ interface SearchResponse {
         scheduledFor: string;
         match: SearchMatch;
     }[];
-    users: { id: number; name: string; email: string }[];
+    users: { uuid: string; name: string; email: string }[];
+    /** Admins only, and only for a full-UUID term. */
+    locations: { uuid: string; name: string; abbreviation: string }[];
 }
 
 interface SearchResult {
     key: string;
     label: string;
     detail: string;
-    href: string;
+    /** Null for records with no dashboard page yet; the row then renders unlinked. */
+    href: string | null;
     icon: typeof Truck;
     match: SearchMatch;
 }
@@ -71,6 +75,7 @@ const MATCH_LABELS: Record<MatchField, string> = {
     cellphone: 'Phone',
     customer: 'Customer',
     license: 'License',
+    uuid: 'UUID',
 };
 
 const MIN_LENGTH = 2;
@@ -103,11 +108,22 @@ function groupsFrom(response: SearchResponse): SearchGroup[] {
         {
             heading: 'Users',
             results: response.users.map((user) => ({
-                key: `user-${user.id}`,
+                key: `user-${user.uuid}`,
                 label: user.name,
                 detail: user.email,
-                href: dashboardRoutes.users.show.url(user.id),
+                href: dashboardRoutes.users.show.url(user.uuid),
                 icon: User,
+                match: null,
+            })),
+        },
+        {
+            heading: 'Locations',
+            results: response.locations.map((location) => ({
+                key: `location-${location.uuid}`,
+                label: location.name,
+                detail: location.abbreviation,
+                href: null,
+                icon: MapPin,
                 match: null,
             })),
         },
@@ -144,6 +160,37 @@ function Highlighted({ value, term }: { value: string; term: string }) {
             </mark>
             {value.slice(end)}
         </span>
+    );
+}
+
+const ROW_CLASS =
+    'group flex items-center rounded-lg p-2 text-gray-800 dark:text-gray-100';
+
+/** A result's icon, label, detail and matched field, linked or not. */
+function ResultRow({ result, term }: { result: SearchResult; term: string }) {
+    const Icon = result.icon;
+
+    return (
+        <>
+            <Icon className="mt-0.5 mr-3 size-4 shrink-0 self-start text-gray-400 dark:text-gray-500" />
+            <div className="min-w-0">
+                <div className="flex">
+                    <span className="font-medium">{result.label}</span>
+                    <span className="ml-2 truncate text-gray-500 dark:text-gray-400">
+                        {result.detail}
+                    </span>
+                </div>
+                {result.match && (
+                    <div className="truncate text-xs text-gray-500 dark:text-gray-400">
+                        {MATCH_LABELS[result.match.field]}:{' '}
+                        <Highlighted
+                            value={displayValue(result.match)}
+                            term={term}
+                        />
+                    </div>
+                )}
+            </div>
+        </>
     );
 }
 
@@ -206,7 +253,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
                     <Dialog.Title className="sr-only">Search</Dialog.Title>
                     <Dialog.Description className="sr-only">
                         Search check-ins, appointments and users by reference,
-                        name, phone, email, PO, plate or license.
+                        name, phone, email, PO, plate, license or UUID.
                     </Dialog.Description>
 
                     <form
@@ -224,7 +271,7 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
                                 id="dashboard-search"
                                 className="w-full appearance-none border-0 bg-white py-3 pr-4 pl-10 text-gray-800 placeholder-gray-400 focus:ring-transparent focus:outline-none dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500"
                                 type="search"
-                                placeholder="Reference, name, phone, email, PO, plate or license…"
+                                placeholder="Reference, name, phone, email, PO, plate, license or UUID…"
                                 value={query}
                                 onChange={(event) =>
                                     setQuery(event.target.value)
@@ -262,53 +309,31 @@ export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
                                     {group.heading}
                                 </div>
                                 <ul className="text-sm">
-                                    {group.results.map((result) => {
-                                        const Icon = result.icon;
-
-                                        return (
-                                            <li key={result.key}>
+                                    {group.results.map((result) => (
+                                        <li key={result.key}>
+                                            {result.href === null ? (
+                                                <div className={ROW_CLASS}>
+                                                    <ResultRow
+                                                        result={result}
+                                                        term={needle}
+                                                    />
+                                                </div>
+                                            ) : (
                                                 <Link
                                                     href={result.href}
                                                     onClick={() =>
                                                         onOpenChange(false)
                                                     }
-                                                    className="group flex items-center rounded-lg p-2 text-gray-800 hover:bg-gray-100 dark:text-gray-100 dark:hover:bg-gray-700/20"
+                                                    className={`${ROW_CLASS} hover:bg-gray-100 dark:hover:bg-gray-700/20`}
                                                 >
-                                                    <Icon className="mt-0.5 mr-3 size-4 shrink-0 self-start text-gray-400 dark:text-gray-500" />
-                                                    <div className="min-w-0">
-                                                        <div className="flex">
-                                                            <span className="font-medium">
-                                                                {result.label}
-                                                            </span>
-                                                            <span className="ml-2 truncate text-gray-500 dark:text-gray-400">
-                                                                {result.detail}
-                                                            </span>
-                                                        </div>
-                                                        {result.match && (
-                                                            <div className="truncate text-xs text-gray-500 dark:text-gray-400">
-                                                                {
-                                                                    MATCH_LABELS[
-                                                                        result
-                                                                            .match
-                                                                            .field
-                                                                    ]
-                                                                }
-                                                                :{' '}
-                                                                <Highlighted
-                                                                    value={displayValue(
-                                                                        result.match,
-                                                                    )}
-                                                                    term={
-                                                                        needle
-                                                                    }
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    </div>
+                                                    <ResultRow
+                                                        result={result}
+                                                        term={needle}
+                                                    />
                                                 </Link>
-                                            </li>
-                                        );
-                                    })}
+                                            )}
+                                        </li>
+                                    ))}
                                 </ul>
                             </div>
                         ))}

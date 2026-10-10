@@ -16,6 +16,7 @@ use Inertia\Testing\AssertableInertia;
 it('shows an appointment with its history and the check-in it became', function (): void {
     $appointment = Appointment::factory()->create(['drivers_name' => 'Jane Driver']);
     $appointment->update(['status' => 'checked-in']);
+
     $checkIn = CheckIn::factory()->create(['appointment_id' => $appointment->id]);
 
     $this->actingAs(User::factory()->withRole(Role::Admin)->create())

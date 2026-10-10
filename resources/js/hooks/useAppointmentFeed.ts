@@ -10,8 +10,8 @@ import { useFeedConnection } from '@/hooks/useFeedConnection';
  * Mirrors App\Dashboard\BroadcastChannels::APPOINTMENTS. Each staff member has their own channel, and
  * the server pushes to it only records at locations they may see.
  */
-const channelFor = (userId: number): string =>
-    `dashboard.appointments.${userId}`;
+const channelFor = (userUuid: string): string =>
+    `dashboard.appointments.${userUuid}`;
 
 /** Mirrors broadcastAs() on App\Events\AppointmentCreated and AppointmentUpdated. */
 const CREATED = '.appointment.created';
@@ -40,7 +40,7 @@ export function useAppointmentFeed({
     onEvent,
     onReconnect,
 }: AppointmentFeedOptions): FeedStatus {
-    const channel = channelFor(usePage().props.auth.user.id);
+    const channel = channelFor(usePage().props.auth.user.uuid);
     const onEventRef = useRef(onEvent);
 
     useEffect(() => {

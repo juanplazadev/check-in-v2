@@ -7,6 +7,7 @@ namespace App\Models;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\RouteKey;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
@@ -29,6 +30,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  */
 #[Fillable(['code', 'linkable_type', 'linkable_id', 'last_visited_at', 'visits'])]
 #[Hidden(['id'])]
+#[RouteKey('code')]
 final class ShortLink extends Model
 {
     /**
@@ -37,11 +39,6 @@ final class ShortLink extends Model
     public function linkable(): MorphTo
     {
         return $this->morphTo();
-    }
-
-    public function getRouteKeyName(): string
-    {
-        return 'code';
     }
 
     /**

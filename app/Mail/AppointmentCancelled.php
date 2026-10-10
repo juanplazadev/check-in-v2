@@ -32,7 +32,7 @@ final class AppointmentCancelled extends Mailable implements ShouldQueue
 
         return new Envelope(
             subject: sprintf(
-                'Cancelled Appointment %s - %s',
+                'Canceled Appointment %s - %s',
                 $this->appointment->reference_number,
                 $this->appointment->location->name,
             ),
@@ -49,10 +49,10 @@ final class AppointmentCancelled extends Mailable implements ShouldQueue
         return new Content(
             view: 'mail.notification',
             with: [
-                'preheader' => sprintf('Appointment %s at %s was cancelled', $this->appointment->reference_number, $location->name),
-                'eyebrow' => 'Cancelled Appointment',
-                'title' => 'A driver has cancelled their appointment',
-                'intro' => 'The slot below is now free. The driver cancelled it from their account.',
+                'preheader' => sprintf('Appointment %s at %s was canceled', $this->appointment->reference_number, $location->name),
+                'eyebrow' => 'Canceled Appointment',
+                'title' => 'A driver has canceled their appointment',
+                'intro' => 'The slot below is now free. The driver canceled it from their account.',
                 'referenceLabel' => 'Reference',
                 'referenceNumber' => $this->appointment->reference_number,
                 'rows' => [

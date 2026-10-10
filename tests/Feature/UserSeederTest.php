@@ -11,7 +11,7 @@ it('seeds the admin account and a fixed number of users per role', function (Rol
 
     $expected = UserSeeder::USERS_PER_ROLE + ($role === Role::Admin ? 1 : 0);
 
-    expect(User::role($role)->count())->toBe($expected)
+    expect(User::query()->role($role)->count())->toBe($expected)
         ->and(User::query()->where('email', UserSeeder::ADMIN_EMAIL)->sole()->hasRole(Role::Admin))->toBeTrue();
 })->with(Role::cases());
 

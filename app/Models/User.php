@@ -18,6 +18,7 @@ use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -29,6 +30,7 @@ use Spatie\Permission\Traits\HasRoles;
 
 /**
  * @property-read int $id
+ * @property-read string $uuid
  * @property-read string $name
  * @property-read string $email
  * @property-read CarbonImmutable|null $email_verified_at
@@ -39,6 +41,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read CarbonImmutable|null $drivers_license_expiration_date
  * @property-read string|null $locale
  * @property-read Theme|null $theme
+ * @property-read array<string, mixed>|null $config
  * @property-read bool $notify_check_in_copy
  * @property-read bool $notify_appointment_copy
  * @property-read bool $notify_appointment_reminder
@@ -57,14 +60,15 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Collection<int, CheckIn> $checkIns
  * @property-read Collection<int, Appointment> $appointments
  */
-#[Fillable(['name', 'email', 'password', 'cellphone', 'drivers_license_number', 'drivers_license_state', 'drivers_license_expiration_date', 'locale', 'theme', 'notify_check_in_copy', 'notify_appointment_copy', 'notify_appointment_reminder', 'notification_channel'])]
-#[Hidden(['password', 'remember_token', 'drivers_license_number', 'location_id'])]
+#[Fillable(['name', 'email', 'password', 'cellphone', 'drivers_license_number', 'drivers_license_state', 'drivers_license_expiration_date', 'locale', 'theme', 'config', 'notify_check_in_copy', 'notify_appointment_copy', 'notify_appointment_reminder', 'notification_channel'])]
+#[Hidden(['id', 'password', 'remember_token', 'drivers_license_number', 'location_id'])]
 final class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory;
 
     use HasRoles;
+    use HasUuids;
     use MatchesSearchTerm;
     use Notifiable;
 
@@ -92,6 +96,7 @@ final class User extends Authenticatable implements MustVerifyEmail
         'drivers_license_expiration_date' => null,
         'locale' => null,
         'theme' => null,
+        'config' => null,
         'notify_check_in_copy' => true,
         'notify_appointment_copy' => true,
         'notify_appointment_reminder' => true,
@@ -177,6 +182,27 @@ final class User extends Authenticatable implements MustVerifyEmail
         };
     }
 
+    /**
+     * Generate a uuid for the public identifier only. The auto-incrementing id
+     * stays the primary key: HasUuids treats the key as a string only when it
+     * is listed here.
+     *
+     * @return list<string>
+     */
+    public function uniqueIds(): array
+    {
+        return ['uuid'];
+    }
+
+    /**
+     * The private channel for broadcast notifications, keyed by uuid so the
+     * channel name the browser subscribes to does not reveal the id.
+     */
+    public function receivesBroadcastNotificationsOn(): string
+    {
+        return 'App.Models.User.'.$this->uuid;
+    }
+
     public function routeNotificationForSms(): ?string
     {
         return $this->cellphone;
@@ -231,6 +257,7 @@ final class User extends Authenticatable implements MustVerifyEmail
             'drivers_license_number' => Encrypted::class,
             'drivers_license_expiration_date' => 'date:Y-m-d',
             'theme' => Theme::class,
+            'config' => 'array',
             'notify_check_in_copy' => 'boolean',
             'notify_appointment_copy' => 'boolean',
             'notify_appointment_reminder' => 'boolean',

@@ -19,7 +19,7 @@ return new class extends Migration
             SpatieRole::findOrCreate($role->value, 'web');
         }
 
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        resolve(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     public function down(): void
@@ -28,6 +28,6 @@ return new class extends Migration
             ->whereIn('name', array_column(Role::cases(), 'value'))
             ->delete();
 
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        resolve(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 };

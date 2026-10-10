@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\AppointmentStatus;
 use App\Enums\NotificationChannel;
 use App\Enums\RecordHistoryEvent;
 use App\Models\Appointment;
@@ -182,7 +183,7 @@ it('leaves a cancelled booking alone', function (): void {
     Notification::fake();
 
     $driver = reminderDriver();
-    reminderBooking($driver, ['status' => App\Enums\AppointmentStatus::Cancelled]);
+    reminderBooking($driver, ['status' => AppointmentStatus::Cancelled]);
 
     runReminderSweep();
 

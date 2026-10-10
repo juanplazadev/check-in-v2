@@ -1,7 +1,7 @@
 import type { Role } from '@/types/staff';
 
 export type User = {
-    id: number;
+    uuid: string;
     name: string;
     email: string;
     avatar?: string;

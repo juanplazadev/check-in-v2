@@ -80,7 +80,7 @@ final class AppServiceProvider extends ServiceProvider
      */
     private function configureDevCommands(): void
     {
-        if (env('LARAVEL_SAIL')) {
+        if (config('app.sail')) {
             DevCommands::only('vite', 'logs');
         }
     }
@@ -233,7 +233,7 @@ final class AppServiceProvider extends ServiceProvider
     {
         CheckIn::updated(static function (CheckIn $checkIn): void {
             if ($checkIn->wasChanged(['status', 'erp_status'])) {
-                CheckInUpdated::dispatch($checkIn);
+                event(new CheckInUpdated($checkIn));
             }
         });
     }
@@ -247,7 +247,7 @@ final class AppServiceProvider extends ServiceProvider
     {
         Appointment::updated(static function (Appointment $appointment): void {
             if ($appointment->wasChanged(['status', 'scheduled_for'])) {
-                AppointmentUpdated::dispatch($appointment);
+                event(new AppointmentUpdated($appointment));
             }
         });
     }

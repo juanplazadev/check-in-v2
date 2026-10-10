@@ -67,7 +67,7 @@ it('renders the confirm screen', function (): void {
     $this->actingAs(confirmingDriver())
         ->get(route('password.confirm'))
         ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page) => $page->component('Auth/ConfirmPassword'));
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page->component('Auth/ConfirmPassword'));
 });
 
 it('returns the driver to the page they were trying to reach', function (): void {

@@ -159,7 +159,7 @@ it('renders the notice for an unverified driver', function (): void {
     $this->actingAs(unverifiedDriver())
         ->get(route('verification.notice'))
         ->assertOk()
-        ->assertInertia(fn (AssertableInertia $page) => $page->component('Auth/VerifyEmail'));
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page->component('Auth/VerifyEmail'));
 });
 
 it('bounces a verified driver off the notice', function (): void {

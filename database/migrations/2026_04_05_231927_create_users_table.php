@@ -16,6 +16,7 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table): void {
             $table->id();
+            $table->uuid()->unique();
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
@@ -26,6 +27,8 @@ return new class extends Migration
             $table->date('drivers_license_expiration_date')->nullable();
             $table->string('locale', 5)->nullable();
             $table->string('theme')->nullable();
+            // Per-account UI settings, shaped like locations.config (e.g. dashboard.check_ins.columns).
+            $table->json('config')->nullable();
             /*
              * Notification preferences. Not nullable: an opt-out toggle has no
              * meaningful "never chosen" state the way locale and theme do, and

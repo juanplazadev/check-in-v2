@@ -1,5 +1,6 @@
 import {
     columnFilteringFeature,
+    columnOrderingFeature,
     columnVisibilityFeature,
     constructFilterFn,
     createColumnHelper,
@@ -47,6 +48,7 @@ export const dashboardTableFeatures = tableFeatures({
     rowSortingFeature,
     rowPaginationFeature,
     columnVisibilityFeature,
+    columnOrderingFeature,
     filteredRowModel: createFilteredRowModel(),
     sortedRowModel: createSortedRowModel(),
     paginatedRowModel: createPaginatedRowModel(),

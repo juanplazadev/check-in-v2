@@ -22,7 +22,7 @@ final readonly class CheckInRecordResolver
      *
      * @var list<string>
      */
-    public const array RELATIONS = ['location', 'purchaseOrders', 'appointment'];
+    public const array RELATIONS = ['location', 'purchaseOrders', 'appointment', 'user'];
 
     public function __construct(private RecordHistoryEntryResolver $history) {}
 
@@ -43,6 +43,7 @@ final readonly class CheckInRecordResolver
             'erpStatus' => $checkIn->erp_status->value,
             'location' => [
                 'id' => $checkIn->location->id,
+                'uuid' => $checkIn->location->uuid,
                 'name' => $checkIn->location->name,
             ],
             'customer' => $checkIn->customer,
@@ -51,18 +52,23 @@ final readonly class CheckInRecordResolver
                 'cellphone' => $checkIn->drivers_cellphone,
                 'email' => $checkIn->drivers_email,
                 'licenseState' => $checkIn->drivers_license_state ?? '',
+                'licenseCountry' => $checkIn->drivers_license_country ?? '',
+                'licenseExpirationDate' => $checkIn->drivers_license_expiration_date,
                 'licenseLastFour' => mb_substr((string) $checkIn->drivers_license_number, -4),
                 'hasAccount' => $checkIn->user_id !== null,
+                'userUuid' => $checkIn->user?->uuid,
             ],
             'truck' => [
                 'name' => $checkIn->truck_name,
                 'plate' => $checkIn->truck_plate,
                 'plateState' => $checkIn->truck_plate_state ?? '',
+                'plateCountry' => $checkIn->truck_plate_country ?? '',
                 'color' => $checkIn->truck_color ?? '',
             ],
             'trailer' => [
                 'plate' => $checkIn->trailer_plate,
                 'plateState' => $checkIn->trailer_plate_state ?? '',
+                'plateCountry' => $checkIn->trailer_plate_country ?? '',
                 'chute' => ($checkIn->trailer_chute ?? TrailerChute::NotApplicable)->value,
             ],
             'emptyWeightLbs' => $checkIn->empty_weight_lbs === null ? null : (int) $checkIn->empty_weight_lbs,
@@ -75,6 +81,9 @@ final readonly class CheckInRecordResolver
             'loadingInstructions' => $checkIn->loading_instructions,
             'appointmentReference' => $checkIn->appointment?->reference_number,
             'createdAt' => $checkIn->created_at->toIso8601String(),
+            'completedAt' => $checkIn->completed_at?->toIso8601String(),
+            'erpSyncedAt' => $checkIn->erp_synced_at?->toIso8601String(),
+            'archivedAt' => $checkIn->deleted_at?->toIso8601String(),
             'history' => $checkIn->relationLoaded('history')
                 ? $checkIn->history->map(fn (RecordHistory $entry): array => $this->history->entry($entry, 'Check-in submitted'))->all()
                 : [],

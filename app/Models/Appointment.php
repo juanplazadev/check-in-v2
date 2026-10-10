@@ -12,6 +12,7 @@ use Carbon\CarbonImmutable;
 use Database\Factories\AppointmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\RouteKey;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -44,6 +45,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 #[Fillable(['uuid', 'reference_number', 'location_id', 'user_id', 'scheduled_for', 'drivers_name', 'drivers_cellphone', 'locale', 'status', 'cancelled_at', 'cancelled_reason', 'claimed_at', 'claimed_via', 'reminder_sent_at'])]
 #[Hidden(['id'])]
+#[RouteKey('uuid')]
 final class Appointment extends Model
 {
     /** @use HasFactory<AppointmentFactory> */
@@ -97,11 +99,6 @@ final class Appointment extends Model
     public function history(): MorphMany
     {
         return $this->morphMany(RecordHistory::class, 'recordable')->oldest();
-    }
-
-    public function getRouteKeyName(): string
-    {
-        return 'uuid';
     }
 
     protected function casts(): array

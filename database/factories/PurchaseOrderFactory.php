@@ -8,6 +8,9 @@ use App\Models\PurchaseOrder;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Override;
 
+/**
+ * @extends Factory<PurchaseOrder>
+ */
 final class PurchaseOrderFactory extends Factory
 {
     #[Override]
@@ -16,7 +19,7 @@ final class PurchaseOrderFactory extends Factory
     public function definition(): array
     {
         return [
-            'number' => mb_strtoupper($this->faker->bothify('PO-#####')),
+            'number' => mb_strtoupper(fake()->bothify('PO-#####')),
         ];
     }
 }

@@ -26,12 +26,12 @@ final class AppointmentFactory extends Factory
     public function definition(): array
     {
         return [
-            'uuid' => $this->faker->uuid(),
+            'uuid' => fake()->uuid(),
             'reference_number' => resolve(ReferenceNumberGenerator::class)->generate(ReferenceType::Appointment),
             'scheduled_for' => Date::now(),
-            'drivers_name' => $this->faker->name(),
-            'drivers_cellphone' => '+1'.$this->faker->numerify('##########'),
-            'locale' => $this->faker->randomElement(['en', 'es']),
+            'drivers_name' => fake()->name(),
+            'drivers_cellphone' => '+1'.fake()->numerify('##########'),
+            'locale' => fake()->randomElement(['en', 'es']),
 
             // A freshly booked appointment is Scheduled and has never been
             // cancelled or claimed. Those fields belong to the states below;
@@ -115,7 +115,7 @@ final class AppointmentFactory extends Factory
         return $this->state(fn (array $attributes): array => [
             'status' => AppointmentStatus::Cancelled,
             'cancelled_at' => Date::now(),
-            'cancelled_reason' => $reason ?? $this->faker->sentence(),
+            'cancelled_reason' => $reason ?? fake()->sentence(),
         ]);
     }
 

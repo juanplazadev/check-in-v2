@@ -8,6 +8,7 @@ use App\DTOs\LocationAvailabilityDTO;
 use App\DTOs\LocationScheduleDTO;
 use App\Geo\DistanceCalculator;
 use App\Models\Location;
+use Carbon\CarbonInterface;
 
 final readonly class CheckInAvailabilityResolver
 {
@@ -70,7 +71,7 @@ final readonly class CheckInAvailabilityResolver
             ]);
         }
 
-        if ($schedule->hasOverride && $schedule->openTime && $schedule->closeTime) {
+        if ($schedule->hasOverride && $schedule->openTime instanceof CarbonInterface && $schedule->closeTime instanceof CarbonInterface) {
             return __('messages.checkInSelectLocation.outsideExceptionHours', [
                 'name' => $location->name,
                 'open' => $schedule->openTime->format('g:i A'),
@@ -79,7 +80,7 @@ final readonly class CheckInAvailabilityResolver
         }
 
         // No exception - outside regular business hours
-        if ($schedule->openTime && $schedule->closeTime) {
+        if ($schedule->openTime instanceof CarbonInterface && $schedule->closeTime instanceof CarbonInterface) {
             return __('messages.checkInSelectLocation.outsideHours', [
                 'name' => $location->name,
                 'open' => $schedule->openTime->format('g:i A'),

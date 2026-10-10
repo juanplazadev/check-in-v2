@@ -42,7 +42,7 @@ it('stores the check-in summary the bell renders', function (): void {
         ]);
 });
 
-it('stores the appointment summary the bell renders, in the location\'s timezone', function (): void {
+it("stores the appointment summary the bell renders, in the location's timezone", function (): void {
     $user = User::factory()->withRole(Role::Shipping)->create();
     $appointment = Appointment::factory()
         ->atLocation(Location::factory()->create(['timezone' => 'America/Phoenix']))
@@ -75,7 +75,7 @@ it('marks an appointment notification read and opens the appointment', function 
     expect($user->unreadNotifications()->count())->toBe(0);
 });
 
-it('shares the signed-in user\'s notifications and unread count on dashboard pages', function (): void {
+it("shares the signed-in user's notifications and unread count on dashboard pages", function (): void {
     $user = User::factory()->withRole(Role::Shipping)->create();
     $read = bellNotificationFor($user);
     bellNotificationFor($user);
@@ -111,7 +111,7 @@ it('marks a notification read and opens its check-in', function (): void {
     expect($user->unreadNotifications()->count())->toBe(0);
 });
 
-it('returns 404 when marking another user\'s notification read', function (): void {
+it("returns 404 when marking another user's notification read", function (): void {
     $owner = User::factory()->withRole(Role::Shipping)->create();
     $id = bellNotificationFor($owner);
 
@@ -122,7 +122,7 @@ it('returns 404 when marking another user\'s notification read', function (): vo
     expect($owner->unreadNotifications()->count())->toBe(1);
 });
 
-it('marks only the signed-in user\'s notifications read with mark all', function (): void {
+it("marks only the signed-in user's notifications read with mark all", function (): void {
     $user = User::factory()->withRole(Role::Shipping)->create();
     $other = User::factory()->withRole(Role::Shipping)->create();
     bellNotificationFor($user);

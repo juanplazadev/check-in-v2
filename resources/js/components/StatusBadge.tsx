@@ -17,6 +17,11 @@ const STATUS_STYLES: Record<string, StatusStyle> = {
         className: 'bg-gray-400/15 text-gray-500 dark:text-gray-400',
         dot: 'bg-gray-400',
     },
+    // A soft-deleted check-in, shown beside its real status.
+    archived: {
+        className: 'bg-gray-400/15 text-gray-500 dark:text-gray-400',
+        dot: 'bg-gray-400',
+    },
     scheduled: {
         className: 'bg-blue-500/12 text-blue-700 dark:text-blue-400',
         dot: 'bg-blue-500',

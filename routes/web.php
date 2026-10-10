@@ -11,8 +11,10 @@ use App\Http\Controllers\CheckInController;
 use App\Http\Controllers\CheckInDistanceController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\Dashboard\AppointmentController as DashboardAppointmentController;
+use App\Http\Controllers\Dashboard\CheckInColumnController as DashboardCheckInColumnController;
 use App\Http\Controllers\Dashboard\CheckInController as DashboardCheckInController;
 use App\Http\Controllers\Dashboard\LiveQueueController;
+use App\Http\Controllers\Dashboard\LocationController as DashboardLocationController;
 use App\Http\Controllers\Dashboard\NotificationController as DashboardNotificationController;
 use App\Http\Controllers\Dashboard\SearchController as DashboardSearchController;
 use App\Http\Controllers\Dashboard\UserController as DashboardUserController;
@@ -150,7 +152,7 @@ Route::middleware('setLocale')->group(function (): void {
     /**
      * Staff dashboard, for every staff role. Check-ins, the live queue and users
      * run on real data; the other pages still render mock data until their
-     * backend pass. User management is admin-only.
+     * backend pass. User and location management is admin-only.
      */
     Route::middleware(['auth', 'verified', RoleMiddleware::using(Role::staff())])->group(function (): void {
         Route::inertia('/dashboard', 'Dashboard/Index')->name('dashboard');
@@ -164,6 +166,7 @@ Route::middleware('setLocale')->group(function (): void {
                 ->name('search');
 
             Route::get('/check-ins', [DashboardCheckInController::class, 'index'])->name('checkIns');
+            Route::patch('/check-ins/columns', DashboardCheckInColumnController::class)->name('checkIns.columns');
             Route::get('/check-ins/{uuid}', [DashboardCheckInController::class, 'show'])
                 ->whereUuid('uuid')
                 ->name('checkIns.show');
@@ -181,9 +184,14 @@ Route::middleware('setLocale')->group(function (): void {
 
             Route::middleware(RoleMiddleware::using(Role::Admin))->group(function (): void {
                 Route::get('/users', [DashboardUserController::class, 'index'])->name('users');
-                Route::get('/users/{id}', [DashboardUserController::class, 'show'])
-                    ->whereNumber('id')
+                Route::get('/users/{uuid}', [DashboardUserController::class, 'show'])
+                    ->whereUuid('uuid')
                     ->name('users.show');
+
+                Route::get('/locations', [DashboardLocationController::class, 'index'])->name('locations');
+                Route::get('/locations/{uuid}', [DashboardLocationController::class, 'show'])
+                    ->whereUuid('uuid')
+                    ->name('locations.show');
             });
         });
     });

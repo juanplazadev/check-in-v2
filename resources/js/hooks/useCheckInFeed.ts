@@ -10,7 +10,8 @@ import { useFeedConnection } from '@/hooks/useFeedConnection';
  * Mirrors App\Dashboard\BroadcastChannels::CHECK_INS. Each staff member has their own channel, and
  * the server pushes to it only records at locations they may see.
  */
-const channelFor = (userId: number): string => `dashboard.check-ins.${userId}`;
+const channelFor = (userUuid: string): string =>
+    `dashboard.check-ins.${userUuid}`;
 
 /** Mirrors broadcastAs() on App\Events\CheckInCreated and CheckInUpdated. */
 const CREATED = '.check-in.created';
@@ -42,7 +43,7 @@ export function useCheckInFeed({
     onEvent,
     onReconnect,
 }: CheckInFeedOptions): FeedStatus {
-    const channel = channelFor(usePage().props.auth.user.id);
+    const channel = channelFor(usePage().props.auth.user.uuid);
     const onEventRef = useRef(onEvent);
 
     useEffect(() => {

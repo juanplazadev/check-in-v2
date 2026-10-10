@@ -1,4 +1,4 @@
-import { format, formatDistanceStrict } from 'date-fns';
+import { format, formatDistanceStrict, parseISO } from 'date-fns';
 
 import { MOCK_NOW } from '@/lib/dashboard/mock';
 
@@ -8,6 +8,11 @@ export function formatDateTime(timestamp: string): string {
 
 export function formatDate(timestamp: string): string {
     return format(new Date(timestamp), 'MMM d, yyyy');
+}
+
+/** A calendar date (YYYY-MM-DD) with no time zone, shown as MM/DD/YYYY. */
+export function formatCalendarDate(date: string): string {
+    return format(parseISO(date), 'MM/dd/yyyy');
 }
 
 export function formatTime(timestamp: string): string {
@@ -36,11 +41,25 @@ export function formatPhone(e164: string): string {
         : e164;
 }
 
+/** Slugs whose display text is not their title case, e.g. the stored `cancelled` reads in US spelling. */
+const LABEL_OVERRIDES: Record<string, string> = {
+    cancelled: 'Canceled',
+};
+
 export function formatLabel(slug: string): string {
+    if (slug in LABEL_OVERRIDES) {
+        return LABEL_OVERRIDES[slug];
+    }
+
     return slug
         .split('-')
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ');
+}
+
+/** "America/New_York" reads as "New York". */
+export function timezoneLabel(timezone: string): string {
+    return (timezone.split('/').pop() ?? timezone).replaceAll('_', ' ');
 }
 
 export function initialsOf(name: string): string {

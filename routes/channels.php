@@ -7,9 +7,7 @@ use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Broadcast;
 
-Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
-    return (int) $user->id === (int) $id;
-});
+Broadcast::channel('App.Models.User.{uuid}', fn (User $user, string $uuid): bool => $user->uuid === $uuid);
 
 /*
  * The staff dashboard's live feeds, one channel per staff member: each event
@@ -18,10 +16,10 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
  */
 Broadcast::channel(
     BroadcastChannels::CHECK_INS,
-    fn (User $user, string $userId): bool => $user->id === (int) $userId && $user->hasVerifiedEmail() && $user->hasAnyRole(Role::staff()),
+    fn (User $user, string $userUuid): bool => $user->uuid === $userUuid && $user->hasVerifiedEmail() && $user->hasAnyRole(Role::staff()),
 );
 
 Broadcast::channel(
     BroadcastChannels::APPOINTMENTS,
-    fn (User $user, string $userId): bool => $user->id === (int) $userId && $user->hasVerifiedEmail() && $user->hasAnyRole(Role::staff()),
+    fn (User $user, string $userUuid): bool => $user->uuid === $userUuid && $user->hasVerifiedEmail() && $user->hasAnyRole(Role::staff()),
 );

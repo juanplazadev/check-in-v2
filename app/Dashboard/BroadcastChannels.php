@@ -18,9 +18,9 @@ use Illuminate\Broadcasting\PrivateChannel;
  */
 final class BroadcastChannels
 {
-    public const string CHECK_INS = 'dashboard.check-ins.{userId}';
+    public const string CHECK_INS = 'dashboard.check-ins.{userUuid}';
 
-    public const string APPOINTMENTS = 'dashboard.appointments.{userId}';
+    public const string APPOINTMENTS = 'dashboard.appointments.{userUuid}';
 
     /**
      * @return list<PrivateChannel>
@@ -45,7 +45,7 @@ final class BroadcastChannels
     {
         return array_values(resolve(DashboardAudience::class)
             ->execute($locationId)
-            ->map(fn (User $user): PrivateChannel => new PrivateChannel(str_replace('{userId}', (string) $user->id, $pattern)))
+            ->map(fn (User $user): PrivateChannel => new PrivateChannel(str_replace('{userUuid}', $user->uuid, $pattern)))
             ->all());
     }
 }

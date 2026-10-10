@@ -6,6 +6,7 @@ import {
     NewTag,
 } from '@/components/dashboard/queue/QueueCard';
 import { formatWait, waitTone } from '@/components/dashboard/queue/wait';
+import RegionLabel from '@/components/dashboard/RegionLabel';
 import dashboardRoutes from '@/routes/dashboard';
 
 /**
@@ -41,11 +42,13 @@ export default function QueueRow({
                 <span className="hidden truncate text-gray-500 md:block dark:text-gray-400">
                     {checkIn.customer}
                 </span>
-                <span className="hidden font-mono text-xs text-gray-600 xl:block dark:text-gray-300">
-                    {checkIn.truck.plate}{' '}
-                    <span className="text-gray-400">
-                        {checkIn.truck.plateState}
-                    </span>
+                <span className="hidden min-w-0 items-center gap-2 font-mono text-xs text-gray-600 xl:flex dark:text-gray-300">
+                    <span className="shrink-0">{checkIn.truck.plate}</span>
+                    <RegionLabel
+                        state={checkIn.truck.plateState}
+                        country={checkIn.truck.plateCountry}
+                        className="font-sans text-gray-400"
+                    />
                 </span>
                 <span className="hidden truncate text-xs text-gray-500 xl:block dark:text-gray-400">
                     {checkIn.location.name}

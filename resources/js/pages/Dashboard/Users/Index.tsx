@@ -51,7 +51,7 @@ const columns = column.columns([
         header: 'Name',
         cell: ({ row, getValue }) => (
             <Link
-                href={dashboardRoutes.users.show.url(row.original.id)}
+                href={dashboardRoutes.users.show.url(row.original.uuid)}
                 className="group flex items-center"
             >
                 <span className="mr-3 flex size-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
@@ -228,7 +228,7 @@ export default function UsersIndex({
                 <DataTable
                     data={users.data}
                     columns={columns}
-                    getRowId={(user) => String(user.id)}
+                    getRowId={(user) => user.uuid}
                     title="All users"
                     hiddenColumns={['type']}
                     emptyMessage="No users match these filters."

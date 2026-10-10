@@ -190,7 +190,7 @@ final readonly class AppointmentScheduleResolver
     private function formatOpenCloseTime(LocationScheduleDTO $schedule): string
     {
         return match (true) {
-            $schedule->openTime && $schedule->closeTime => $schedule->openTime->format('g:i A').' - '.$schedule->closeTime->format('g:i A T'),
+            $schedule->openTime instanceof CarbonInterface && $schedule->closeTime instanceof CarbonInterface => $schedule->openTime->format('g:i A').' - '.$schedule->closeTime->format('g:i A T'),
             ! $schedule->isOpen => __('messages.appointmentSelectLocation.closedToday'),
             default => 'N/A',
         };

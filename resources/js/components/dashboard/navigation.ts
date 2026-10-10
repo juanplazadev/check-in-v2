@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 import {
     CalendarClock,
     LayoutDashboard,
+    MapPin,
     RadioTower,
     Truck,
     Users,
@@ -76,6 +77,12 @@ export const DASHBOARD_NAVIGATION: DashboardNavGroup[] = [
                 label: 'Users',
                 href: dashboardRoutes.users.url(),
                 icon: Users,
+                roles: ['admin'],
+            },
+            {
+                label: 'Locations',
+                href: dashboardRoutes.locations.url(),
+                icon: MapPin,
                 roles: ['admin'],
             },
         ],

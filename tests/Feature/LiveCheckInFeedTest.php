@@ -16,6 +16,7 @@ use App\Models\Location;
 use App\Models\User;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Testing\TestResponse;
 
 /*
  * The websocket feeds behind the live queue: who may subscribe to the
@@ -40,11 +41,11 @@ function useReverbBroadcaster(): void
     require base_path('routes/channels.php');
 }
 
-function authorizeCheckInFeed(User $user, string $feed = 'check-ins', ?User $owner = null): Illuminate\Testing\TestResponse
+function authorizeCheckInFeed(User $user, string $feed = 'check-ins', ?User $owner = null): TestResponse
 {
     return test()->actingAs($user)->post('/broadcasting/auth', [
         'socket_id' => '1234.5678',
-        'channel_name' => "private-dashboard.{$feed}.".($owner ?? $user)->id,
+        'channel_name' => "private-dashboard.{$feed}.".($owner ?? $user)->uuid,
     ]);
 }
 
@@ -56,7 +57,7 @@ it('lets every staff role subscribe to the check-in feed', function (Role $role)
         ->assertJsonStructure(['auth']);
 })->with(Role::staff());
 
-it('refuses another staff member\'s feed', function (string $feed): void {
+it("refuses another staff member's feed", function (string $feed): void {
     useReverbBroadcaster();
 
     authorizeCheckInFeed(
@@ -65,6 +66,33 @@ it('refuses another staff member\'s feed', function (string $feed): void {
         owner: User::factory()->withRole(Role::Shipping)->create(),
     )->assertForbidden();
 })->with(['check-ins', 'appointments']);
+
+it('refuses a feed addressed by numeric id', function (): void {
+    useReverbBroadcaster();
+    $user = User::factory()->withRole(Role::Admin)->create();
+
+    test()->actingAs($user)->post('/broadcasting/auth', [
+        'socket_id' => '1234.5678',
+        'channel_name' => "private-dashboard.check-ins.{$user->id}",
+    ])->assertForbidden();
+});
+
+it('authorizes the notification channel by uuid', function (): void {
+    useReverbBroadcaster();
+    $user = User::factory()->withRole(Role::Admin)->create();
+
+    expect($user->receivesBroadcastNotificationsOn())->toBe("App.Models.User.{$user->uuid}");
+
+    test()->actingAs($user)->post('/broadcasting/auth', [
+        'socket_id' => '1234.5678',
+        'channel_name' => "private-App.Models.User.{$user->uuid}",
+    ])->assertSuccessful();
+
+    test()->actingAs($user)->post('/broadcasting/auth', [
+        'socket_id' => '1234.5678',
+        'channel_name' => "private-App.Models.User.{$user->id}",
+    ])->assertForbidden();
+});
 
 it('pushes a record only to the staff who work its location', function (string $feed, Closure $eventAt): void {
     $location = Location::factory()->create();
@@ -76,8 +104,8 @@ it('pushes a record only to the staff who work its location', function (string $
     $channels = array_map(fn (PrivateChannel $channel): string => $channel->name, $eventAt($location)->broadcastOn());
 
     expect($channels)->toEqualCanonicalizing([
-        "private-dashboard.{$feed}.{$admin->id}",
-        "private-dashboard.{$feed}.{$shippingHere->id}",
+        "private-dashboard.{$feed}.{$admin->uuid}",
+        "private-dashboard.{$feed}.{$shippingHere->uuid}",
     ]);
 })->with([
     'check-in' => ['check-ins', fn (Location $location): CheckInCreated => new CheckInCreated(CheckIn::factory()->atLocation($location)->create())],

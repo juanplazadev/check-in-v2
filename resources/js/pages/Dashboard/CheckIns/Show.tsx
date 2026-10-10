@@ -43,6 +43,9 @@ export default function CheckInShow({ checkIn }: { checkIn: CheckInRecord }) {
                 subtitle={`Submitted ${formatDateTime(checkIn.createdAt)} at ${checkIn.location.name}`}
                 actions={
                     <>
+                        {checkIn.archivedAt !== null && (
+                            <StatusBadge status="archived" label="Archived" />
+                        )}
                         <StatusBadge
                             status={checkIn.status}
                             label={formatLabel(checkIn.status)}

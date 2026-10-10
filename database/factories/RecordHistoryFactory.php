@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Model;
 use Override;
 
+/**
+ * @extends Factory<RecordHistory>
+ */
 final class RecordHistoryFactory extends Factory
 {
     #[Override]

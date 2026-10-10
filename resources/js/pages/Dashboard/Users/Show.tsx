@@ -2,14 +2,12 @@ import { Head } from '@inertiajs/react';
 import type { LucideIcon } from 'lucide-react';
 import {
     CalendarClock,
-    Check,
     Clock,
     Globe,
     MapPin,
     Phone,
     TriangleAlert,
     Truck,
-    X,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
@@ -17,6 +15,7 @@ import AdminOnly from '@/components/dashboard/AdminOnly';
 import BackLink from '@/components/dashboard/BackLink';
 import Card from '@/components/dashboard/Card';
 import { DetailCard, DetailRow } from '@/components/dashboard/DetailCard';
+import FeaturePill from '@/components/dashboard/FeaturePill';
 import PageHeader from '@/components/dashboard/PageHeader';
 import RoleChips from '@/components/dashboard/RoleChips';
 import type { DashboardUser, UserLocation } from '@/components/dashboard/types';
@@ -25,6 +24,7 @@ import {
     formatDateTime,
     formatPhone,
     initialsOf,
+    timezoneLabel,
 } from '@/lib/dashboard/format';
 import dashboardRoutes from '@/routes/dashboard';
 import { STAFF_ROLE_LABELS } from '@/types/staff';
@@ -38,40 +38,6 @@ function splitLocationName(name: string): [string, string | null] {
     const [primary, ...rest] = name.split(' - ');
 
     return [primary, rest.length > 0 ? rest.join(' - ') : null];
-}
-
-/** "America/New_York" reads as "New York". */
-function timezoneLabel(timezone: string): string {
-    return (timezone.split('/').pop() ?? timezone).replaceAll('_', ' ');
-}
-
-function FeaturePill({
-    icon: Icon,
-    label,
-    enabled,
-}: {
-    icon: LucideIcon;
-    label: string;
-    enabled: boolean;
-}) {
-    const StateIcon = enabled ? Check : X;
-
-    return (
-        <span
-            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                enabled
-                    ? 'bg-brand-green/12 text-brand-green'
-                    : 'bg-gray-100 text-gray-500 dark:bg-gray-700/60 dark:text-gray-400'
-            }`}
-        >
-            <Icon className="size-3.5" aria-hidden />
-            {label}
-            <StateIcon
-                className="size-3"
-                aria-label={enabled ? 'enabled' : 'disabled'}
-            />
-        </span>
-    );
 }
 
 function LocationFact({

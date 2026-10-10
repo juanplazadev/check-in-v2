@@ -48,7 +48,7 @@ final readonly class RecordHistoryEntryResolver
                 $context['from'] ?? 'unknown',
                 $context['to'] ?? 'unknown',
             ),
-            RecordHistoryEvent::Claimed => 'Linked to the driver\'s account',
+            RecordHistoryEvent::Claimed => "Linked to the driver's account",
             RecordHistoryEvent::AccountDeleted => 'Driver deleted their account',
         };
     }

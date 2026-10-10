@@ -48,7 +48,7 @@ final readonly class BookAppointmentAction
         $this->notifyStaff->handle(new AppointmentReceived($appointment), $appointment->location_id);
 
         // Onto the live queue's arriving rail.
-        AppointmentCreated::dispatch($appointment);
+        event(new AppointmentCreated($appointment));
 
         return $appointment;
     }

@@ -45,7 +45,7 @@ final readonly class CompleteCheckInAction
         $this->sendCheckInCopy->handle($checkIn);
 
         // Onto every open staff dashboard, purchase orders included.
-        CheckInCreated::dispatch($checkIn);
+        event(new CheckInCreated($checkIn));
 
         // Into the notification bell of every staff member who works this location.
         $this->notifyStaff->handle(new CheckInReceived($checkIn), $checkIn->location_id);

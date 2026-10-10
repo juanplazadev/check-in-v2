@@ -72,7 +72,7 @@ export default function NotificationsMenu() {
     }>();
 
     // A broadcast notification only says "something arrived"; the prop is the source of truth.
-    useEchoNotification(`App.Models.User.${props.auth.user.id}`, () =>
+    useEchoNotification(`App.Models.User.${props.auth.user.uuid}`, () =>
         router.reload({ only: ['notifications'], async: true }),
     );
 

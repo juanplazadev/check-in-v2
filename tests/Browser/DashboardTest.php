@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Enums\Role;
+use App\Models\CheckIn;
 use App\Models\User;
 
 /**
@@ -23,12 +24,14 @@ it('renders the overview without console errors', function (): void {
 });
 
 it('filters the check-ins table by status tab and search', function (): void {
+    CheckIn::factory()->count(30)->create();
+
     $page = visit(route('dashboard.checkIns'))
         ->assertSee('All check-ins')
-        ->assertSee('Showing 1 to 10 of 140 results');
+        ->assertSee('Showing 1 to 25 of 30 results');
 
-    $page->click('Cancelled')
-        ->assertDontSee('of 140 results')
+    $page->click('button:has-text("Canceled")')
+        ->assertDontSee('of 30 results')
         ->type('input[type="search"]', 'zzzz-no-match')
         ->assertSee('No check-ins match these filters.')
         ->assertNoJavascriptErrors();
