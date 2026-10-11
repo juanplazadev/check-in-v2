@@ -193,7 +193,14 @@ function historyEntry(
 ): RecordHistoryEntry {
     historyId += 1;
 
-    return { id: historyId, event, description, actor, createdAt: iso(at) };
+    return {
+        id: historyId,
+        event,
+        description,
+        changes: null,
+        actor,
+        createdAt: iso(at),
+    };
 }
 
 function checkInHistory(
@@ -301,6 +308,9 @@ function makeCheckIn(index: number): CheckInRecord {
         locale: random() > 0.75 ? 'es' : 'en',
         createdAt: iso(createdAt),
         completedAt: status === 'completed' ? iso(createdAt + HOUR) : null,
+        cancelledAt: status === 'cancelled' ? iso(createdAt + HOUR) : null,
+        cancelledReason:
+            status === 'cancelled' ? 'Load canceled by the shipper.' : null,
         erpSyncedAt: erpStatus === 'synced' ? iso(createdAt + 2 * HOUR) : null,
         archivedAt: null,
         history: checkInHistory(createdAt, status, erpStatus),

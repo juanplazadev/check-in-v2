@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia;
 
 /*
- * The location data behind the admin locations table and detail page. Gates
+ * The location data behind the locations table and detail page. Gates
  * are pinned in DashboardPagesTest.
  */
 
@@ -71,3 +71,18 @@ it('returns not found for an unknown or deleted location', function (Closure $uu
     'unknown' => [fn (): string => (string) Str::uuid()],
     'deleted' => [fn (): string => tap(Location::factory()->create())->delete()->uuid],
 ]);
+
+it('shows location-scoped staff only the locations they work at', function (): void {
+    $mine = Location::factory()->create();
+    $other = Location::factory()->create();
+    $shipping = User::factory()->withRole(Role::Shipping)->worksAt($mine)->create();
+
+    $this->actingAs($shipping)
+        ->get(route('dashboard.locations'))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->has('locations', 1)
+            ->where('locations.0.uuid', $mine->uuid));
+
+    $this->get(route('dashboard.locations.show', ['uuid' => $other->uuid]))
+        ->assertNotFound();
+});

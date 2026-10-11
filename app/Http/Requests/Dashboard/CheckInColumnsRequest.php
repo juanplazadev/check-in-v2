@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Dashboard;
 
 use App\Enums\CheckInColumn;
+use App\Enums\Permission;
 use App\Models\User;
 use App\Queries\DashboardCheckInColumns;
 use Illuminate\Foundation\Http\FormRequest;
@@ -12,9 +13,17 @@ use Illuminate\Validation\Rule;
 
 final class CheckInColumnsRequest extends FormRequest
 {
+    /**
+     * Column display and column order are separate permissions; the route
+     * only lets in users who hold at least one.
+     */
     public function authorize(): bool
     {
-        return true;
+        /** @var User $user */
+        $user = $this->user();
+
+        return (! $this->has('columns') || $user->can(Permission::SaveCheckInColumnDisplay))
+            && (! $this->has('order') || $user->can(Permission::SaveCheckInColumnOrder));
     }
 
     /**

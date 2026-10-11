@@ -2,7 +2,6 @@ import { Head, Link, router } from '@inertiajs/react';
 import { BadgeCheck } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
-import AdminOnly from '@/components/dashboard/AdminOnly';
 import {
     DataTableProvider,
     useDataTableContext,
@@ -13,6 +12,7 @@ import DataTableSearch from '@/components/dashboard/data-table/DataTableSearch';
 import DataTableTabs from '@/components/dashboard/data-table/DataTableTabs';
 import { createDashboardColumnHelper } from '@/components/dashboard/data-table/features';
 import PageHeader from '@/components/dashboard/PageHeader';
+import RequirePermission from '@/components/dashboard/RequirePermission';
 import RoleChips from '@/components/dashboard/RoleChips';
 import type { DashboardUser } from '@/components/dashboard/types';
 import DashboardLayout from '@/layouts/DashboardLayout';
@@ -192,7 +192,7 @@ export default function UsersIndex({
         );
 
     return (
-        <AdminOnly>
+        <RequirePermission permission="view users">
             <DataTableProvider
                 initialGlobalFilter={filters.search ?? ''}
                 initialColumnFilters={[
@@ -240,7 +240,7 @@ export default function UsersIndex({
                     }}
                 />
             </DataTableProvider>
-        </AdminOnly>
+        </RequirePermission>
     );
 }
 

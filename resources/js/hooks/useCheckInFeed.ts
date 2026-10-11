@@ -13,14 +13,15 @@ import { useFeedConnection } from '@/hooks/useFeedConnection';
 const channelFor = (userUuid: string): string =>
     `dashboard.check-ins.${userUuid}`;
 
-/** Mirrors broadcastAs() on App\Events\CheckInCreated and CheckInUpdated. */
+/** Mirrors broadcastAs() on App\Events\CheckInCreated, CheckInUpdated and CheckInDeleted. */
 const CREATED = '.check-in.created';
 const UPDATED = '.check-in.updated';
+const DELETED = '.check-in.deleted';
 
-export type CheckInFeedEvent = {
-    type: 'created' | 'updated';
-    checkIn: CheckInRecord;
-};
+/** A deleted check-in no longer exists, so its event carries only the uuid. */
+export type CheckInFeedEvent =
+    | { type: 'created' | 'updated'; checkIn: CheckInRecord }
+    | { type: 'deleted'; uuid: string };
 
 interface FeedPayload {
     checkIn: CheckInRecord;
@@ -56,6 +57,9 @@ export function useCheckInFeed({
     );
     useEcho<FeedPayload>(channel, UPDATED, ({ checkIn }) =>
         onEventRef.current({ type: 'updated', checkIn }),
+    );
+    useEcho<{ uuid: string }>(channel, DELETED, ({ uuid }) =>
+        onEventRef.current({ type: 'deleted', uuid }),
     );
 
     return useFeedConnection(onReconnect);

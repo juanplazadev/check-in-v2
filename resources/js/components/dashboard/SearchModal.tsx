@@ -48,7 +48,7 @@ interface SearchResponse {
         match: SearchMatch;
     }[];
     users: { uuid: string; name: string; email: string }[];
-    /** Admins only, and only for a full-UUID term. */
+    /** Only with view locations, scoped to the user's locations, and only for a full-UUID term. */
     locations: { uuid: string; name: string; abbreviation: string }[];
 }
 
@@ -196,8 +196,8 @@ function ResultRow({ result, term }: { result: SearchResult; term: string }) {
 
 /**
  * Mosaic's ModalSearch on a Radix dialog, backed by the dashboard search
- * endpoint. Scoping to the user's locations, and users for admins only, happen
- * on the server.
+ * endpoint. Scoping to the user's locations, and users only with view users,
+ * happen on the server.
  */
 export default function SearchModal({ open, onOpenChange }: SearchModalProps) {
     const [query, setQuery] = useState('');

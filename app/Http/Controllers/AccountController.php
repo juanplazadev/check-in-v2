@@ -109,6 +109,7 @@ final class AccountController extends Controller
             'license' => [
                 'number' => $user->drivers_license_number,
                 'state' => $user->drivers_license_state,
+                'country' => $user->drivers_license_country,
                 'expirationDate' => $user->drivers_license_expiration_date?->format('Y-m-d'),
             ],
         ]);

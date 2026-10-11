@@ -1,7 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { CalendarClock, Truck } from 'lucide-react';
 
-import AdminOnly from '@/components/dashboard/AdminOnly';
 import { DataTableProvider } from '@/components/dashboard/data-table/context';
 import DataTable from '@/components/dashboard/data-table/DataTable';
 import DataTableSearch from '@/components/dashboard/data-table/DataTableSearch';
@@ -9,6 +8,7 @@ import DataTableTabs from '@/components/dashboard/data-table/DataTableTabs';
 import { createDashboardColumnHelper } from '@/components/dashboard/data-table/features';
 import FeaturePill from '@/components/dashboard/FeaturePill';
 import PageHeader from '@/components/dashboard/PageHeader';
+import RequirePermission from '@/components/dashboard/RequirePermission';
 import type { DashboardLocationSummary } from '@/components/dashboard/types';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { timezoneLabel } from '@/lib/dashboard/format';
@@ -127,7 +127,7 @@ export default function LocationsIndex({ locations }: LocationsIndexProps) {
     ];
 
     return (
-        <AdminOnly>
+        <RequirePermission permission="view locations">
             <DataTableProvider>
                 <Head title="Locations" />
 
@@ -151,7 +151,7 @@ export default function LocationsIndex({ locations }: LocationsIndexProps) {
                     emptyMessage="No locations match these filters."
                 />
             </DataTableProvider>
-        </AdminOnly>
+        </RequirePermission>
     );
 }
 

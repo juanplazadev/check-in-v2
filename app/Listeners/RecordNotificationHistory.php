@@ -9,9 +9,12 @@ use App\Enums\RecordHistoryEvent;
 use App\History\ChannelName;
 use App\History\RecordNotification;
 use App\Models\User;
+use App\Notifications\Channels\SmsChannel;
 use Illuminate\Mail\SentMessage;
 use Illuminate\Notifications\Events\NotificationFailed;
 use Illuminate\Notifications\Events\NotificationSent;
+use Illuminate\Notifications\Events\NotificationSkipped;
+use Illuminate\Notifications\Notification;
 use Throwable;
 
 /**
@@ -36,6 +39,7 @@ final readonly class RecordNotificationHistory
         }
 
         $this->record($event->notification, $event->channel, RecordHistoryEvent::NotificationSent, [
+            'recipient' => $this->recipient($event->notifiable, $event->notification, $event->channel),
             'messageId' => $this->messageId($event->response),
         ]);
     }
@@ -49,7 +53,24 @@ final readonly class RecordNotificationHistory
         $exception = $event->data['exception'] ?? null;
 
         $this->record($event->notification, $event->channel, RecordHistoryEvent::NotificationFailed, [
+            'recipient' => $this->recipient($event->notifiable, $event->notification, $event->channel),
             'reason' => $exception instanceof Throwable ? $exception->getMessage() : null,
+        ]);
+    }
+
+    /**
+     * Only a text skipped by {@see SkipUnroutableSms} belongs in the trail. A
+     * skip made on purpose elsewhere, through a notification's shouldSend(), is
+     * a decision rather than something support needs to explain.
+     */
+    public function handleSkipped(NotificationSkipped $event): void
+    {
+        if (! $event->notification instanceof RecordNotification || $event->channel !== SmsChannel::class) {
+            return;
+        }
+
+        $this->record($event->notification, $event->channel, RecordHistoryEvent::NotificationSkipped, [
+            'reason' => 'no-recipient',
         ]);
     }
 
@@ -79,6 +100,23 @@ final readonly class RecordNotificationHistory
             user: $user instanceof User ? $user : null,
             context: array_filter($context, static fn (mixed $value): bool => $value !== null),
         );
+    }
+
+    /**
+     * Where the message was addressed, captured now because the driver can
+     * change their email or cellphone later. A registered driver's text goes to
+     * the cellphone on their profile, which need not match the number typed on
+     * the check-in, and that mismatch is exactly what staff need to see.
+     */
+    private function recipient(mixed $notifiable, Notification $notification, string $channel): ?string
+    {
+        if (! is_object($notifiable) || ! method_exists($notifiable, 'routeNotificationFor')) {
+            return null;
+        }
+
+        $route = $notifiable->routeNotificationFor($this->channels->forChannel($channel), $notification);
+
+        return is_string($route) && $route !== '' ? $route : null;
     }
 
     /**

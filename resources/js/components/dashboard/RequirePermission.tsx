@@ -1,16 +1,23 @@
 import { ShieldAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { hasAnyRole, useStaffRoles } from '@/hooks/useStaffRoles';
+import { useCan } from '@/hooks/useCan';
+import type { Permission } from '@/types/auth';
 
 /**
- * Hides admin screens from other staff in the UI. This is presentation only: the backend pass
- * must enforce the same rule with route middleware, since anyone can request the page directly.
+ * Hides a screen from staff without the permission. This is presentation only: the route enforces
+ * the same permission, since anyone can request the page directly.
  */
-export default function AdminOnly({ children }: { children: ReactNode }) {
-    const roles = useStaffRoles();
+export default function RequirePermission({
+    permission,
+    children,
+}: {
+    permission: Permission;
+    children: ReactNode;
+}) {
+    const can = useCan();
 
-    if (hasAnyRole(roles, ['admin'])) {
+    if (can(permission)) {
         return children;
     }
 
@@ -20,7 +27,7 @@ export default function AdminOnly({ children }: { children: ReactNode }) {
                 <ShieldAlert className="size-6 text-gray-400" />
             </span>
             <h2 className="mb-2 text-lg font-semibold text-gray-800 dark:text-gray-100">
-                Admins only
+                No access
             </h2>
             <p className="text-sm">
                 Ask an administrator if you need access to this page.

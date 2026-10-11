@@ -18,6 +18,8 @@ interface LiveRecords<T> {
      * screen, otherwise animates it out and drops it.
      */
     apply: (type: 'created' | 'updated', record: T, belongs: boolean) => void;
+    /** Animates a record out and drops it, e.g. one that was deleted. */
+    remove: (uuid: string) => void;
 }
 
 /**
@@ -55,17 +57,21 @@ export function useLiveRecords<T extends LiveRecord>(
         }, ms);
     };
 
+    const remove = (uuid: string) => {
+        markFor(setLeaving, uuid, LEAVE_MS, () =>
+            setRecords((previous) =>
+                previous.filter((item) => item.uuid !== uuid),
+            ),
+        );
+    };
+
     const apply = (
         type: 'created' | 'updated',
         record: T,
         belongs: boolean,
     ) => {
         if (!belongs) {
-            markFor(setLeaving, record.uuid, LEAVE_MS, () =>
-                setRecords((previous) =>
-                    previous.filter((item) => item.uuid !== record.uuid),
-                ),
-            );
+            remove(record.uuid);
 
             return;
         }
@@ -83,5 +89,5 @@ export function useLiveRecords<T extends LiveRecord>(
         }
     };
 
-    return { records, fresh, leaving, apply };
+    return { records, fresh, leaving, apply, remove };
 }

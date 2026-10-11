@@ -213,16 +213,19 @@ it('does not find a check-in by UUID at a location the scoped user cannot see', 
         ->assertJsonCount(0, 'checkIns');
 });
 
-it('finds a location by its UUID for admins only', function (Role $role, int $expected): void {
+it('finds a location by its UUID only where the user may see it', function (Role $role, bool $attached, int $expected): void {
     $location = Location::factory()->create();
     Location::factory()->create();
+    $factory = User::factory()->withRole($role);
 
-    searchAs(User::factory()->withRole($role)->create(), $location->uuid)
+    searchAs(($attached ? $factory->worksAt($location) : $factory)->create(), $location->uuid)
         ->assertOk()
         ->assertJsonCount($expected, 'locations');
 })->with([
-    'admin' => [Role::Admin, 1],
-    'sales' => [Role::Sales, 0],
+    'admin' => [Role::Admin, false, 1],
+    'sales' => [Role::Sales, false, 1],
+    'shipping at it' => [Role::Shipping, true, 1],
+    'shipping elsewhere' => [Role::Shipping, false, 0],
 ]);
 
 it('does not search locations by anything but UUID', function (): void {

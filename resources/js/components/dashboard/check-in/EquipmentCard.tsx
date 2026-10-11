@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 
 import Card from '@/components/dashboard/Card';
 import PlateChip from '@/components/dashboard/check-in/PlateChip';
-import { DetailRow } from '@/components/dashboard/DetailCard';
+import { DetailHint, DetailRow } from '@/components/dashboard/DetailCard';
 import type {
     CheckInFormFields,
     CheckInRecord,
@@ -83,11 +83,35 @@ export default function EquipmentCard({
         checkIn.emptyWeightLbs,
     );
 
+    const trailerStateField = fieldState(
+        fields.showTrailerPlateState,
+        trailer.plateState,
+    );
+    const trailerCountryField = fieldState(
+        fields.showTrailerPlateCountry,
+        trailer.plateCountry,
+    );
+    const trailerHint = hintFor(
+        combinedFieldState([trailerStateField, trailerCountryField]),
+    );
+
     return (
         <Card title="Truck & Trailer">
-            <div className="grid grid-cols-1 divide-y divide-gray-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0 dark:divide-gray-700/60">
-                <EquipmentHalf icon={Truck} title="Truck">
-                    <DetailRow label="Truck name">{truck.name}</DetailRow>
+            <div className="grid grid-cols-1 divide-y divide-gray-100 md:grid-cols-2 md:divide-x md:divide-y-0 dark:divide-gray-700/60">
+                <EquipmentHalf icon={Truck} label="Truck" identity={truck.name}>
+                    <PlateRow
+                        plate={truck.plate}
+                        plateState={truck.plateState}
+                        plateCountry={truck.plateCountry}
+                        stateField={fieldState(
+                            fields.showTruckPlateState,
+                            truck.plateState,
+                        )}
+                        countryField={fieldState(
+                            fields.showTruckPlateCountry,
+                            truck.plateCountry,
+                        )}
+                    />
                     {color !== 'hidden' && (
                         <DetailRow label="Color" hint={hintFor(color)}>
                             {truck.color !== '' ? (
@@ -107,19 +131,6 @@ export default function EquipmentCard({
                             ) : null}
                         </DetailRow>
                     )}
-                    <PlateRow
-                        plate={truck.plate}
-                        plateState={truck.plateState}
-                        plateCountry={truck.plateCountry}
-                        stateField={fieldState(
-                            fields.showTruckPlateState,
-                            truck.plateState,
-                        )}
-                        countryField={fieldState(
-                            fields.showTruckPlateCountry,
-                            truck.plateCountry,
-                        )}
-                    />
                     {weight !== 'hidden' && (
                         <DetailRow label="Empty weight" hint={hintFor(weight)}>
                             {checkIn.emptyWeightLbs !== null
@@ -129,20 +140,30 @@ export default function EquipmentCard({
                     )}
                 </EquipmentHalf>
 
-                <EquipmentHalf icon={Container} title="Trailer">
-                    <PlateRow
-                        plate={trailer.plate}
-                        plateState={trailer.plateState}
-                        plateCountry={trailer.plateCountry}
-                        stateField={fieldState(
-                            fields.showTrailerPlateState,
-                            trailer.plateState,
-                        )}
-                        countryField={fieldState(
-                            fields.showTrailerPlateCountry,
-                            trailer.plateCountry,
-                        )}
-                    />
+                <EquipmentHalf
+                    icon={Container}
+                    label="Trailer"
+                    identity={
+                        <span className="inline-flex items-center gap-1.5">
+                            <PlateChip
+                                plate={trailer.plate}
+                                state={
+                                    trailerStateField === 'hidden'
+                                        ? ''
+                                        : trailer.plateState
+                                }
+                                country={
+                                    trailerCountryField === 'hidden'
+                                        ? ''
+                                        : trailer.plateCountry
+                                }
+                            />
+                            {trailerHint !== undefined && (
+                                <DetailHint hint={trailerHint} />
+                            )}
+                        </span>
+                    }
+                >
                     <DetailRow label="Chute">
                         {trailer.chute === 'n/a'
                             ? 'N/A'
@@ -154,22 +175,34 @@ export default function EquipmentCard({
     );
 }
 
+/** One side of the card: an icon tile over its identifying value, then its detail rows. */
 function EquipmentHalf({
     icon: Icon,
-    title,
+    label,
+    identity,
     children,
 }: {
     icon: LucideIcon;
-    title: string;
+    label: string;
+    identity: ReactNode;
     children: ReactNode;
 }) {
     return (
-        <section className="px-5 py-4">
-            <h3 className="mb-1 flex items-center gap-2 text-xs font-semibold text-gray-400 uppercase dark:text-gray-500">
-                <Icon className="size-4" />
-                {title}
-            </h3>
-            <dl className="divide-y divide-gray-100 text-sm dark:divide-gray-700/60">
+        <section>
+            <div className="flex items-center gap-3 px-5 pt-5 pb-2">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                    <Icon className="size-4" />
+                </span>
+                <div className="min-w-0">
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {label}
+                    </div>
+                    <div className="truncate font-semibold text-gray-800 dark:text-gray-100">
+                        {identity}
+                    </div>
+                </div>
+            </div>
+            <dl className="divide-y divide-gray-100 px-5 pb-2 text-sm dark:divide-gray-700/60">
                 {children}
             </dl>
         </section>

@@ -1,17 +1,18 @@
 import { Head, Link } from '@inertiajs/react';
 import { CalendarClock, Truck, Users } from 'lucide-react';
 
-import AdminOnly from '@/components/dashboard/AdminOnly';
 import BackLink from '@/components/dashboard/BackLink';
 import Card from '@/components/dashboard/Card';
 import { DetailCard, DetailRow } from '@/components/dashboard/DetailCard';
 import FeaturePill from '@/components/dashboard/FeaturePill';
 import PageHeader from '@/components/dashboard/PageHeader';
+import RequirePermission from '@/components/dashboard/RequirePermission';
 import RoleChips from '@/components/dashboard/RoleChips';
 import type {
     DashboardLocation,
     LocationStaffMember,
 } from '@/components/dashboard/types';
+import { useCan } from '@/hooks/useCan';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import {
     formatDateTime,
@@ -29,25 +30,38 @@ function minutes(value: number): string {
 }
 
 function StaffRow({ member }: { member: LocationStaffMember }) {
+    const can = useCan();
+    const content = (
+        <>
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                {initialsOf(member.name)}
+            </span>
+            <div className="min-w-0 flex-1">
+                <div className="truncate font-medium text-gray-800 group-hover:text-brand-green dark:text-gray-100">
+                    {member.name}
+                </div>
+                <div className="truncate text-sm text-gray-500 dark:text-gray-400">
+                    {member.email}
+                </div>
+            </div>
+            <RoleChips roles={member.roles} />
+        </>
+    );
+
     return (
         <li>
-            <Link
-                href={dashboardRoutes.users.show.url(member.uuid)}
-                className="group flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/30"
-            >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                    {initialsOf(member.name)}
-                </span>
-                <div className="min-w-0 flex-1">
-                    <div className="truncate font-medium text-gray-800 group-hover:text-brand-green dark:text-gray-100">
-                        {member.name}
-                    </div>
-                    <div className="truncate text-sm text-gray-500 dark:text-gray-400">
-                        {member.email}
-                    </div>
+            {can('view users') ? (
+                <Link
+                    href={dashboardRoutes.users.show.url(member.uuid)}
+                    className="group flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/30"
+                >
+                    {content}
+                </Link>
+            ) : (
+                <div className="group flex items-center gap-3 px-5 py-3">
+                    {content}
                 </div>
-                <RoleChips roles={member.roles} />
-            </Link>
+            )}
         </li>
     );
 }
@@ -80,7 +94,7 @@ function StaffSection({ staff }: { staff: LocationStaffMember[] }) {
                             No staff attached
                         </h3>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            Admins and other all-locations roles still see this
+                            Staff who can view all locations still see this
                             location's check-ins and appointments.
                         </p>
                     </div>
@@ -94,7 +108,7 @@ export default function LocationShow({ location }: LocationShowProps) {
     const { address, appointmentBooking } = location;
 
     return (
-        <AdminOnly>
+        <RequirePermission permission="view locations">
             <Head title={location.name} />
 
             <BackLink
@@ -177,7 +191,7 @@ export default function LocationShow({ location }: LocationShowProps) {
 
                 <StaffSection staff={location.staff} />
             </div>
-        </AdminOnly>
+        </RequirePermission>
     );
 }
 

@@ -44,7 +44,8 @@ final class UserSeeder extends Seeder
                 'password' => $password,
                 'cellphone' => '+15551234567',
                 'drivers_license_number' => 'D4821955',
-                'drivers_license_state' => 'AZ',
+                'drivers_license_state' => 'Arizona',
+                'drivers_license_country' => 'US',
                 'drivers_license_expiration_date' => Date::now()->addYears(3)->format('Y-m-d'),
             ],
         );

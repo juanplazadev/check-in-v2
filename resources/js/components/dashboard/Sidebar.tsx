@@ -8,7 +8,7 @@ import {
     isNavItemActive,
 } from '@/components/dashboard/navigation';
 import Logo from '@/components/Logo';
-import { hasAnyRole, useStaffRoles } from '@/hooks/useStaffRoles';
+import { useCan } from '@/hooks/useCan';
 import { dashboard } from '@/routes';
 
 const EXPANDED_STORAGE_KEY = 'dashboard-sidebar-expanded';
@@ -32,7 +32,7 @@ function readStoredExpanded(): boolean {
  */
 export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
     const { url, props } = usePage<{ dashboard: DashboardCounts | null }>();
-    const roles = useStaffRoles();
+    const can = useCan();
     const trigger = useRef<HTMLButtonElement>(null);
     const sidebar = useRef<HTMLDivElement>(null);
     const [sidebarExpanded, setSidebarExpanded] = useState(false);
@@ -87,7 +87,9 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
 
     const groups = DASHBOARD_NAVIGATION.map((group) => ({
         ...group,
-        items: group.items.filter((item) => hasAnyRole(roles, item.roles)),
+        items: group.items.filter(
+            (item) => item.permission === undefined || can(item.permission),
+        ),
     })).filter((group) => group.items.length > 0);
 
     return (

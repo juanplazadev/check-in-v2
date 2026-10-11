@@ -41,12 +41,17 @@ export type RecordHistoryEvent =
     | 'created'
     | 'notification-sent'
     | 'notification-failed'
+    | 'notification-skipped'
     | 'employee-notification-queued'
     | 'status-changed'
     | 'claimed'
     | 'account-deleted'
     | 'note-added'
-    | 'license-viewed';
+    | 'license-viewed'
+    | 'details-edited'
+    | 'reinstated'
+    | 'archived'
+    | 'restored';
 
 /** An internal staff note on a check-in, newest first on the detail page. */
 export interface CheckInNote {
@@ -62,10 +67,21 @@ export interface LocationSummary {
     name: string;
 }
 
+/** One field a staff edit changed. Empty values are null; a redacted field carries no values. */
+export interface RecordHistoryChange {
+    field: string;
+    label: string;
+    from: string | null;
+    to: string | null;
+    redacted: boolean;
+}
+
 export interface RecordHistoryEntry {
     id: number;
     event: RecordHistoryEvent;
     description: string;
+    /** The fields a 'details-edited' entry changed; null for every other event. */
+    changes: RecordHistoryChange[] | null;
     actor: string | null;
     createdAt: string;
 }
@@ -81,6 +97,22 @@ export interface CheckInFormFields {
     showDriversLicenseState: boolean;
     showDriversLicenseCountry: boolean;
     showDriversLicenseExpirationDate: boolean;
+}
+
+/**
+ * What permanently deleting a check-in removes, from App\Dashboard\CheckInDeletionImpact. Only
+ * sent on a partial reload, when the delete dialog opens.
+ */
+export interface CheckInDeletionImpact {
+    historyEntries: number;
+    notes: number;
+    purchaseOrders: number;
+    staffNotifications: number;
+    hasShortLink: boolean;
+    pendingClaims: number;
+    appointmentReference: string | null;
+    driverHasAccount: boolean;
+    archived: boolean;
 }
 
 export interface CheckInRecord {
@@ -130,6 +162,9 @@ export interface CheckInRecord {
     locale: string;
     createdAt: string;
     completedAt: string | null;
+    cancelledAt: string | null;
+    /** Why staff cancelled it; set only on a cancelled check-in. */
+    cancelledReason: string | null;
     erpSyncedAt: string | null;
     /** Set when the check-in is soft-deleted. */
     archivedAt: string | null;

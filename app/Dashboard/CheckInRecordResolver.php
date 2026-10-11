@@ -83,6 +83,8 @@ final readonly class CheckInRecordResolver
             'locale' => $checkIn->locale,
             'createdAt' => $checkIn->created_at->toIso8601String(),
             'completedAt' => $checkIn->completed_at?->toIso8601String(),
+            'cancelledAt' => $checkIn->cancelled_at?->toIso8601String(),
+            'cancelledReason' => $checkIn->cancelled_reason,
             'erpSyncedAt' => $checkIn->erp_synced_at?->toIso8601String(),
             'archivedAt' => $checkIn->deleted_at?->toIso8601String(),
             'history' => $checkIn->relationLoaded('history')

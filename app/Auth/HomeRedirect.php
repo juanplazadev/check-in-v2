@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Auth;
 
-use App\Enums\Role;
+use App\Enums\Permission;
 use App\Models\User;
 
 /**
@@ -12,15 +12,15 @@ use App\Models\User;
  * middleware sends an already signed-in user. Centralized so login,
  * registration and the guest pages stay in sync.
  *
- * Staff land on the dashboard; drivers, and anyone without a staff role,
- * land on their driver account. A missing user also gets the account route,
+ * Staff (anyone who may view the overview) land on the dashboard; drivers,
+ * and everyone else, land on their driver account. A missing user also gets the account route,
  * whose auth middleware bounces it to login.
  */
 final class HomeRedirect
 {
     public static function for(?User $user): string
     {
-        return $user?->hasAnyRole(Role::staff())
+        return $user?->can(Permission::ViewOverview)
             ? route('dashboard')
             : route('account');
     }

@@ -19,11 +19,14 @@ import dashboardRoutes from '@/routes/dashboard';
 export default function CheckInShow({
     checkIn,
     fields,
+    truckColors,
     notes,
 }: {
     checkIn: CheckInRecord;
     /** The location's optional fields today; rows it no longer collects still show stored values. */
     fields: CheckInFormFields;
+    /** The truck color slugs (config('app.truck_colors')) the edit form offers. */
+    truckColors: string[];
     /** Internal staff notes, newest first. */
     notes: CheckInNote[];
 }) {
@@ -33,6 +36,15 @@ export default function CheckInShow({
     // just gained stay current. The broadcast payload carries no history, hence the reload.
     useCheckInFeed({
         onEvent: (event) => {
+            // Deleted elsewhere: this page no longer exists, and a reload would be a 404.
+            if (event.type === 'deleted') {
+                if (event.uuid === checkIn.uuid) {
+                    router.visit(backHref);
+                }
+
+                return;
+            }
+
             if (
                 event.type === 'updated' &&
                 event.checkIn.uuid === checkIn.uuid
@@ -49,13 +61,18 @@ export default function CheckInShow({
 
             <BackLink href={backHref} label="Check-ins" />
 
-            <CheckInHero checkIn={checkIn} noteCount={notes.length} />
+            <CheckInHero
+                checkIn={checkIn}
+                fields={fields}
+                truckColors={truckColors}
+                noteCount={notes.length}
+            />
 
             <div className="grid grid-cols-12 gap-6">
                 <div className="col-span-full space-y-6 xl:col-span-8">
                     <DriverCard checkIn={checkIn} fields={fields} />
-                    <EquipmentCard checkIn={checkIn} fields={fields} />
                     <LoadCard checkIn={checkIn} />
+                    <EquipmentCard checkIn={checkIn} fields={fields} />
                     <NotesCard
                         key={checkIn.uuid}
                         checkInUuid={checkIn.uuid}

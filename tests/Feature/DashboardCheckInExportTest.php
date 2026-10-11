@@ -69,11 +69,17 @@ function exportedRows(): array
     }
 }
 
-it('forbids exports to staff other than admins and shipping managers', function (Role $role): void {
+it('forbids the master export to everyone but admins', function (Role $role): void {
     $this->actingAs(User::factory()->withRole($role)->create())
         ->postJson(route('dashboard.checkIns.exports.store'), ['scope' => 'all'])
         ->assertForbidden();
-})->with([Role::Shipping, Role::Sales, Role::Driver]);
+})->with([Role::ShippingManager, Role::Shipping, Role::Sales, Role::Driver]);
+
+it('forbids the current view export to sales and drivers', function (Role $role): void {
+    $this->actingAs(User::factory()->withRole($role)->create())
+        ->postJson(route('dashboard.checkIns.exports.store'), ['scope' => 'view', 'columns' => ['reference']])
+        ->assertForbidden();
+})->with([Role::Sales, Role::Driver]);
 
 it('redirects guests to the login page', function (): void {
     post(route('dashboard.checkIns.exports.store'), ['scope' => 'all'])
@@ -96,7 +102,7 @@ it('queues the export on its own low-priority queue', function (Role $role): voi
         && $job->columns === ['reference', 'customer']
         && $job->filters['status'] === 'pending'
         && $job->filters['timezone'] === 'America/Chicago');
-})->with([Role::Admin, Role::ShippingManager]);
+})->with([Role::Admin, Role::ShippingManager, Role::Shipping]);
 
 it('rejects an export without a scope or a current view without columns', function (): void {
     $this->actingAs(User::factory()->withRole(Role::Admin)->create())
@@ -139,13 +145,11 @@ it('exports the current view with its filters, sort and columns', function (): v
     );
 });
 
-it('exports every visible check-in to the master file, archived included, with only the last four of the license', function (): void {
-    $mine = Location::factory()->create();
-    $user = User::factory()->withRole(Role::ShippingManager)->worksAt($mine)->create();
-    $archived = CheckIn::factory()->atLocation($mine)->create(['drivers_license_number' => 'D1234-5678', 'locale' => 'es']);
+it('exports every check-in to the master file, archived included, with only the last four of the license', function (): void {
+    $user = User::factory()->withRole(Role::Admin)->create();
+    $archived = CheckIn::factory()->create(['drivers_license_number' => 'D1234-5678', 'locale' => 'es']);
     $archived->delete();
-    CheckIn::factory()->atLocation($mine)->completed()->create();
-    CheckIn::factory()->create();
+    CheckIn::factory()->completed()->create();
 
     $this->actingAs($user)
         ->postJson(route('dashboard.checkIns.exports.store'), ['scope' => 'all', 'status' => 'completed'])

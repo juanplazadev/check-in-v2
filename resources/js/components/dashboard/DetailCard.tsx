@@ -52,7 +52,7 @@ export function DetailRow({
     );
 }
 
-function DetailHint({ hint }: { hint: string }) {
+export function DetailHint({ hint }: { hint: string }) {
     return (
         <Popover>
             <PopoverTrigger asChild>

@@ -24,6 +24,7 @@ return new class extends Migration
             $table->string('cellphone', 12)->nullable();
             $table->text('drivers_license_number')->nullable();
             $table->string('drivers_license_state')->nullable();
+            $table->string('drivers_license_country', 2)->nullable();
             $table->date('drivers_license_expiration_date')->nullable();
             $table->string('locale', 5)->nullable();
             $table->string('theme')->nullable();

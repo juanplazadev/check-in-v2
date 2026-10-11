@@ -37,12 +37,13 @@ it('filters the check-ins table by status tab and search', function (): void {
         ->assertNoJavascriptErrors();
 });
 
-it('hides user management from non-admin staff', function (): void {
+it('hides user management from staff without view users', function (): void {
     $this->actingAs(User::factory()->withRole(Role::Sales)->create());
 
     visit(route('dashboard'))
         ->assertSee('Overview')
-        ->assertDontSee('Administration')
+        ->assertSee('Locations')
+        ->assertMissing('a[href$="/dashboard/users"]')
         ->assertNoJavascriptErrors();
 });
 

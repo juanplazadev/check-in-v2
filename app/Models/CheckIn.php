@@ -41,6 +41,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read CheckInErpStatus $erp_status
  * @property-read CarbonImmutable|null $completed_at
  * @property-read int|null $completed_by
+ * @property-read CarbonImmutable|null $cancelled_at
+ * @property-read int|null $cancelled_by
+ * @property-read string|null $cancelled_reason
  * @property-read CarbonImmutable|null $erp_synced_at
  * @property-read ErpSyncMethod|null $erp_synced_via
  * @property-read int|null $erp_synced_by
@@ -78,12 +81,13 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read Appointment|null $appointment
  * @property-read User|null $appointmentLinkedBy
  * @property-read User|null $completedBy
+ * @property-read User|null $cancelledBy
  * @property-read User|null $erpSyncedBy
  * @property-read Collection<int, CheckInNote> $notes
  */
 #[Fillable(['uuid', 'reference_number', 'location_id', 'user_id', 'appointment_id',
     'appointment_linked_at', 'appointment_linked_via', 'appointment_linked_by', 'status', 'erp_status',
-    'completed_at', 'completed_by', 'erp_synced_at', 'erp_synced_via', 'erp_synced_by', 'customer',
+    'completed_at', 'completed_by', 'cancelled_at', 'cancelled_by', 'cancelled_reason', 'erp_synced_at', 'erp_synced_via', 'erp_synced_by', 'customer',
     'destination_city', 'destination_state', 'destination_country', 'truck_name', 'truck_plate', 'truck_color',
     'truck_plate_state', 'truck_plate_country', 'trailer_plate', 'trailer_plate_state', 'trailer_plate_country',
     'trailer_chute', 'empty_weight_lbs', 'drivers_name', 'drivers_cellphone', 'drivers_email', 'drivers_license_number',
@@ -146,6 +150,16 @@ final class CheckIn extends Model
     public function completedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'completed_by');
+    }
+
+    /**
+     * The staff member who cancelled the check-in.
+     *
+     * @return BelongsTo<User, $this>
+     */
+    public function cancelledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
     }
 
     /**
@@ -214,6 +228,7 @@ final class CheckIn extends Model
             'appointment_linked_at' => 'datetime',
             'appointment_linked_via' => AppointmentLinkMethod::class,
             'completed_at' => 'datetime',
+            'cancelled_at' => 'datetime',
             'erp_synced_at' => 'datetime',
             'erp_synced_via' => ErpSyncMethod::class,
             'trailer_chute' => TrailerChute::class,

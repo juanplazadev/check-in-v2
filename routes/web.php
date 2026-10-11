@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use App\Enums\Role;
+use App\Enums\Permission;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AccountPdfController;
 use App\Http\Controllers\AccountSettingsController;
@@ -11,23 +11,31 @@ use App\Http\Controllers\CheckInController;
 use App\Http\Controllers\CheckInDistanceController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\Dashboard\AppointmentController as DashboardAppointmentController;
+use App\Http\Controllers\Dashboard\CheckInArchiveController as DashboardCheckInArchiveController;
+use App\Http\Controllers\Dashboard\CheckInCancelController as DashboardCheckInCancelController;
 use App\Http\Controllers\Dashboard\CheckInColumnController as DashboardCheckInColumnController;
 use App\Http\Controllers\Dashboard\CheckInCompleteController as DashboardCheckInCompleteController;
 use App\Http\Controllers\Dashboard\CheckInController as DashboardCheckInController;
+use App\Http\Controllers\Dashboard\CheckInDeleteController as DashboardCheckInDeleteController;
 use App\Http\Controllers\Dashboard\CheckInExportController as DashboardCheckInExportController;
 use App\Http\Controllers\Dashboard\CheckInLicenseController as DashboardCheckInLicenseController;
 use App\Http\Controllers\Dashboard\CheckInNoteController as DashboardCheckInNoteController;
+use App\Http\Controllers\Dashboard\CheckInPdfController as DashboardCheckInPdfController;
+use App\Http\Controllers\Dashboard\CheckInReinstateController as DashboardCheckInReinstateController;
 use App\Http\Controllers\Dashboard\CheckInReopenController as DashboardCheckInReopenController;
+use App\Http\Controllers\Dashboard\CheckInRestoreController as DashboardCheckInRestoreController;
+use App\Http\Controllers\Dashboard\CheckInUpdateController as DashboardCheckInUpdateController;
 use App\Http\Controllers\Dashboard\LiveQueueController;
 use App\Http\Controllers\Dashboard\LocationController as DashboardLocationController;
 use App\Http\Controllers\Dashboard\NotificationController as DashboardNotificationController;
+use App\Http\Controllers\Dashboard\RolePermissionController as DashboardRolePermissionController;
 use App\Http\Controllers\Dashboard\SearchController as DashboardSearchController;
 use App\Http\Controllers\Dashboard\UserController as DashboardUserController;
 use App\Http\Controllers\GeoController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\ScheduleController;
 use Illuminate\Support\Facades\Route;
-use Spatie\Permission\Middleware\RoleMiddleware;
+use Spatie\Permission\Middleware\PermissionMiddleware;
 
 Route::prefix('locale')->group(function (): void {
 
@@ -75,10 +83,10 @@ Route::middleware('setLocale')->group(function (): void {
      * user/password and logout endpoints carry no verified middleware either,
      * for the same reason.
      *
-     * Drivers and admins only (Role::accountHolders()); the other staff roles
+     * Behind access driver account (drivers and admins); the other staff roles
      * have no driver account and get a 403.
      */
-    Route::middleware(['auth', RoleMiddleware::using(Role::accountHolders())])->group(function (): void {
+    Route::middleware(['auth', PermissionMiddleware::using(Permission::AccessDriverAccount)])->group(function (): void {
         // password.confirm, not verified: this page decrypts and displays the
         // driver's licence number - the one field encrypted at rest - and is
         // also where the email that guards the account is changed. A live
@@ -105,7 +113,7 @@ Route::middleware('setLocale')->group(function (): void {
      * attaches the driver's guest check-in or appointment once the Verified
      * event fires, so an unverified account genuinely has no history to show.
      */
-    Route::middleware(['auth', 'verified', RoleMiddleware::using(Role::accountHolders())])->group(function (): void {
+    Route::middleware(['auth', 'verified', PermissionMiddleware::using(Permission::AccessDriverAccount)])->group(function (): void {
         Route::get('/account', [AccountController::class, 'index'])->name('account');
         Route::get('/account/settings', [AccountSettingsController::class, 'index'])->name('account.settings');
 
@@ -155,86 +163,138 @@ Route::middleware('setLocale')->group(function (): void {
     });
 
     /**
-     * Staff dashboard, for every staff role. Check-ins, the live queue and users
-     * run on real data; the other pages still render mock data until their
-     * backend pass. User and location management is admin-only.
+     * Staff dashboard. Every route is behind its own permission, granted to
+     * roles in Role::permissions(); never check a role here. Check-ins, the
+     * live queue, users and locations run on real data; the other pages still
+     * render mock data until their backend pass.
      */
-    Route::middleware(['auth', 'verified', RoleMiddleware::using(Role::staff())])->group(function (): void {
-        Route::inertia('/dashboard', 'Dashboard/Index')->name('dashboard');
+    Route::middleware(['auth', 'verified'])->group(function (): void {
+        Route::inertia('/dashboard', 'Dashboard/Index')
+            ->middleware(PermissionMiddleware::using(Permission::ViewOverview))
+            ->name('dashboard');
 
         Route::prefix('dashboard')->name('dashboard.')->group(function (): void {
 
-            Route::get('/queue', LiveQueueController::class)->name('queue');
+            Route::middleware(PermissionMiddleware::using(Permission::ViewLiveQueue))
+                ->get('/queue', LiveQueueController::class)
+                ->name('queue');
 
-            Route::middleware('throttle:60,1')
+            Route::middleware(['throttle:60,1', PermissionMiddleware::using(Permission::SearchDashboard)])
                 ->get('/search', DashboardSearchController::class)
                 ->name('search');
 
-            Route::get('/check-ins', [DashboardCheckInController::class, 'index'])->name('checkIns');
-            Route::patch('/check-ins/columns', DashboardCheckInColumnController::class)->name('checkIns.columns');
-            Route::get('/check-ins/{uuid}', [DashboardCheckInController::class, 'show'])
-                ->whereUuid('uuid')
-                ->name('checkIns.show');
-            Route::middleware('throttle:30,1')
-                ->post('/check-ins/{uuid}/notes', DashboardCheckInNoteController::class)
-                ->whereUuid('uuid')
-                ->name('checkIns.notes.store');
+            Route::middleware(PermissionMiddleware::using(Permission::ViewCheckIns))->group(function (): void {
+                Route::get('/check-ins', [DashboardCheckInController::class, 'index'])->name('checkIns');
 
-            /**
-             * Check-in status changes and the driver's full license number:
-             * every staff role but sales.
-             */
-            Route::middleware(RoleMiddleware::using([Role::Admin, Role::ShippingManager, Role::Shipping]))->group(function (): void {
-                Route::middleware('throttle:30,1')
+                // Which of display and order may be saved is checked per key
+                // by CheckInColumnsRequest.
+                Route::middleware(PermissionMiddleware::using([Permission::SaveCheckInColumnDisplay, Permission::SaveCheckInColumnOrder]))
+                    ->patch('/check-ins/columns', DashboardCheckInColumnController::class)
+                    ->name('checkIns.columns');
+
+                Route::get('/check-ins/{uuid}', [DashboardCheckInController::class, 'show'])
+                    ->whereUuid('uuid')
+                    ->name('checkIns.show');
+
+                // Printing needs the same bytes as viewing, so either permission opens the file.
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using([Permission::ViewCheckInPdf, Permission::PrintCheckInPdf])])
+                    ->get('/check-ins/{uuid}/pdf', DashboardCheckInPdfController::class)
+                    ->whereUuid('uuid')
+                    ->name('checkIns.pdf');
+
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::WriteCheckInNotes)])
+                    ->post('/check-ins/{uuid}/notes', DashboardCheckInNoteController::class)
+                    ->whereUuid('uuid')
+                    ->name('checkIns.notes.store');
+
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::CompleteCheckIns)])
                     ->post('/check-ins/{uuid}/complete', DashboardCheckInCompleteController::class)
                     ->whereUuid('uuid')
                     ->name('checkIns.complete');
 
-                // POST, not GET: every reveal writes to both history trails.
-                Route::middleware('throttle:30,1')
-                    ->post('/check-ins/{uuid}/license', DashboardCheckInLicenseController::class)
-                    ->whereUuid('uuid')
-                    ->name('checkIns.license');
-            });
-
-            /**
-             * Reopening a completed check-in and spreadsheet exports: admins
-             * and shipping managers only. Asking for an export queues a job
-             * that emails the file to the requester.
-             */
-            Route::middleware(RoleMiddleware::using([Role::Admin, Role::ShippingManager]))->group(function (): void {
-                Route::middleware('throttle:30,1')
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ReopenCheckIns)])
                     ->post('/check-ins/{uuid}/reopen', DashboardCheckInReopenController::class)
                     ->whereUuid('uuid')
                     ->name('checkIns.reopen');
 
-                Route::middleware('throttle:5,1')
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::CancelCheckIns)])
+                    ->post('/check-ins/{uuid}/cancel', DashboardCheckInCancelController::class)
+                    ->whereUuid('uuid')
+                    ->name('checkIns.cancel');
+
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ReinstateCheckIns)])
+                    ->post('/check-ins/{uuid}/reinstate', DashboardCheckInReinstateController::class)
+                    ->whereUuid('uuid')
+                    ->name('checkIns.reinstate');
+
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ArchiveCheckIns)])
+                    ->post('/check-ins/{uuid}/archive', DashboardCheckInArchiveController::class)
+                    ->whereUuid('uuid')
+                    ->name('checkIns.archive');
+
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::RestoreCheckIns)])
+                    ->post('/check-ins/{uuid}/restore', DashboardCheckInRestoreController::class)
+                    ->whereUuid('uuid')
+                    ->name('checkIns.restore');
+
+                // Permanent, in any status. The reason is required by
+                // CheckInDeleteRequest.
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::DeleteCheckIns)])
+                    ->delete('/check-ins/{uuid}', DashboardCheckInDeleteController::class)
+                    ->whereUuid('uuid')
+                    ->name('checkIns.destroy');
+
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::EditCheckIns)])
+                    ->patch('/check-ins/{uuid}', DashboardCheckInUpdateController::class)
+                    ->whereUuid('uuid')
+                    ->name('checkIns.update');
+
+                // POST, not GET: every reveal writes to both history trails.
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::RevealDriverLicenses)])
+                    ->post('/check-ins/{uuid}/license', DashboardCheckInLicenseController::class)
+                    ->whereUuid('uuid')
+                    ->name('checkIns.license');
+
+                // Queues a job that emails the file to the requester. Which
+                // spreadsheet may be asked for is checked per scope by
+                // CheckInExportRequest.
+                Route::middleware(['throttle:5,1', PermissionMiddleware::using([Permission::ExportCheckInsView, Permission::ExportCheckInsMaster])])
                     ->post('/check-ins/exports', [DashboardCheckInExportController::class, 'store'])
                     ->name('checkIns.exports.store');
             });
 
-            Route::post('/notifications/read-all', [DashboardNotificationController::class, 'readAll'])
-                ->name('notifications.readAll');
-            Route::post('/notifications/{id}/read', [DashboardNotificationController::class, 'read'])
-                ->whereUuid('id')
-                ->name('notifications.read');
+            Route::middleware(PermissionMiddleware::using(Permission::ViewNotifications))->group(function (): void {
+                Route::post('/notifications/read-all', [DashboardNotificationController::class, 'readAll'])
+                    ->name('notifications.readAll');
+                Route::post('/notifications/{id}/read', [DashboardNotificationController::class, 'read'])
+                    ->whereUuid('id')
+                    ->name('notifications.read');
+            });
 
-            Route::inertia('/appointments', 'Dashboard/Appointments/Index')->name('appointments');
-            Route::get('/appointments/{uuid}', [DashboardAppointmentController::class, 'show'])
-                ->whereUuid('uuid')
-                ->name('appointments.show');
+            Route::middleware(PermissionMiddleware::using(Permission::ViewAppointments))->group(function (): void {
+                Route::inertia('/appointments', 'Dashboard/Appointments/Index')->name('appointments');
+                Route::get('/appointments/{uuid}', [DashboardAppointmentController::class, 'show'])
+                    ->whereUuid('uuid')
+                    ->name('appointments.show');
+            });
 
-            Route::middleware(RoleMiddleware::using(Role::Admin))->group(function (): void {
+            Route::middleware(PermissionMiddleware::using(Permission::ViewUsers))->group(function (): void {
                 Route::get('/users', [DashboardUserController::class, 'index'])->name('users');
                 Route::get('/users/{uuid}', [DashboardUserController::class, 'show'])
                     ->whereUuid('uuid')
                     ->name('users.show');
+            });
 
+            Route::middleware(PermissionMiddleware::using(Permission::ViewLocations))->group(function (): void {
                 Route::get('/locations', [DashboardLocationController::class, 'index'])->name('locations');
                 Route::get('/locations/{uuid}', [DashboardLocationController::class, 'show'])
                     ->whereUuid('uuid')
                     ->name('locations.show');
             });
+
+            Route::middleware(PermissionMiddleware::using(Permission::ViewRolesAndPermissions))
+                ->get('/roles', DashboardRolePermissionController::class)
+                ->name('roles');
         });
     });
 

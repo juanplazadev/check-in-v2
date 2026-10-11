@@ -171,7 +171,8 @@ it('prefills the check-in with the signed-in driver saved license', function ():
         'email' => 'john@example.com',
         'password' => 'secret-password',
         'drivers_license_number' => 'D1234567',
-        'drivers_license_state' => 'Arizona',
+        'drivers_license_state' => 'Sonora',
+        'drivers_license_country' => 'MX',
         'drivers_license_expiration_date' => '2030-05-01',
     ]);
 
@@ -181,7 +182,8 @@ it('prefills the check-in with the signed-in driver saved license', function ():
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->component('CheckInForm')
             ->where('driverLicense.number', 'D1234567')
-            ->where('driverLicense.state', 'Arizona')
+            ->where('driverLicense.state', 'Sonora')
+            ->where('driverLicense.country', 'MX')
             ->where('driverLicense.expirationDate', '2030-05-01'));
 });
 

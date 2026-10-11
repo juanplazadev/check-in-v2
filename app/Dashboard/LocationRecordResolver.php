@@ -14,7 +14,7 @@ use App\Models\User;
  * locations table and detail page. Mapped by hand because id is hidden on the
  * model.
  *
- * Expects the users_count column that {@see \App\Queries\AdminLocations} selects.
+ * Expects the users_count column that {@see \App\Queries\LocationDirectory} selects.
  */
 final readonly class LocationRecordResolver
 {

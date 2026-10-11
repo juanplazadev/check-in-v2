@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Dashboard;
 
+use App\Dashboard\CheckInDeletionImpact;
 use App\Dashboard\CheckInRecordResolver;
+use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\CheckInIndexRequest;
 use App\Models\CheckIn;
@@ -15,6 +17,7 @@ use App\Queries\DashboardCheckIns;
 use App\Queries\DashboardLocations;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Inertia\Inertia;
 use Inertia\Response;
 
 final class CheckInController extends Controller
@@ -58,7 +61,7 @@ final class CheckInController extends Controller
      * its existence is not confirmed. Archived check-ins still open, since the
      * archived tab links to them.
      */
-    public function show(#[CurrentUser] User $user, string $uuid, CheckInRecordResolver $resolver): Response
+    public function show(#[CurrentUser] User $user, string $uuid, CheckInRecordResolver $resolver, CheckInDeletionImpact $impact): Response
     {
         $checkIn = CheckIn::query()
             ->withTrashed()
@@ -70,12 +73,16 @@ final class CheckInController extends Controller
         return inertia('Dashboard/CheckIns/Show', [
             'checkIn' => $resolver->record($checkIn),
             'fields' => $checkIn->location->checkInFormFields(),
+            'truckColors' => config('app.truck_colors'),
             'notes' => $checkIn->notes->map(fn (CheckInNote $note): array => [
                 'id' => $note->id,
                 'author' => $note->user?->name,
                 'body' => $note->body,
                 'createdAt' => $note->created_at->toIso8601String(),
             ])->all(),
+            'deletionImpact' => $user->can(Permission::DeleteCheckIns)
+                ? Inertia::optional(fn (): array => $impact->summary($checkIn))
+                : null,
         ]);
     }
 }

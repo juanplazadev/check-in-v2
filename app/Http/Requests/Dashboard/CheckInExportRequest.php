@@ -6,6 +6,7 @@ namespace App\Http\Requests\Dashboard;
 
 use App\Enums\CheckInColumn;
 use App\Enums\CheckInExportScope;
+use App\Enums\Permission;
 use App\Http\Requests\Dashboard\Concerns\FiltersCheckIns;
 use App\Models\User;
 use App\Queries\DashboardCheckInColumns;
@@ -21,9 +22,19 @@ final class CheckInExportRequest extends FormRequest
 {
     use FiltersCheckIns;
 
+    /**
+     * Each spreadsheet has its own permission; the route only lets in users
+     * who hold at least one. An unknown scope is left to the rules.
+     */
     public function authorize(): bool
     {
-        return true;
+        $permission = match (CheckInExportScope::tryFrom((string) $this->input('scope'))) {
+            CheckInExportScope::View => Permission::ExportCheckInsView,
+            CheckInExportScope::All => Permission::ExportCheckInsMaster,
+            null => null,
+        };
+
+        return $permission === null || (bool) $this->user()?->can($permission);
     }
 
     /**

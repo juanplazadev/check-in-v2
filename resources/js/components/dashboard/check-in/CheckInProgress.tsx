@@ -30,7 +30,11 @@ function stepsFor(checkIn: CheckInRecord): Step[] {
     const completed = checkIn.status === 'completed';
 
     const outcome: Step = cancelled
-        ? { label: 'Canceled', tone: 'cancelled', timestamp: null }
+        ? {
+              label: 'Canceled',
+              tone: 'cancelled',
+              timestamp: checkIn.cancelledAt,
+          }
         : {
               label: 'Completed',
               tone: completed ? 'done' : 'current',

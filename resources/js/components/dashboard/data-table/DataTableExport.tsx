@@ -12,13 +12,16 @@ export type ExportScope = 'view' | 'all';
 
 /**
  * Toolbar menu that offers an Excel export of the current view or of every record, styled like
- * `DataTableColumns`. The caller decides what each choice downloads.
+ * `DataTableColumns`. The caller decides what each choice downloads, and which are offered.
  */
 export default function DataTableExport({
+    scopes = ['view', 'all'],
     visibleCount,
     allLabel,
     onExport,
 }: {
+    /** The choices to offer; both by default. */
+    scopes?: ExportScope[];
     /** Rows matching the current filters, across every page. */
     visibleCount: number;
     allLabel: string;
@@ -45,36 +48,40 @@ export default function DataTableExport({
                 <div className="px-2.5 pt-1.5 pb-2 text-xs font-semibold text-gray-400 uppercase dark:text-gray-500">
                     Export to Excel
                 </div>
-                <DropdownMenuItem
-                    className="items-start gap-3 rounded-md"
-                    onSelect={() => onExport('view')}
-                >
-                    <Filter className="mt-0.5" />
-                    <span>
-                        <span className="block font-medium text-gray-800 dark:text-gray-100">
-                            Current view
+                {scopes.includes('view') && (
+                    <DropdownMenuItem
+                        className="items-start gap-3 rounded-md"
+                        onSelect={() => onExport('view')}
+                    >
+                        <Filter className="mt-0.5" />
+                        <span>
+                            <span className="block font-medium text-gray-800 dark:text-gray-100">
+                                Current view
+                            </span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-400">
+                                {visibleCount.toLocaleString()} row
+                                {visibleCount === 1 ? '' : 's'} with these
+                                filters and columns
+                            </span>
                         </span>
-                        <span className="block text-xs text-gray-500 dark:text-gray-400">
-                            {visibleCount.toLocaleString()} row
-                            {visibleCount === 1 ? '' : 's'} with these filters
-                            and columns
+                    </DropdownMenuItem>
+                )}
+                {scopes.includes('all') && (
+                    <DropdownMenuItem
+                        className="items-start gap-3 rounded-md"
+                        onSelect={() => onExport('all')}
+                    >
+                        <Table2 className="mt-0.5" />
+                        <span>
+                            <span className="block font-medium text-gray-800 dark:text-gray-100">
+                                {allLabel}
+                            </span>
+                            <span className="block text-xs text-gray-500 dark:text-gray-400">
+                                Master spreadsheet with every column
+                            </span>
                         </span>
-                    </span>
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                    className="items-start gap-3 rounded-md"
-                    onSelect={() => onExport('all')}
-                >
-                    <Table2 className="mt-0.5" />
-                    <span>
-                        <span className="block font-medium text-gray-800 dark:text-gray-100">
-                            {allLabel}
-                        </span>
-                        <span className="block text-xs text-gray-500 dark:text-gray-400">
-                            Master spreadsheet with every column
-                        </span>
-                    </span>
-                </DropdownMenuItem>
+                    </DropdownMenuItem>
+                )}
             </DropdownMenuContent>
         </DropdownMenu>
     );

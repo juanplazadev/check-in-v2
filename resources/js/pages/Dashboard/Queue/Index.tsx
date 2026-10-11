@@ -132,8 +132,14 @@ export default function QueueIndex({
     const reload = () => router.reload({ only: ['checkIns', 'appointments'] });
 
     useCheckInFeed({
-        onEvent: ({ type, checkIn }) =>
-            queue.apply(type, checkIn, checkIn.status === 'pending'),
+        onEvent: (event) =>
+            event.type === 'deleted'
+                ? queue.remove(event.uuid)
+                : queue.apply(
+                      event.type,
+                      event.checkIn,
+                      event.checkIn.status === 'pending',
+                  ),
         onReconnect: reload,
     });
 

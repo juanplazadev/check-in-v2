@@ -12,7 +12,7 @@ import type {
     CheckInFormFields,
     CheckInRecord,
 } from '@/components/dashboard/types';
-import { hasAnyRole, useStaffRoles } from '@/hooks/useStaffRoles';
+import { useCan } from '@/hooks/useCan';
 import {
     combinedFieldState,
     fieldState,
@@ -36,14 +36,10 @@ export default function DriverCard({
     fields: CheckInFormFields;
 }) {
     const { driver } = checkIn;
-    const roles = useStaffRoles();
-    const isAdmin = hasAnyRole(roles, ['admin']);
-    // Presentation only: the license route enforces the same roles.
-    const canRevealLicense = hasAnyRole(roles, [
-        'admin',
-        'shipping-manager',
-        'shipping',
-    ]);
+    const can = useCan();
+    const canViewUsers = can('view users');
+    // Presentation only: the license route enforces the same permission.
+    const canRevealLicense = can('reveal driver licenses');
 
     const licenseState = fieldState(
         fields.showDriversLicenseState,
@@ -78,7 +74,7 @@ export default function DriverCard({
                         <span className="text-lg font-semibold text-gray-800 dark:text-gray-100">
                             {driver.name}
                         </span>
-                        {isAdmin && driver.userUuid !== null ? (
+                        {canViewUsers && driver.userUuid !== null ? (
                             <Link
                                 href={dashboardRoutes.users.show.url(
                                     driver.userUuid,

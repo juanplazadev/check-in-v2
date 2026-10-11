@@ -66,6 +66,7 @@ final class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(...),
                 'roles' => fn (): array => $request->user()?->getRoleNames()->all() ?? [],
+                'permissions' => fn (): array => $request->user()?->getAllPermissions()->pluck('name')->values()->all() ?? [],
             ],
             'dashboard' => $this->getDashboardCounts(...),
             'notifications' => $this->getNotifications(...),
@@ -119,7 +120,7 @@ final class HandleInertiaRequests extends Middleware
 
     /**
      * Sidebar badge counts. Only the dashboard renders the sidebar, and the
-     * route group in front of it already requires a staff role. Counts only the
+     * routes in front of it already require a staff permission. Counts only the
      * user's locations. The live feed reloads this prop alone whenever a
      * check-in arrives or changes.
      *

@@ -7,7 +7,7 @@ namespace App\Models;
 use App\Casts\Encrypted;
 use App\Dashboard\MatchesSearchTerm;
 use App\Enums\NotificationChannel;
-use App\Enums\Role;
+use App\Enums\Permission;
 use App\Enums\Theme;
 use App\Notifications\Channels\SmsChannel;
 use App\Notifications\ResetPassword;
@@ -38,6 +38,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read string|null $cellphone
  * @property-read string|null $drivers_license_number
  * @property-read string|null $drivers_license_state
+ * @property-read string|null $drivers_license_country
  * @property-read CarbonImmutable|null $drivers_license_expiration_date
  * @property-read string|null $locale
  * @property-read Theme|null $theme
@@ -60,7 +61,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read Collection<int, CheckIn> $checkIns
  * @property-read Collection<int, Appointment> $appointments
  */
-#[Fillable(['name', 'email', 'password', 'cellphone', 'drivers_license_number', 'drivers_license_state', 'drivers_license_expiration_date', 'locale', 'theme', 'config', 'notify_check_in_copy', 'notify_appointment_copy', 'notify_appointment_reminder', 'notification_channel'])]
+#[Fillable(['name', 'email', 'password', 'cellphone', 'drivers_license_number', 'drivers_license_state', 'drivers_license_country', 'drivers_license_expiration_date', 'locale', 'theme', 'config', 'notify_check_in_copy', 'notify_appointment_copy', 'notify_appointment_reminder', 'notification_channel'])]
 #[Hidden(['id', 'password', 'remember_token', 'drivers_license_number', 'location_id'])]
 final class User extends Authenticatable implements MustVerifyEmail
 {
@@ -93,6 +94,7 @@ final class User extends Authenticatable implements MustVerifyEmail
         'cellphone' => null,
         'drivers_license_number' => null,
         'drivers_license_state' => null,
+        'drivers_license_country' => null,
         'drivers_license_expiration_date' => null,
         'locale' => null,
         'theme' => null,
@@ -119,8 +121,8 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * The locations a staff member works at. Only the location-scoped roles are
-     * limited by it; see {@see self::dashboardLocationIds()}.
+     * The locations a staff member works at. Only staff without view all
+     * locations are limited by it; see {@see self::dashboardLocationIds()}.
      *
      * Not to be confused with {@see self::location()}, a driver's booking
      * default.
@@ -136,7 +138,7 @@ final class User extends Authenticatable implements MustVerifyEmail
      * The locations whose check-ins and appointments this user may see on the
      * staff dashboard, or null for every location.
      *
-     * Any all-locations role wins, so an admin who also holds shipping is not
+     * View all locations wins, so an admin who also holds shipping is not
      * narrowed by it. Everyone else gets their attached locations, which fails
      * closed: a shipping user attached to nothing sees nothing.
      *
@@ -144,7 +146,7 @@ final class User extends Authenticatable implements MustVerifyEmail
      */
     public function dashboardLocationIds(): ?array
     {
-        if ($this->hasAnyRole(Role::allLocations())) {
+        if ($this->can(Permission::ViewAllLocations)) {
             return null;
         }
 

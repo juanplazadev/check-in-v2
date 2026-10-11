@@ -7,13 +7,14 @@ use App\Models\Appointment;
 use App\Models\CheckIn;
 use App\Models\Location;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Inertia\Testing\AssertableInertia;
 
 use function Pest\Laravel\get;
 
 /*
  * These pin the dashboard's route-to-page wiring and the gates in front of it: auth, verified, a
- * staff role for every page, and admin for user and location management. Check-in data has its own tests in
+ * staff permission for every page, and view users or view roles and permissions (admins only) for the admin pages. Check-in data has its own tests in
  * DashboardCheckInsTest, the appointment detail in DashboardAppointmentsTest, users in
  * DashboardUsersTest, locations in DashboardLocationsTest; the other pages still render mock data. Location scoping is pinned in DashboardLocationScopeTest.
  */
@@ -32,13 +33,14 @@ $operationalPages = [
     'check-in' => [fn (): string => route('dashboard.checkIns.show', ['uuid' => CheckIn::factory()->create()->uuid]), 'Dashboard/CheckIns/Show'],
     'appointments' => [fn (): string => route('dashboard.appointments'), 'Dashboard/Appointments/Index'],
     'appointment' => [fn (): string => route('dashboard.appointments.show', ['uuid' => Appointment::factory()->create()->uuid]), 'Dashboard/Appointments/Show'],
+    'locations' => [fn (): string => route('dashboard.locations'), 'Dashboard/Locations/Index'],
+    'location' => [fn (): string => route('dashboard.locations.show', ['uuid' => Location::factory()->create()->uuid]), 'Dashboard/Locations/Show'],
 ];
 
 $adminPages = [
     'users' => [fn (): string => route('dashboard.users'), 'Dashboard/Users/Index'],
     'user' => [fn (): string => route('dashboard.users.show', ['uuid' => User::factory()->create()->uuid]), 'Dashboard/Users/Show'],
-    'locations' => [fn (): string => route('dashboard.locations'), 'Dashboard/Locations/Index'],
-    'location' => [fn (): string => route('dashboard.locations.show', ['uuid' => Location::factory()->create()->uuid]), 'Dashboard/Locations/Show'],
+    'roles' => [fn (): string => route('dashboard.roles'), 'Dashboard/Roles/Index'],
 ];
 
 dataset('operational pages', $operationalPages);
@@ -88,11 +90,13 @@ it('sends unverified staff to the verification notice', function (Closure $url):
         ->assertRedirect(route('verification.notice'));
 })->with('dashboard pages');
 
-it("shares the signed-in user's roles with the page", function (): void {
+it("shares the signed-in user's roles and permissions with the page", function (): void {
     $this->actingAs(dashboardUser(Role::Sales))
         ->get(route('dashboard'))
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
-            ->where('auth.roles', [Role::Sales->value]));
+            ->where('auth.roles', [Role::Sales->value])
+            ->where('auth.permissions', fn (Collection $permissions): bool => $permissions->sort()->values()->all()
+                === collect(Role::Sales->permissions())->map->value->sort()->values()->all()));
 });
 
 it('rejects malformed record identifiers', function (string $path): void {

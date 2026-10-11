@@ -12,7 +12,10 @@ import {
 
 import CheckInProgress from '@/components/dashboard/check-in/CheckInProgress';
 import CheckInToolbar from '@/components/dashboard/check-in/CheckInToolbar';
-import type { CheckInRecord } from '@/components/dashboard/types';
+import type {
+    CheckInFormFields,
+    CheckInRecord,
+} from '@/components/dashboard/types';
 import StatusBadge from '@/components/StatusBadge';
 import {
     formatDateTime,
@@ -37,9 +40,15 @@ function timeOnSite(checkIn: CheckInRecord): string | null {
 /** The top of the check-in detail page: identity, status, lifecycle, key facts and actions. */
 export default function CheckInHero({
     checkIn,
+    fields,
+    truckColors,
     noteCount = 0,
 }: {
     checkIn: CheckInRecord;
+    /** The location's optional fields, for the toolbar's edit form. */
+    fields: CheckInFormFields;
+    /** The truck color slugs the edit form offers. */
+    truckColors: string[];
     /** Staff notes on this check-in; the chip shows only when there are some. */
     noteCount?: number;
 }) {
@@ -88,11 +97,26 @@ export default function CheckInHero({
                     </div>
                 </div>
 
-                <CheckInToolbar checkIn={checkIn} />
+                <CheckInToolbar
+                    checkIn={checkIn}
+                    fields={fields}
+                    truckColors={truckColors}
+                />
             </div>
 
             <div className="border-t border-gray-100 px-5 py-5 dark:border-gray-700/60">
                 <CheckInProgress checkIn={checkIn} />
+                {checkIn.status === 'cancelled' &&
+                    checkIn.cancelledReason !== null && (
+                        <p className="mt-4 rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-600 dark:bg-gray-900/40 dark:text-gray-300">
+                            <span className="font-semibold text-gray-800 dark:text-gray-100">
+                                Cancellation reason:
+                            </span>{' '}
+                            <span className="whitespace-pre-line">
+                                {checkIn.cancelledReason}
+                            </span>
+                        </p>
+                    )}
             </div>
 
             <div className="flex flex-wrap gap-2 border-t border-gray-100 px-5 py-4 dark:border-gray-700/60">

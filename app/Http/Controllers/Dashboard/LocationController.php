@@ -6,22 +6,24 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Dashboard\LocationRecordResolver;
 use App\Http\Controllers\Controller;
-use App\Queries\AdminLocations;
+use App\Models\User;
+use App\Queries\LocationDirectory;
+use Illuminate\Container\Attributes\CurrentUser;
 use Inertia\Response;
 
 final class LocationController extends Controller
 {
-    public function index(AdminLocations $query, LocationRecordResolver $resolver): Response
+    public function index(#[CurrentUser] User $user, LocationDirectory $query, LocationRecordResolver $resolver): Response
     {
         return inertia('Dashboard/Locations/Index', [
-            'locations' => $query->execute()->map($resolver->summary(...))->values()->all(),
+            'locations' => $query->execute($user)->map($resolver->summary(...))->values()->all(),
         ]);
     }
 
-    public function show(string $uuid, AdminLocations $query, LocationRecordResolver $resolver): Response
+    public function show(#[CurrentUser] User $user, string $uuid, LocationDirectory $query, LocationRecordResolver $resolver): Response
     {
         return inertia('Dashboard/Locations/Show', [
-            'location' => $resolver->record($query->find($uuid)),
+            'location' => $resolver->record($query->find($user, $uuid)),
         ]);
     }
 }

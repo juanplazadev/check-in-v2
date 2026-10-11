@@ -4,7 +4,7 @@ import { CalendarClock, ChevronRight, MapPin } from 'lucide-react';
 import Card from '@/components/dashboard/Card';
 import HistoryTimeline from '@/components/dashboard/HistoryTimeline';
 import type { CheckInRecord } from '@/components/dashboard/types';
-import { hasAnyRole, useStaffRoles } from '@/hooks/useStaffRoles';
+import { useCan } from '@/hooks/useCan';
 import dashboardRoutes from '@/routes/dashboard';
 
 /** The detail page's right column: the linked appointment, the location, then history. */
@@ -13,7 +13,7 @@ export default function CheckInSideRail({
 }: {
     checkIn: CheckInRecord;
 }) {
-    const isAdmin = hasAnyRole(useStaffRoles(), ['admin']);
+    const canViewUsers = useCan()('view users');
 
     const locationName = (
         <span className="font-semibold text-gray-800 dark:text-gray-100">
@@ -53,7 +53,7 @@ export default function CheckInSideRail({
                             <div className="text-xs text-gray-500 dark:text-gray-400">
                                 Location
                             </div>
-                            {isAdmin ? (
+                            {canViewUsers ? (
                                 <Link
                                     href={dashboardRoutes.locations.show.url(
                                         checkIn.location.uuid,

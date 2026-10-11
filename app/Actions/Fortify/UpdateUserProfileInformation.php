@@ -10,6 +10,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Laravel\Fortify\Contracts\UpdatesUserProfileInformation;
@@ -47,12 +48,16 @@ final readonly class UpdateUserProfileInformation implements UpdatesUserProfileI
             'cellphone' => ['nullable', 'string', 'regex:/^\+1\d{10}$/'],
 
             'drivers_license_number' => ['nullable', 'string', 'min:4', 'max:20'],
-            'drivers_license_state' => ['nullable', 'string', 'max:255'],
+            'drivers_license_state' => ['nullable', 'string', 'min:2', 'max:30'],
+            'drivers_license_country' => ['nullable', 'required_with:drivers_license_state', 'string', 'size:2', 'alpha'],
             'drivers_license_expiration_date' => ['nullable', 'date_format:Y-m-d', 'after:today', 'before:+60 years'],
         ], [
             'cellphone.regex' => __('messages.accountProfile.cellphoneInvalid'),
             'drivers_license_number.min' => __('messages.accountProfile.licenseNumberInvalid'),
             'drivers_license_number.max' => __('messages.accountProfile.licenseNumberInvalid'),
+            'drivers_license_country.required_with' => __('messages.accountProfile.licenseCountryRequired'),
+            'drivers_license_country.size' => __('messages.accountProfile.licenseCountryInvalid'),
+            'drivers_license_country.alpha' => __('messages.accountProfile.licenseCountryInvalid'),
             'drivers_license_expiration_date.after' => __('messages.accountProfile.licenseExpirationPast'),
             'drivers_license_expiration_date.before' => __('messages.accountProfile.licenseExpirationTooFar'),
         ])->validateWithBag('updateProfileInformation');
@@ -139,6 +144,7 @@ final readonly class UpdateUserProfileInformation implements UpdatesUserProfileI
             'cellphone' => $user->cellphone,
             'drivers_license_number' => $user->drivers_license_number,
             'drivers_license_state' => $user->drivers_license_state,
+            'drivers_license_country' => $user->drivers_license_country,
             'drivers_license_expiration_date' => $user->drivers_license_expiration_date?->format('Y-m-d'),
         ];
     }
@@ -174,10 +180,11 @@ final readonly class UpdateUserProfileInformation implements UpdatesUserProfileI
 
     /**
      * Coerce the optional license fields to their stored shape: trimmed values
-     * or null when blank, so clearing a field wipes it.
+     * or null when blank, so clearing a field wipes it. The country only means
+     * something alongside a state, so clearing the state wipes it too.
      *
      * @param  array<string, string|null>  $input
-     * @return array{drivers_license_number: string|null, drivers_license_state: string|null, drivers_license_expiration_date: string|null}
+     * @return array{drivers_license_number: string|null, drivers_license_state: string|null, drivers_license_country: string|null, drivers_license_expiration_date: string|null}
      */
     private function normalizeLicense(array $input): array
     {
@@ -187,9 +194,13 @@ final readonly class UpdateUserProfileInformation implements UpdatesUserProfileI
             return $value === '' ? null : $value;
         };
 
+        $state = $blankToNull($input['drivers_license_state'] ?? null);
+        $country = $blankToNull($input['drivers_license_country'] ?? null);
+
         return [
             'drivers_license_number' => $blankToNull($input['drivers_license_number'] ?? null),
-            'drivers_license_state' => $blankToNull($input['drivers_license_state'] ?? null),
+            'drivers_license_state' => $state,
+            'drivers_license_country' => $state === null || $country === null ? null : Str::upper($country),
             'drivers_license_expiration_date' => $blankToNull($input['drivers_license_expiration_date'] ?? null),
         ];
     }

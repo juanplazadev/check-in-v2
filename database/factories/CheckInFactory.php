@@ -105,6 +105,7 @@ final class CheckInFactory extends Factory
             'drivers_cellphone' => $user->cellphone,
             'drivers_license_number' => $user->drivers_license_number,
             'drivers_license_state' => $user->drivers_license_state,
+            'drivers_license_country' => $user->drivers_license_country,
             'drivers_license_expiration_date' => $user->drivers_license_expiration_date,
         ], fn (mixed $value): bool => $value !== null));
     }
@@ -183,10 +184,23 @@ final class CheckInFactory extends Factory
         ]);
     }
 
-    public function cancelled(): static
+    public function cancelled(?User $by = null, string $reason = 'Load canceled'): static
     {
         return $this->state(fn (array $attributes): array => [
             'status' => CheckInStatus::Cancelled,
+            'cancelled_at' => Date::now(),
+            'cancelled_by' => $by?->id,
+            'cancelled_reason' => $reason,
+        ]);
+    }
+
+    /**
+     * Archive the check-in: soft-deleted, so it lists only on the archived tab.
+     */
+    public function archived(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'deleted_at' => Date::now(),
         ]);
     }
 }

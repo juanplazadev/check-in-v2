@@ -163,6 +163,7 @@ interface PageProps {
     driverLicense: {
         number: string | null;
         state: string | null;
+        country: string | null;
         expirationDate: string | null;
     } | null;
     [key: string]: unknown;
@@ -399,6 +400,7 @@ export default function CheckInForm({
         : '';
     const prefillLicenseNumber = driverLicense?.number ?? '';
     const prefillLicenseState = driverLicense?.state ?? '';
+    const prefillLicenseCountry = driverLicense?.country ?? '';
     const prefillLicenseExpiration = driverLicense?.expirationDate ?? '';
 
     const trailerChuteOptions = [
@@ -592,7 +594,7 @@ export default function CheckInForm({
                 drivers_cellphone: prefillCellphone,
                 drivers_license_number: prefillLicenseNumber,
                 drivers_license_state: prefillLicenseState,
-                drivers_license_country: prefillLicenseState ? 'US' : '',
+                drivers_license_country: prefillLicenseCountry,
                 drivers_license_expiration_date: prefillLicenseExpiration,
             },
         });

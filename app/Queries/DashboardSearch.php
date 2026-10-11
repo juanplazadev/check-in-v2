@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Queries;
 
 use App\Encryption\BlindIndex;
-use App\Enums\Role;
+use App\Enums\Permission;
 use App\Models\Appointment;
 use App\Models\CheckIn;
 use App\Models\Location;
@@ -16,10 +16,11 @@ use Illuminate\Support\Str;
 
 /**
  * The dashboard header search: a handful of the newest check-ins, appointments
- * and (for admins) users matching one free-text term.
+ * and (with view users) users matching one free-text term.
  *
  * A term that is a full UUID also matches check-ins and appointments by uuid,
- * and (for admins) locations, which are searchable by uuid alone. It is an
+ * and locations the user may see (with view locations), which are searchable
+ * by uuid alone. It is an
  * exact match on the unique index: the term is checked with Str::isUuid()
  * first, since Postgres errors on comparing a uuid column to anything else.
  *
@@ -61,13 +62,12 @@ final readonly class DashboardSearch
     {
         $digits = $this->phoneDigits($term);
         $uuid = Str::isUuid($term) ? Str::lower($term) : null;
-        $isAdmin = $user->hasRole(Role::Admin);
 
         return [
             'checkIns' => $this->checkIns($user, $term, $digits, $uuid),
             'appointments' => $this->appointments($user, $term, $digits, $uuid),
-            'users' => $isAdmin ? $this->users($term) : [],
-            'locations' => $isAdmin && $uuid !== null ? $this->locations($uuid) : [],
+            'users' => $user->can(Permission::ViewUsers) ? $this->users($term) : [],
+            'locations' => $user->can(Permission::ViewLocations) && $uuid !== null ? $this->locations($user, $uuid) : [],
         ];
     }
 
@@ -141,10 +141,13 @@ final readonly class DashboardSearch
     /**
      * @return list<array{uuid: string, name: string, abbreviation: string}>
      */
-    private function locations(string $uuid): array
+    private function locations(User $user, string $uuid): array
     {
+        $locationIds = $user->dashboardLocationIds();
+
         return array_values(Location::query()
             ->where('uuid', $uuid)
+            ->when($locationIds !== null, fn (Builder $query): Builder => $query->whereKey($locationIds))
             ->limit(self::PER_TYPE)
             ->get(['uuid', 'name', 'abbreviation'])
             ->map(fn (Location $location): array => [

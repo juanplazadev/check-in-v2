@@ -31,13 +31,17 @@ enum Role: string
 
     /**
      * Staff who see only the locations they are attached to (the
-     * location_user pivot). Every other staff role sees every location.
+     * location_user pivot): every staff role without view all locations.
+     * For seeding and display only; access checks go through the permission.
      *
      * @return list<self>
      */
     public static function locationScoped(): array
     {
-        return [self::ShippingManager, self::Shipping];
+        return array_values(array_filter(
+            self::staff(),
+            fn (self $role): bool => ! in_array(Permission::ViewAllLocations, $role->permissions(), true),
+        ));
     }
 
     /**
@@ -54,12 +58,53 @@ enum Role: string
     }
 
     /**
-     * Who may use the driver account area: drivers, plus admins.
+     * The permissions this role grants. Granted by the
+     * create_default_permissions migration; change both together.
      *
-     * @return list<self>
+     * @return list<Permission>
      */
-    public static function accountHolders(): array
+    public function permissions(): array
     {
-        return [self::Driver, self::Admin];
+        $staffBasics = [
+            Permission::ViewOverview,
+            Permission::ViewLiveQueue,
+            Permission::ViewCheckIns,
+            Permission::ViewAppointments,
+            Permission::ViewLocations,
+            Permission::ViewNotifications,
+            Permission::SearchDashboard,
+            Permission::FilterCheckIns,
+            Permission::SyncCheckInsToErp,
+            Permission::WriteCheckInNotes,
+            Permission::SaveCheckInColumnDisplay,
+            Permission::SaveCheckInColumnOrder,
+            Permission::ViewCheckInPdf,
+            Permission::PrintCheckInPdf,
+        ];
+
+        $shipping = [
+            ...$staffBasics,
+            Permission::CompleteCheckIns,
+            Permission::EmailCheckInPdf,
+            Permission::CancelCheckIns,
+            Permission::RevealDriverLicenses,
+            Permission::ArchiveCheckIns,
+            Permission::RestoreCheckIns,
+            Permission::ExportCheckInsView,
+        ];
+
+        return match ($this) {
+            self::Admin => Permission::cases(),
+            self::ShippingManager => [
+                ...$shipping,
+                Permission::ReopenCheckIns,
+                Permission::UnsyncCheckInsFromErp,
+                Permission::EditCheckIns,
+                Permission::ReinstateCheckIns,
+            ],
+            self::Shipping => $shipping,
+            self::Sales => [...$staffBasics, Permission::ViewAllLocations],
+            self::Driver => [Permission::AccessDriverAccount],
+        };
     }
 }

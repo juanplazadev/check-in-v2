@@ -7,6 +7,7 @@ namespace App\Notifications\Channels;
 use App\Sms\SmsMessage;
 use App\Sms\SmsSender;
 use Illuminate\Notifications\Notification;
+use LogicException;
 
 /**
  * Delivers a notification's toSms() payload through whichever
@@ -14,6 +15,12 @@ use Illuminate\Notifications\Notification;
  *
  * Named as a channel class rather than a string alias so `via()` can reference
  * it without a service-provider registration.
+ *
+ * Every guard here throws rather than returning quietly. A quiet return still
+ * lets Laravel fire NotificationSent, which put "sent by SMS" in the trail for
+ * a text that never went out. A missing number is caught earlier by
+ * {@see \App\Listeners\SkipUnroutableSms}, and the other two are programmer
+ * errors, so reaching any of them is a bug that should surface as a failure.
  */
 final readonly class SmsChannel
 {
@@ -23,20 +30,18 @@ final readonly class SmsChannel
     {
         $number = $notifiable->routeNotificationFor('sms', $notification);
 
-        // A driver can clear their number between the notification being queued
-        // and the worker picking it up, so this is not unreachable.
         if (! is_string($number) || $number === '') {
-            return;
+            throw new LogicException(sprintf('%s reached the SMS channel with no number to send to.', $notification::class));
         }
 
         if (! method_exists($notification, 'toSms')) {
-            return;
+            throw new LogicException(sprintf('%s is sent by SMS but has no toSms() method.', $notification::class));
         }
 
         $message = $notification->toSms($notifiable);
 
         if (! $message instanceof SmsMessage) {
-            return;
+            throw new LogicException(sprintf('%s::toSms() must return an %s.', $notification::class, SmsMessage::class));
         }
 
         $this->sender->send($message);

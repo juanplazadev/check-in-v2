@@ -34,8 +34,8 @@ import type {
     LocationSummary,
 } from '@/components/dashboard/types';
 import StatusBadge from '@/components/StatusBadge';
+import { useCan } from '@/hooks/useCan';
 import { useCheckInFeed } from '@/hooks/useCheckInFeed';
-import { hasAnyRole, useStaffRoles } from '@/hooks/useStaffRoles';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import {
     formatCalendarDate,
@@ -158,7 +158,7 @@ const DATE_ACCESSORS: Record<
 };
 
 /** Driver names and locations link to their pages for admins only, since only admins can open them. */
-const buildColumns = (dateField: DateRangeField, isAdmin: boolean) =>
+const buildColumns = (dateField: DateRangeField, canViewUsers: boolean) =>
     column.columns([
         column.accessor('referenceNumber', {
             id: 'reference',
@@ -177,7 +177,7 @@ const buildColumns = (dateField: DateRangeField, isAdmin: boolean) =>
             header: COLUMN_LABELS.driver,
             cell: ({ row, getValue }) => (
                 <div>
-                    {isAdmin && row.original.driver.userUuid !== null ? (
+                    {canViewUsers && row.original.driver.userUuid !== null ? (
                         <Link
                             href={dashboardRoutes.users.show.url(
                                 row.original.driver.userUuid,
@@ -204,7 +204,7 @@ const buildColumns = (dateField: DateRangeField, isAdmin: boolean) =>
             id: 'location',
             header: COLUMN_LABELS.location,
             cell: ({ row, getValue }) =>
-                isAdmin ? (
+                canViewUsers ? (
                     <Link
                         href={dashboardRoutes.locations.show.url(
                             row.original.location.uuid,
@@ -590,12 +590,15 @@ export default function CheckInsIndex({
     const [missed, setMissed] = useState(0);
     const [dateRange, setDateRange] = useState(() => dateRangeOf(filters));
     const dateField = dateRange?.field ?? 'submitted';
-    const staffRoles = useStaffRoles();
-    const isAdmin = hasAnyRole(staffRoles, ['admin']);
-    const canExport = hasAnyRole(staffRoles, ['admin', 'shipping-manager']);
+    const can = useCan();
+    const canViewUsers = can('view users');
+    const exportScopes: ExportScope[] = [
+        ...(can('export check-ins view') ? (['view'] as const) : []),
+        ...(can('export check-ins master') ? (['all'] as const) : []),
+    ];
     const columns = useMemo(
-        () => buildColumns(dateField, isAdmin),
-        [dateField, isAdmin],
+        () => buildColumns(dateField, canViewUsers),
+        [dateField, canViewUsers],
     );
     const columnChoices = useColumnSettings(columnSettings);
     const exporter = useCheckInExport();
@@ -619,8 +622,18 @@ export default function CheckInsIndex({
     }
 
     useCheckInFeed({
-        onEvent: ({ type, checkIn }) => {
+        onEvent: (event) => {
             scheduleRecount();
+
+            if (event.type === 'deleted') {
+                setRows((previous) =>
+                    previous.filter((row) => row.uuid !== event.uuid),
+                );
+
+                return;
+            }
+
+            const { type, checkIn } = event;
 
             if (type === 'updated') {
                 setRows((previous) =>
@@ -802,8 +815,9 @@ export default function CheckInsIndex({
                             onReorder={columnChoices.reorder}
                             onReset={columnChoices.reset}
                         />
-                        {canExport && (
+                        {exportScopes.length > 0 && (
                             <DataTableExport
+                                scopes={exportScopes}
                                 visibleCount={checkIns.total}
                                 allLabel="All check-ins"
                                 onExport={exportCheckIns}

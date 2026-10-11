@@ -6,12 +6,16 @@ namespace App\Http\Requests\Dashboard\Concerns;
 
 use App\Enums\CheckInDateField;
 use App\Enums\CheckInStatus;
+use App\Enums\Permission;
 use App\Queries\DashboardCheckIns;
 use Illuminate\Validation\Rule;
 
 /**
  * The check-in table's search, tab, locations, date range, paging and sort,
  * shared by the table and its current view export so both read the same rows.
+ *
+ * Without filter check-ins, the tab, location and date range filters are
+ * ignored rather than refused, so a shared link still opens.
  */
 trait FiltersCheckIns
 {
@@ -23,12 +27,13 @@ trait FiltersCheckIns
         $search = mb_trim((string) $this->validated('search'));
         $from = $this->validated('from');
         $to = $this->validated('to');
-        $hasRange = $from !== null && $to !== null;
+        $canFilter = (bool) $this->user()?->can(Permission::FilterCheckIns);
+        $hasRange = $canFilter && $from !== null && $to !== null;
 
         return [
             'search' => mb_strlen($search) < DashboardCheckIns::MIN_SEARCH_LENGTH ? null : $search,
-            'status' => $this->validated('status'),
-            'locations' => array_values(array_map(intval(...), (array) $this->validated('locations', []))),
+            'status' => $canFilter ? $this->validated('status') : null,
+            'locations' => $canFilter ? array_values(array_map(intval(...), (array) $this->validated('locations', []))) : [],
             'dateField' => $hasRange ? $this->validated('date_field') : null,
             'from' => $hasRange ? $from : null,
             'to' => $hasRange ? $to : null,

@@ -164,13 +164,15 @@ export function LiveAlertsProvider({ children }: { children: ReactNode }) {
     }, []);
 
     const status = useCheckInFeed({
-        onEvent: ({ type, checkIn }) => {
-            // The sidebar badge counts pending check-ins, which either event can change.
+        onEvent: (event) => {
+            // The sidebar badge counts pending check-ins, which any event can change.
             router.reload({ only: ['dashboard'], async: true });
 
-            if (type !== 'created') {
+            if (event.type !== 'created') {
                 return;
             }
+
+            const { checkIn } = event;
 
             if (settings.sound) {
                 playChime();

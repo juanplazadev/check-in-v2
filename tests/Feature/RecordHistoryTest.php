@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 use App\Actions\CompleteCheckInAction;
 use App\CheckIn\CheckInScheduleResolver;
+use App\Dashboard\RecordHistoryEntryResolver;
 use App\Enums\CheckInErpStatus;
 use App\Enums\NotificationChannel;
 use App\Enums\RecordHistoryEvent;
 use App\Models\CheckIn;
 use App\Models\Location;
+use App\Models\RecordHistory;
 use App\Models\User;
+use App\Notifications\Channels\SmsChannel;
 use App\Notifications\CheckInCopy;
 use App\Sms\SmsMessage;
 use App\Sms\SmsSender;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\Notification;
 
 /**
  * @param  array<string, mixed>  $attributes
@@ -222,4 +226,90 @@ it('records a failed send with its reason and no sent row', function (): void {
         ->and($row->subject)->toBe('check-in-copy')
         ->and($row->context['reason'])->toBe('carrier rejected the number')
         ->and($checkIn->history()->where('event', RecordHistoryEvent::NotificationSent)->count())->toBe(0);
+});
+
+/*
+ * A registered driver's text goes to their profile cellphone, which need not be
+ * the number typed on the check-in. Staff helping a driver need to see which.
+ */
+it('records where each copy was addressed for a registered driver', function (): void {
+    $driver = trailDriver([
+        'cellphone' => '+12015550199',
+        'notification_channel' => NotificationChannel::Both,
+    ]);
+
+    $checkIn = completeCheckInFor($driver);
+
+    $recipients = $checkIn->history()
+        ->where('event', RecordHistoryEvent::NotificationSent)
+        ->get()
+        ->mapWithKeys(fn (RecordHistory $row): array => [$row->channel => $row->context['recipient']]);
+
+    expect($checkIn->drivers_cellphone)->toBe('+12015550123')
+        ->and($recipients->all())->toEqualCanonicalizing([
+            'sms' => '+12015550199',
+            'mail' => 'trail-driver@example.com',
+        ]);
+});
+
+it('records the check-in number as the recipient of a guest text', function (): void {
+    $checkIn = completeCheckInFor(null);
+
+    $row = $checkIn->history()
+        ->where('event', RecordHistoryEvent::NotificationSent)
+        ->sole();
+
+    expect($row->context['recipient'])->toBe('+12015550123');
+});
+
+/*
+ * The cellphone is optional on a profile, and a queued job can outlive it. The
+ * trail must say the text was skipped, not that it was sent.
+ */
+it('records a skipped text when the driver no longer has a cellphone', function (): void {
+    $driver = trailDriver(['cellphone' => null]);
+    $checkIn = CheckIn::factory()->forUser($driver)->create();
+
+    Notification::sendNow($driver, new CheckInCopy($checkIn), [SmsChannel::class]);
+
+    $row = $checkIn->history()
+        ->where('event', RecordHistoryEvent::NotificationSkipped)
+        ->sole();
+
+    expect($row->channel)->toBe('sms')
+        ->and($row->subject)->toBe('check-in-copy')
+        ->and($row->context['reason'])->toBe('no-recipient')
+        ->and($checkIn->history()->where('event', RecordHistoryEvent::NotificationSent)->count())->toBe(0)
+        ->and($checkIn->history()->where('event', RecordHistoryEvent::NotificationFailed)->count())->toBe(0);
+});
+
+it('describes where a copy went for staff', function (): void {
+    $driver = trailDriver([
+        'cellphone' => '+12015550199',
+        'notification_channel' => NotificationChannel::Both,
+    ]);
+
+    $checkIn = completeCheckInFor($driver);
+    $resolver = resolve(RecordHistoryEntryResolver::class);
+
+    $descriptions = $checkIn->history()
+        ->where('event', RecordHistoryEvent::NotificationSent)
+        ->get()
+        ->map(fn (RecordHistory $row): string => $resolver->entry($row, 'Check-in submitted')['description']);
+
+    expect($descriptions->all())->toEqualCanonicalizing([
+        'Check-in copy sent by SMS to +1 (201) 555-0199',
+        'Check-in copy sent by email to trail-driver@example.com',
+    ]);
+});
+
+it('describes a row written before recipients were captured by its channel alone', function (): void {
+    $row = RecordHistory::factory()->create([
+        'event' => RecordHistoryEvent::NotificationSent,
+        'subject' => 'check-in-copy',
+        'channel' => 'sms',
+    ]);
+
+    expect(resolve(RecordHistoryEntryResolver::class)->entry($row, 'Check-in submitted')['description'])
+        ->toBe('Check-in copy sent by SMS');
 });

@@ -25,6 +25,9 @@ return new class extends Migration
             $table->string('erp_status');
             $table->timestampTz('completed_at')->nullable();
             $table->foreignId('completed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestampTz('cancelled_at')->nullable();
+            $table->foreignId('cancelled_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->text('cancelled_reason')->nullable();
             $table->timestampTz('erp_synced_at')->nullable();
             $table->string('erp_synced_via')->nullable();
             $table->foreignId('erp_synced_by')->nullable()->constrained('users')->nullOnDelete();

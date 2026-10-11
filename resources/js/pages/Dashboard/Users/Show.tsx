@@ -11,12 +11,12 @@ import {
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import AdminOnly from '@/components/dashboard/AdminOnly';
 import BackLink from '@/components/dashboard/BackLink';
 import Card from '@/components/dashboard/Card';
 import { DetailCard, DetailRow } from '@/components/dashboard/DetailCard';
 import FeaturePill from '@/components/dashboard/FeaturePill';
 import PageHeader from '@/components/dashboard/PageHeader';
+import RequirePermission from '@/components/dashboard/RequirePermission';
 import RoleChips from '@/components/dashboard/RoleChips';
 import type { DashboardUser, UserLocation } from '@/components/dashboard/types';
 import DashboardLayout from '@/layouts/DashboardLayout';
@@ -239,7 +239,7 @@ function locationAccessSummary(user: DashboardUser): string | null {
 
 export default function UserShow({ user }: UserShowProps) {
     return (
-        <AdminOnly>
+        <RequirePermission permission="view users">
             <Head title={user.name} />
 
             <BackLink href={dashboardRoutes.users.url()} label="Users" />
@@ -298,7 +298,7 @@ export default function UserShow({ user }: UserShowProps) {
                     <LocationsSection user={user} />
                 </div>
             </div>
-        </AdminOnly>
+        </RequirePermission>
     );
 }
 
