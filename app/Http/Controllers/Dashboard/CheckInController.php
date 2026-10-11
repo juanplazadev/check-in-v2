@@ -8,6 +8,7 @@ use App\Dashboard\CheckInRecordResolver;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\CheckInIndexRequest;
 use App\Models\CheckIn;
+use App\Models\CheckInNote;
 use App\Models\User;
 use App\Queries\DashboardCheckInColumns;
 use App\Queries\DashboardCheckIns;
@@ -62,12 +63,19 @@ final class CheckInController extends Controller
         $checkIn = CheckIn::query()
             ->withTrashed()
             ->visibleTo($user)
-            ->with([...CheckInRecordResolver::RELATIONS, 'history.user'])
+            ->with([...CheckInRecordResolver::RELATIONS, 'history.user', 'notes.user'])
             ->where('uuid', $uuid)
             ->firstOrFail();
 
         return inertia('Dashboard/CheckIns/Show', [
             'checkIn' => $resolver->record($checkIn),
+            'fields' => $checkIn->location->checkInFormFields(),
+            'notes' => $checkIn->notes->map(fn (CheckInNote $note): array => [
+                'id' => $note->id,
+                'author' => $note->user?->name,
+                'body' => $note->body,
+                'createdAt' => $note->created_at->toIso8601String(),
+            ])->all(),
         ]);
     }
 }

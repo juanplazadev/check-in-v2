@@ -30,10 +30,11 @@ services:
   horizon:
     <<: *app
     command: php artisan horizon
-    # Exceed the longest supervisor job timeout (the pdf supervisor's 120s) so
-    # in-flight jobs finish on the SIGTERM sent when this container is recreated
-    # during deploy, rather than being killed mid-render.
-    stop_grace_period: 180s
+    # Exceed the longest supervisor job timeout (the exports supervisor's 600s)
+    # so in-flight jobs finish on the SIGTERM sent when this container is
+    # recreated during deploy, rather than being killed mid-render. Only an
+    # export actually running holds a deploy up this long.
+    stop_grace_period: 620s
 
   scheduler:
     <<: *app

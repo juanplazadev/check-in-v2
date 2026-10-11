@@ -7,6 +7,8 @@ namespace App\Http\Controllers\Dashboard;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Notifications\AppointmentReceived;
+use App\Notifications\CheckInExportFailed;
+use App\Notifications\CheckInExportReady;
 use App\Notifications\CheckInReceived;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\RedirectResponse;
@@ -43,6 +45,7 @@ final class NotificationController extends Controller
         return match ($notification->type) {
             CheckInReceived::TYPE => route('dashboard.checkIns.show', $notification->data['checkInUuid']),
             AppointmentReceived::TYPE => route('dashboard.appointments.show', $notification->data['appointmentUuid']),
+            CheckInExportReady::TYPE, CheckInExportFailed::TYPE => route('dashboard.checkIns'),
             default => route('dashboard'),
         };
     }

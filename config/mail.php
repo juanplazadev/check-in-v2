@@ -138,4 +138,17 @@ return [
 
     'always_to' => env('MAIL_ALWAYS_TO'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Check-In Export Attachment Limit
+    |--------------------------------------------------------------------------
+    |
+    | Check-in spreadsheets are emailed as attachments. Base64 grows a file by
+    | about a third and Mailgun refuses messages over 25MB, so a larger export
+    | is announced by email without the file, asking for a narrower view.
+    |
+    */
+
+    'export_attachment_max_kb' => (int) env('MAIL_EXPORT_ATTACHMENT_MAX_KB', 18000),
+
 ];

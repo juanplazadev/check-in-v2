@@ -432,6 +432,27 @@ it('shows a check-in with its history', function (): void {
             ->where('checkIn.history.0.description', 'Status changed from pending to completed'));
 });
 
+it('shares the location check-in form fields with the check-in', function (): void {
+    $location = Location::factory()->create(['config' => ['checkin' => ['show_truck_color' => true]]]);
+    $checkIn = CheckIn::factory()->atLocation($location)->create();
+
+    $this->actingAs(allLocationsStaff())
+        ->get(route('dashboard.checkIns.show', ['uuid' => $checkIn->uuid]))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('fields.showTruckColor', true)
+            ->where('fields.showEmptyWeightLbs', false)
+            ->where('fields.showDriversLicenseExpirationDate', false));
+});
+
+it('shows the language the driver checked in with', function (): void {
+    $checkIn = CheckIn::factory()->create(['locale' => 'es']);
+
+    $this->actingAs(allLocationsStaff())
+        ->get(route('dashboard.checkIns.show', ['uuid' => $checkIn->uuid]))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('checkIn.locale', 'es'));
+});
+
 it('shows an archived check-in', function (): void {
     $checkIn = CheckIn::factory()->create();
     $checkIn->delete();

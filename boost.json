@@ -18,6 +18,8 @@
         "octane-development",
         "wayfinder-development",
         "inertia-react-development",
+        "echo-react-development",
+        "echo-development",
         "tailwindcss-development"
     ]
 }

@@ -50,6 +50,8 @@ final readonly class RecordHistoryEntryResolver
             ),
             RecordHistoryEvent::Claimed => "Linked to the driver's account",
             RecordHistoryEvent::AccountDeleted => 'Driver deleted their account',
+            RecordHistoryEvent::NoteAdded => 'Note added',
+            RecordHistoryEvent::LicenseViewed => "Driver's license viewed",
         };
     }
 }

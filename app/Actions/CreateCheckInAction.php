@@ -54,6 +54,7 @@ final readonly class CreateCheckInAction
                 'reference_number' => $this->references->generate(ReferenceType::CheckIn),
                 'location_id' => $location->id,
                 'user_id' => $user?->id,
+                'drivers_email' => $user?->email,
                 'status' => CheckInStatus::Pending,
                 'erp_status' => CheckInErpStatus::Pending,
                 'locale' => $this->localeManager->getLocale(request()),

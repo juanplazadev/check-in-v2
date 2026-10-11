@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Dashboard\CheckInExportFiles;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Artisan;
@@ -25,3 +26,9 @@ Schedule::command('appointments:send-reminders')->hourly()->withoutOverlapping()
 Schedule::call(fn (): int => DatabaseNotification::query()
     ->where('created_at', '<', now()->subDays(30))
     ->delete())->daily()->name('notifications:prune');
+
+// Check-in exports are deleted as soon as they are emailed; this only sweeps up
+// a file left by a worker killed mid-export.
+Schedule::call(fn (): int => resolve(CheckInExportFiles::class)->prune(now()))
+    ->daily()
+    ->name('check-in-exports:prune');

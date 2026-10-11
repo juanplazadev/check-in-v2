@@ -15,7 +15,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * An append-only trail of the changes a driver makes to their own account.
+ * An append-only trail of what a user does with their account: changes to
+ * the account itself, and staff actions such as leaving a check-in note.
  *
  * @property-read int $id
  * @property-read int $user_id

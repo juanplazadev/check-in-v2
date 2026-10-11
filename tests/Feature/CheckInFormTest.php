@@ -160,6 +160,8 @@ it('accepts a valid submission when optional fields are hidden', function (): vo
 
     $response->assertSessionHasNoErrors()
         ->assertRedirect(route('checkIn.confirmed', CheckIn::query()->sole()));
+
+    expect(CheckIn::query()->sole()->drivers_email)->toBeNull();
 });
 
 it('prefills the check-in with the signed-in driver saved license', function (): void {
@@ -207,7 +209,10 @@ it('captures the signed-in driver on the check-in', function (): void {
         ->post(route('checkIn.store', $location), validCheckInPayload())
         ->assertSessionHasNoErrors();
 
-    expect(CheckIn::query()->sole()->user_id)->toBe($user->id);
+    $checkIn = CheckIn::query()->sole();
+
+    expect($checkIn->user_id)->toBe($user->id)
+        ->and($checkIn->drivers_email)->toBe('john@example.com');
 });
 
 it('accepts a submission that omits the optional trailer chute', function (): void {

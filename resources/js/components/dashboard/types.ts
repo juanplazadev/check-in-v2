@@ -44,7 +44,18 @@ export type RecordHistoryEvent =
     | 'employee-notification-queued'
     | 'status-changed'
     | 'claimed'
-    | 'account-deleted';
+    | 'account-deleted'
+    | 'note-added'
+    | 'license-viewed';
+
+/** An internal staff note on a check-in, newest first on the detail page. */
+export interface CheckInNote {
+    id: number;
+    /** Null once the author's account is deleted. */
+    author: string | null;
+    body: string;
+    createdAt: string;
+}
 
 export interface LocationSummary {
     id: number;
@@ -57,6 +68,19 @@ export interface RecordHistoryEntry {
     description: string;
     actor: string | null;
     createdAt: string;
+}
+
+/** A location's optional check-in fields, as Location::checkInFormFields() returns them. */
+export interface CheckInFormFields {
+    showTruckColor: boolean;
+    showEmptyWeightLbs: boolean;
+    showTruckPlateState: boolean;
+    showTruckPlateCountry: boolean;
+    showTrailerPlateState: boolean;
+    showTrailerPlateCountry: boolean;
+    showDriversLicenseState: boolean;
+    showDriversLicenseCountry: boolean;
+    showDriversLicenseExpirationDate: boolean;
 }
 
 export interface CheckInRecord {
@@ -102,6 +126,8 @@ export interface CheckInRecord {
     purchaseOrders: string[];
     loadingInstructions: string | null;
     appointmentReference: string | null;
+    /** The language the driver checked in with: one of config('app.locales'), e.g. 'es'. */
+    locale: string;
     createdAt: string;
     completedAt: string | null;
     erpSyncedAt: string | null;

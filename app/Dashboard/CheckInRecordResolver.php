@@ -80,6 +80,7 @@ final readonly class CheckInRecordResolver
             'purchaseOrders' => $purchaseOrders,
             'loadingInstructions' => $checkIn->loading_instructions,
             'appointmentReference' => $checkIn->appointment?->reference_number,
+            'locale' => $checkIn->locale,
             'createdAt' => $checkIn->created_at->toIso8601String(),
             'completedAt' => $checkIn->completed_at?->toIso8601String(),
             'erpSyncedAt' => $checkIn->erp_synced_at?->toIso8601String(),

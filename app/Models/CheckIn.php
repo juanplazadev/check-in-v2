@@ -19,9 +19,11 @@ use Database\Factories\CheckInFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\RouteKey;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -77,6 +79,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read User|null $appointmentLinkedBy
  * @property-read User|null $completedBy
  * @property-read User|null $erpSyncedBy
+ * @property-read Collection<int, CheckInNote> $notes
  */
 #[Fillable(['uuid', 'reference_number', 'location_id', 'user_id', 'appointment_id',
     'appointment_linked_at', 'appointment_linked_via', 'appointment_linked_by', 'status', 'erp_status',
@@ -175,6 +178,17 @@ final class CheckIn extends Model
     public function history(): MorphMany
     {
         return $this->morphMany(RecordHistory::class, 'recordable')->oldest();
+    }
+
+    /**
+     * Internal staff notes, newest first at the relation so the notes card is
+     * one eager load with no sorting at the call site.
+     *
+     * @return HasMany<CheckInNote, $this>
+     */
+    public function notes(): HasMany
+    {
+        return $this->hasMany(CheckInNote::class)->latest()->latest('id');
     }
 
     /**

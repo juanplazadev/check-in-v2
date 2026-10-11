@@ -221,6 +221,29 @@ return [
             'nice' => 5,
         ],
 
+        /*
+         * Check-in spreadsheet exports. Their own supervisor rather than a
+         * lower spot in supervisor-1's queue list: queue order only decides
+         * what a free worker picks next, so a long export would still hold a
+         * default worker. One process at the lowest priority keeps exports
+         * from ever competing with mail, PDFs or the live dashboard.
+         *
+         * timeout must stay below config('queue.connections.redis-exports.retry_after').
+         */
+        'supervisor-exports' => [
+            'connection' => 'redis-exports',
+            'queue' => ['exports'],
+            'balance' => 'auto',
+            'autoScalingStrategy' => 'time',
+            'maxProcesses' => 1,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 256,
+            'tries' => 1,
+            'timeout' => 600,
+            'nice' => 10,
+        ],
+
         'supervisor-1' => [
             'connection' => 'redis',
             'queue' => ['default'],

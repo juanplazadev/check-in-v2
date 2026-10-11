@@ -298,6 +298,7 @@ function makeCheckIn(index: number): CheckInRecord {
                 ? 'Keep reefer at 34F. Load pallets nose to tail.'
                 : null,
         appointmentReference: random() > 0.7 ? reference('A') : null,
+        locale: random() > 0.75 ? 'es' : 'en',
         createdAt: iso(createdAt),
         completedAt: status === 'completed' ? iso(createdAt + HOUR) : null,
         erpSyncedAt: erpStatus === 'synced' ? iso(createdAt + 2 * HOUR) : null,

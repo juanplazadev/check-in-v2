@@ -16,6 +16,7 @@ use App\Models\CheckIn;
 use App\Models\CheckInSchedule;
 use App\Models\CheckInScheduleOverride;
 use App\Models\Location;
+use App\Models\User;
 use App\Pdf\BrowsershotRecordPdfRenderer;
 use App\Pdf\RecordPdfRenderer;
 use App\Reference\RandomCode;
@@ -29,6 +30,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Encryption\Encrypter;
 use Illuminate\Foundation\DevCommands;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
@@ -208,10 +210,16 @@ final class AppServiceProvider extends ServiceProvider
                         ? $value->value
                         : $value;
 
+                    // Credit the signed-in staff member who made the change;
+                    // without one (queue jobs, guest flows) the record's own
+                    // user stays the actor.
+                    $actor = Auth::user();
+
                     resolve(RecordHistoryAction::class)->handle(
                         record: $record,
                         event: RecordHistoryEvent::StatusChanged,
                         subject: $column,
+                        user: $actor instanceof User ? $actor : null,
                         context: [
                             'from' => $scalar($record->getOriginal($column)),
                             'to' => $scalar($record->getAttribute($column)),

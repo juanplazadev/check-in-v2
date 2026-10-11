@@ -83,15 +83,27 @@ final readonly class DashboardCheckIns
      */
     public function execute(User $user, array $filters, int $total): LengthAwarePaginator
     {
+        return $this->query($user, $filters)
+            ->paginate($filters['perPage'], total: $total)
+            ->withQueryString();
+    }
+
+    /**
+     * Every row the table would show across all its pages, in the same order.
+     * The current view export reads it whole.
+     *
+     * @param  array{search: string|null, status: string|null, locations: list<int>, dateField: string|null, from: string|null, to: string|null, timezone: string, perPage: int, sort: string|null, direction: string}  $filters
+     * @return Builder<CheckIn>
+     */
+    public function query(User $user, array $filters): Builder
+    {
         return $this->filtered($user, $filters)
             ->when($filters['status'], fn (Builder $query, string $status): Builder => $status === self::ARCHIVED
                 ? $query->onlyTrashed()
                 : $query->where('status', $status))
             ->with(CheckInRecordResolver::RELATIONS)
             ->tap(fn (Builder $query): Builder => $this->sorted($query, $filters))
-            ->orderByDesc('id')
-            ->paginate($filters['perPage'], total: $total)
-            ->withQueryString();
+            ->orderByDesc('id');
     }
 
     /**

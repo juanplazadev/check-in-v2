@@ -80,6 +80,21 @@ return [
             'after_commit' => false,
         ],
 
+        /*
+         * Spreadsheet exports only (the horizon supervisor-exports). A big
+         * export can run for minutes, so its retry_after must exceed that
+         * supervisor's 600s timeout without stretching the shared connection's,
+         * which is what re-runs a stuck default or pdf job.
+         */
+        'redis-exports' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'exports',
+            'retry_after' => (int) env('REDIS_EXPORTS_QUEUE_RETRY_AFTER', 660),
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
         'deferred' => [
             'driver' => 'deferred',
         ],

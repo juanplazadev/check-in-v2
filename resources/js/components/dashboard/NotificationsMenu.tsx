@@ -15,6 +15,8 @@ import notificationRoutes from '@/routes/dashboard/notifications';
 /** Mirror the TYPE constants and toArray() of the classes in App\Notifications. */
 const CHECK_IN_RECEIVED = 'check-in.created';
 const APPOINTMENT_RECEIVED = 'appointment.booked';
+const CHECK_IN_EXPORT_READY = 'check-in-export.ready';
+const CHECK_IN_EXPORT_FAILED = 'check-in-export.failed';
 
 interface CheckInReceivedData {
     checkInUuid: string;
@@ -30,6 +32,17 @@ interface AppointmentReceivedData {
     locationName: string;
     /** Already formatted in the location's timezone. */
     scheduledFor: string;
+}
+
+interface CheckInExportReadyData {
+    filename: string;
+    rowCount: number;
+    /** False when the file was over the email size limit and went out without it. */
+    attached: boolean;
+}
+
+interface CheckInExportFailedData {
+    filename: string;
 }
 
 interface DashboardNotification {
@@ -59,6 +72,21 @@ function titleFor(notification: DashboardNotification): string {
                 notification.data as unknown as AppointmentReceivedData;
 
             return `${data.driverName} booked ${data.locationName} for ${data.scheduledFor} (${data.referenceNumber})`;
+        }
+        case CHECK_IN_EXPORT_READY: {
+            const data = notification.data as unknown as CheckInExportReadyData;
+
+            const rows = `${data.rowCount.toLocaleString()} row${data.rowCount === 1 ? '' : 's'}`;
+
+            return data.attached
+                ? `Your check-in export ${data.filename} (${rows}) was emailed to you`
+                : `Your check-in export ${data.filename} (${rows}) was too large to email`;
+        }
+        case CHECK_IN_EXPORT_FAILED: {
+            const data =
+                notification.data as unknown as CheckInExportFailedData;
+
+            return `Your check-in export ${data.filename} could not be built`;
         }
         default:
             return 'New notification';

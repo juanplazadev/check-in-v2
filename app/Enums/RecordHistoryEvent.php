@@ -20,4 +20,6 @@ enum RecordHistoryEvent: string
     case StatusChanged = 'status-changed';
     case Claimed = 'claimed';
     case AccountDeleted = 'account-deleted';
+    case NoteAdded = 'note-added';
+    case LicenseViewed = 'license-viewed';
 }

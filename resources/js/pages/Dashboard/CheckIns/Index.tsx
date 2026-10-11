@@ -20,6 +20,7 @@ import type {
     DateRangeValue,
 } from '@/components/dashboard/data-table/DataTableDateRange';
 import DataTableExport from '@/components/dashboard/data-table/DataTableExport';
+import type { ExportScope } from '@/components/dashboard/data-table/DataTableExport';
 import DataTableFilter from '@/components/dashboard/data-table/DataTableFilter';
 import DataTableSearch from '@/components/dashboard/data-table/DataTableSearch';
 import DataTableTabs from '@/components/dashboard/data-table/DataTableTabs';
@@ -525,6 +526,26 @@ function useColumnSettings(settings: CheckInsIndexProps['columns']) {
     };
 }
 
+type ExportPayload = Record<string, string | number | string[]>;
+
+/**
+ * Queues a spreadsheet of the current view or of every check-in. The file is built in the
+ * background and emailed to the user, so this only confirms the request.
+ */
+function useCheckInExport() {
+    const { post, transform, processing } = useHttp<ExportPayload>({});
+    const [notice, setNotice] = useState<'queued' | 'failed' | null>(null);
+
+    const request = (payload: ExportPayload) => {
+        transform(() => payload);
+        post(dashboardRoutes.checkIns.exports.store.url())
+            .then(() => setNotice('queued'))
+            .catch(() => setNotice('failed'));
+    };
+
+    return { request, processing, notice, dismiss: () => setNotice(null) };
+}
+
 /**
  * Search is left out: only the server knows what it matches. A new check-in has no completed or
  * synced date yet, so it only matches a range over the submitted date.
@@ -577,6 +598,7 @@ export default function CheckInsIndex({
         [dateField, isAdmin],
     );
     const columnChoices = useColumnSettings(columnSettings);
+    const exporter = useCheckInExport();
     const recountTimer = useRef<number | undefined>(undefined);
 
     useEffect(() => () => window.clearTimeout(recountTimer.current), []);
@@ -682,6 +704,39 @@ export default function CheckInsIndex({
             { only: TABLE_PROPS, preserveState: true },
         );
 
+    // Exports what the server last applied, which is what the rows on screen show, and the
+    // visible columns in their on-screen order. Times are written in the viewer's timezone.
+    const exportCheckIns = (scope: ExportScope) => {
+        if (exporter.processing) {
+            return;
+        }
+
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+        exporter.request(
+            scope === 'all'
+                ? { scope, tz: timezone }
+                : {
+                      ...queryFor(
+                          filters.search ?? '',
+                          filters.status ?? undefined,
+                          filters.locations.map(String),
+                          dateRangeOf(filters),
+                          {
+                              perPage: pageSize.default,
+                              default: pageSize.default,
+                          },
+                          sort,
+                      ),
+                      scope,
+                      tz: timezone,
+                      columns: columnChoices.tableOrder.filter(
+                          (id) => columnChoices.tableVisibility[id],
+                      ),
+                  },
+        );
+    };
+
     const changePage = (pageIndex: number) =>
         visitPage(pageIndex, filters.perPage);
 
@@ -751,9 +806,7 @@ export default function CheckInsIndex({
                             <DataTableExport
                                 visibleCount={checkIns.total}
                                 allLabel="All check-ins"
-                                onExport={() => {
-                                    // The spreadsheet download is not built yet.
-                                }}
+                                onExport={exportCheckIns}
                             />
                         )}
                     </>
@@ -763,6 +816,30 @@ export default function CheckInsIndex({
             <div className="mb-5">
                 <DataTableTabs columnId="status" tabs={tabs} />
             </div>
+
+            {exporter.notice !== null && (
+                <div
+                    role="status"
+                    className={
+                        exporter.notice === 'queued'
+                            ? 'mb-5 flex items-center justify-between gap-3 rounded-lg bg-brand-green/10 px-4 py-2.5 text-sm font-medium text-brand-green'
+                            : 'mb-5 flex items-center justify-between gap-3 rounded-lg bg-red-500/10 px-4 py-2.5 text-sm font-medium text-red-600 dark:text-red-400'
+                    }
+                >
+                    <span>
+                        {exporter.notice === 'queued'
+                            ? "Export started. We'll email it to you when it's ready."
+                            : 'The export could not be started. Please try again in a minute.'}
+                    </span>
+                    <button
+                        type="button"
+                        onClick={exporter.dismiss}
+                        className="shrink-0 opacity-70 transition hover:opacity-100"
+                    >
+                        Dismiss
+                    </button>
+                </div>
+            )}
 
             {missed > 0 && (
                 <button

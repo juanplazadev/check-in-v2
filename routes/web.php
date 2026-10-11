@@ -12,7 +12,12 @@ use App\Http\Controllers\CheckInDistanceController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\Dashboard\AppointmentController as DashboardAppointmentController;
 use App\Http\Controllers\Dashboard\CheckInColumnController as DashboardCheckInColumnController;
+use App\Http\Controllers\Dashboard\CheckInCompleteController as DashboardCheckInCompleteController;
 use App\Http\Controllers\Dashboard\CheckInController as DashboardCheckInController;
+use App\Http\Controllers\Dashboard\CheckInExportController as DashboardCheckInExportController;
+use App\Http\Controllers\Dashboard\CheckInLicenseController as DashboardCheckInLicenseController;
+use App\Http\Controllers\Dashboard\CheckInNoteController as DashboardCheckInNoteController;
+use App\Http\Controllers\Dashboard\CheckInReopenController as DashboardCheckInReopenController;
 use App\Http\Controllers\Dashboard\LiveQueueController;
 use App\Http\Controllers\Dashboard\LocationController as DashboardLocationController;
 use App\Http\Controllers\Dashboard\NotificationController as DashboardNotificationController;
@@ -170,6 +175,43 @@ Route::middleware('setLocale')->group(function (): void {
             Route::get('/check-ins/{uuid}', [DashboardCheckInController::class, 'show'])
                 ->whereUuid('uuid')
                 ->name('checkIns.show');
+            Route::middleware('throttle:30,1')
+                ->post('/check-ins/{uuid}/notes', DashboardCheckInNoteController::class)
+                ->whereUuid('uuid')
+                ->name('checkIns.notes.store');
+
+            /**
+             * Check-in status changes and the driver's full license number:
+             * every staff role but sales.
+             */
+            Route::middleware(RoleMiddleware::using([Role::Admin, Role::ShippingManager, Role::Shipping]))->group(function (): void {
+                Route::middleware('throttle:30,1')
+                    ->post('/check-ins/{uuid}/complete', DashboardCheckInCompleteController::class)
+                    ->whereUuid('uuid')
+                    ->name('checkIns.complete');
+
+                // POST, not GET: every reveal writes to both history trails.
+                Route::middleware('throttle:30,1')
+                    ->post('/check-ins/{uuid}/license', DashboardCheckInLicenseController::class)
+                    ->whereUuid('uuid')
+                    ->name('checkIns.license');
+            });
+
+            /**
+             * Reopening a completed check-in and spreadsheet exports: admins
+             * and shipping managers only. Asking for an export queues a job
+             * that emails the file to the requester.
+             */
+            Route::middleware(RoleMiddleware::using([Role::Admin, Role::ShippingManager]))->group(function (): void {
+                Route::middleware('throttle:30,1')
+                    ->post('/check-ins/{uuid}/reopen', DashboardCheckInReopenController::class)
+                    ->whereUuid('uuid')
+                    ->name('checkIns.reopen');
+
+                Route::middleware('throttle:5,1')
+                    ->post('/check-ins/exports', [DashboardCheckInExportController::class, 'store'])
+                    ->name('checkIns.exports.store');
+            });
 
             Route::post('/notifications/read-all', [DashboardNotificationController::class, 'readAll'])
                 ->name('notifications.readAll');

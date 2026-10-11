@@ -262,11 +262,15 @@
     --color-gray-800: #1f2937;
     --color-gray-900: #111827;
     --color-gray-950: #030712;
-
-    border-color: var(--color-gray-200);
 }
 
+/*
+  The default border lives in a layer, never on the unlayered block above: portalled menus and
+  popovers re-apply `.dashboard` on themselves, and an unlayered border-color would beat their own
+  `dark:border-*` utilities.
+*/
 @layer components {
+    .dashboard,
     .dashboard *,
     .dashboard ::after,
     .dashboard ::before {
