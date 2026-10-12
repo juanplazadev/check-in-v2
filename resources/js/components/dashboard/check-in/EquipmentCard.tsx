@@ -1,10 +1,11 @@
 import type { LucideIcon } from 'lucide-react';
 import { Container, Truck } from 'lucide-react';
+import { Children } from 'react';
 import type { ReactNode } from 'react';
 
 import Card from '@/components/dashboard/Card';
-import PlateChip from '@/components/dashboard/check-in/PlateChip';
-import { DetailHint, DetailRow } from '@/components/dashboard/DetailCard';
+import LicensePlate from '@/components/dashboard/check-in/LicensePlate';
+import { DetailHint } from '@/components/dashboard/DetailCard';
 import type {
     CheckInFormFields,
     CheckInRecord,
@@ -40,34 +41,6 @@ function hintFor(state: FieldState): string | undefined {
     return state === 'legacy' ? LEGACY_FIELD_HINT : undefined;
 }
 
-/** A plate row whose state and country each follow the location's config. */
-function PlateRow({
-    plate,
-    plateState,
-    plateCountry,
-    stateField,
-    countryField,
-}: {
-    plate: string;
-    plateState: string;
-    plateCountry: string;
-    stateField: FieldState;
-    countryField: FieldState;
-}) {
-    return (
-        <DetailRow
-            label="Plate"
-            hint={hintFor(combinedFieldState([stateField, countryField]))}
-        >
-            <PlateChip
-                plate={plate}
-                state={stateField === 'hidden' ? '' : plateState}
-                country={countryField === 'hidden' ? '' : plateCountry}
-            />
-        </DetailRow>
-    );
-}
-
 export default function EquipmentCard({
     checkIn,
     fields,
@@ -83,6 +56,14 @@ export default function EquipmentCard({
         checkIn.emptyWeightLbs,
     );
 
+    const truckStateField = fieldState(
+        fields.showTruckPlateState,
+        truck.plateState,
+    );
+    const truckCountryField = fieldState(
+        fields.showTruckPlateCountry,
+        truck.plateCountry,
+    );
     const trailerStateField = fieldState(
         fields.showTrailerPlateState,
         trailer.plateState,
@@ -91,29 +72,40 @@ export default function EquipmentCard({
         fields.showTrailerPlateCountry,
         trailer.plateCountry,
     );
-    const trailerHint = hintFor(
-        combinedFieldState([trailerStateField, trailerCountryField]),
-    );
+
+    const chute = trailer.chute === 'n/a' ? 'N/A' : formatLabel(trailer.chute);
 
     return (
         <Card title="Truck & Trailer">
-            <div className="grid grid-cols-1 divide-y divide-gray-100 md:grid-cols-2 md:divide-x md:divide-y-0 dark:divide-gray-700/60">
-                <EquipmentHalf icon={Truck} label="Truck" identity={truck.name}>
-                    <PlateRow
-                        plate={truck.plate}
-                        plateState={truck.plateState}
-                        plateCountry={truck.plateCountry}
-                        stateField={fieldState(
-                            fields.showTruckPlateState,
-                            truck.plateState,
-                        )}
-                        countryField={fieldState(
-                            fields.showTruckPlateCountry,
-                            truck.plateCountry,
-                        )}
-                    />
+            <div className="grid gap-4 p-5 md:grid-cols-2">
+                <UnitTile
+                    icon={Truck}
+                    label="Truck"
+                    identity={truck.name}
+                    plate={
+                        <LicensePlate
+                            plate={truck.plate}
+                            state={
+                                truckStateField === 'hidden'
+                                    ? ''
+                                    : truck.plateState
+                            }
+                            country={
+                                truckCountryField === 'hidden'
+                                    ? ''
+                                    : truck.plateCountry
+                            }
+                            hint={hintFor(
+                                combinedFieldState([
+                                    truckStateField,
+                                    truckCountryField,
+                                ]),
+                            )}
+                        />
+                    }
+                >
                     {color !== 'hidden' && (
-                        <DetailRow label="Color" hint={hintFor(color)}>
+                        <SpecCell label="Color" hint={hintFor(color)}>
                             {truck.color !== '' ? (
                                 <span className="inline-flex items-center gap-2">
                                     <span
@@ -129,68 +121,70 @@ export default function EquipmentCard({
                                     {formatLabel(truck.color)}
                                 </span>
                             ) : null}
-                        </DetailRow>
+                        </SpecCell>
                     )}
                     {weight !== 'hidden' && (
-                        <DetailRow label="Empty weight" hint={hintFor(weight)}>
+                        <SpecCell label="Empty weight" hint={hintFor(weight)}>
                             {checkIn.emptyWeightLbs !== null
                                 ? `${checkIn.emptyWeightLbs.toLocaleString()} lbs`
                                 : null}
-                        </DetailRow>
+                        </SpecCell>
                     )}
-                </EquipmentHalf>
+                </UnitTile>
 
-                <EquipmentHalf
+                <UnitTile
                     icon={Container}
                     label="Trailer"
-                    identity={
-                        <span className="inline-flex items-center gap-1.5">
-                            <PlateChip
-                                plate={trailer.plate}
-                                state={
-                                    trailerStateField === 'hidden'
-                                        ? ''
-                                        : trailer.plateState
-                                }
-                                country={
-                                    trailerCountryField === 'hidden'
-                                        ? ''
-                                        : trailer.plateCountry
-                                }
-                            />
-                            {trailerHint !== undefined && (
-                                <DetailHint hint={trailerHint} />
+                    identity={chute}
+                    plate={
+                        <LicensePlate
+                            plate={trailer.plate}
+                            state={
+                                trailerStateField === 'hidden'
+                                    ? ''
+                                    : trailer.plateState
+                            }
+                            country={
+                                trailerCountryField === 'hidden'
+                                    ? ''
+                                    : trailer.plateCountry
+                            }
+                            hint={hintFor(
+                                combinedFieldState([
+                                    trailerStateField,
+                                    trailerCountryField,
+                                ]),
                             )}
-                        </span>
+                        />
                     }
                 >
-                    <DetailRow label="Chute">
-                        {trailer.chute === 'n/a'
-                            ? 'N/A'
-                            : formatLabel(trailer.chute)}
-                    </DetailRow>
-                </EquipmentHalf>
+                    <SpecCell label="Chute">{chute}</SpecCell>
+                </UnitTile>
             </div>
         </Card>
     );
 }
 
-/** One side of the card: an icon tile over its identifying value, then its detail rows. */
-function EquipmentHalf({
+/** One unit on a gray tile: an icon over its identifying value, its plate, then its specs. */
+function UnitTile({
     icon: Icon,
     label,
     identity,
+    plate,
     children,
 }: {
     icon: LucideIcon;
     label: string;
     identity: ReactNode;
+    plate: ReactNode;
     children: ReactNode;
 }) {
+    const hasSpecs = Children.toArray(children).length > 0;
+
     return (
-        <section>
-            <div className="flex items-center gap-3 px-5 pt-5 pb-2">
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+        <section className="flex h-full flex-col rounded-lg bg-gray-50 p-4 dark:bg-gray-900/40">
+            <div className="flex items-center gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-gray-600 shadow-xs dark:bg-gray-800 dark:text-gray-300">
                     <Icon className="size-4" />
                 </span>
                 <div className="min-w-0">
@@ -202,9 +196,39 @@ function EquipmentHalf({
                     </div>
                 </div>
             </div>
-            <dl className="divide-y divide-gray-100 px-5 pb-2 text-sm dark:divide-gray-700/60">
-                {children}
-            </dl>
+
+            <div className="flex justify-center py-5">{plate}</div>
+
+            {hasSpecs && (
+                <dl className="mt-auto grid grid-cols-2 gap-4 border-t border-gray-200/70 pt-4 dark:border-gray-700/60">
+                    {children}
+                </dl>
+            )}
         </section>
+    );
+}
+
+/** A label over its value, for the specs at the foot of a unit tile. */
+function SpecCell({
+    label,
+    hint,
+    children,
+}: {
+    label: string;
+    hint?: string;
+    children: ReactNode;
+}) {
+    return (
+        <div className="min-w-0">
+            <dt className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 uppercase dark:text-gray-500">
+                {label}
+                {hint !== undefined && <DetailHint hint={hint} />}
+            </dt>
+            <dd className="mt-1 text-sm font-medium text-gray-800 dark:text-gray-100">
+                {children ?? (
+                    <span className="text-gray-400 dark:text-gray-500">-</span>
+                )}
+            </dd>
+        </div>
     );
 }

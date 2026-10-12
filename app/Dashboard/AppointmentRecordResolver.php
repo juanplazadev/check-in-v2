@@ -38,6 +38,7 @@ final readonly class AppointmentRecordResolver
             'status' => $appointment->status->value,
             'location' => [
                 'id' => $appointment->location->id,
+                'uuid' => $appointment->location->uuid,
                 'name' => $appointment->location->name,
             ],
             'driver' => [

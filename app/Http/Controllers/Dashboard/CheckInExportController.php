@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Dashboard;
 
-use App\Enums\CheckInExportScope;
+use App\Enums\ExportScope;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\CheckInExportRequest;
 use App\Jobs\ExportCheckInsJob;
@@ -27,14 +27,7 @@ final class CheckInExportController extends Controller
         $filters = $request->filters();
         $stamp = Date::now($filters['timezone'])->format('Y-m-d-Hi');
 
-        ExportCheckInsJob::dispatch(
-            $user,
-            $scope,
-            $filters,
-            $request->columns(),
-            (string) Str::uuid(),
-            $scope === CheckInExportScope::All ? "check-ins-master-{$stamp}.xlsx" : "check-ins-{$stamp}.xlsx",
-        );
+        dispatch(new ExportCheckInsJob($user, $scope, $filters, $request->columns(), (string) Str::uuid(), $scope === ExportScope::All ? "check-ins-master-{$stamp}.xlsx" : "check-ins-{$stamp}.xlsx"));
 
         return response()->noContent(202);
     }

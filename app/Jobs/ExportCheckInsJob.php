@@ -4,19 +4,22 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
-use App\Dashboard\CheckInExportFiles;
 use App\Dashboard\CheckInSpreadsheet;
+use App\Dashboard\ExportFiles;
 use App\Enums\CheckInDateField;
-use App\Enums\CheckInExportScope;
-use App\Mail\CheckInExportMail;
+use App\Enums\ExportScope;
+use App\Enums\ExportSubject;
+use App\Mail\ExportMail;
 use App\Models\CheckIn;
 use App\Models\User;
-use App\Notifications\CheckInExportFailed;
-use App\Notifications\CheckInExportReady;
+use App\Notifications\ExportFailed;
+use App\Notifications\ExportReady;
 use App\Queries\DashboardCheckIns;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Queue\Attributes\Timeout;
+use Illuminate\Queue\Attributes\Tries;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Mail;
 use Spatie\SimpleExcel\SimpleExcelWriter;
@@ -38,15 +41,13 @@ use Throwable;
  * Location scoping is applied again here: the user's access is checked when
  * the job runs, not only when it was queued.
  */
+#[Timeout(600)]
+#[Tries(1)]
 final class ExportCheckInsJob implements ShouldQueue
 {
     use Queueable;
 
     public const int CHUNK_SIZE = 1000;
-
-    public int $tries = 1;
-
-    public int $timeout = 600;
 
     /**
      * @param  array{search: string|null, status: string|null, locations: list<int>, dateField: string|null, from: string|null, to: string|null, timezone: string, perPage: int, sort: string|null, direction: string}  $filters
@@ -54,7 +55,7 @@ final class ExportCheckInsJob implements ShouldQueue
      */
     public function __construct(
         public User $user,
-        public CheckInExportScope $scope,
+        public ExportScope $scope,
         public array $filters,
         public array $columns,
         public string $exportUuid,
@@ -67,7 +68,7 @@ final class ExportCheckInsJob implements ShouldQueue
         }
     }
 
-    public function handle(DashboardCheckIns $checkIns, CheckInSpreadsheet $spreadsheet, CheckInExportFiles $files): void
+    public function handle(DashboardCheckIns $checkIns, CheckInSpreadsheet $spreadsheet, ExportFiles $files): void
     {
         $disk = $files->disk();
         $path = $files->path($this->exportUuid);
@@ -80,7 +81,8 @@ final class ExportCheckInsJob implements ShouldQueue
             $rowCount = $this->write($disk->path($path), $checkIns, $spreadsheet, $dateField, $timezone);
             $attachable = $disk->size($path) <= (int) config('mail.export_attachment_max_kb') * 1024;
 
-            Mail::to($this->user)->send(new CheckInExportMail(
+            Mail::to($this->user)->send(new ExportMail(
+                ExportSubject::CheckIns,
                 $this->filename,
                 $this->scope,
                 $rowCount,
@@ -91,12 +93,12 @@ final class ExportCheckInsJob implements ShouldQueue
             $disk->delete($path);
         }
 
-        $this->user->notify(new CheckInExportReady($this->filename, $rowCount, $attachable));
+        $this->user->notify(new ExportReady(ExportSubject::CheckIns, $this->filename, $rowCount, $attachable));
     }
 
     public function failed(?Throwable $exception): void
     {
-        $this->user->notify(new CheckInExportFailed($this->filename));
+        $this->user->notify(new ExportFailed(ExportSubject::CheckIns, $this->filename));
     }
 
     /**
@@ -108,12 +110,12 @@ final class ExportCheckInsJob implements ShouldQueue
         $rowCount = 0;
 
         try {
-            $writer->addHeader($this->scope === CheckInExportScope::View
+            $writer->addHeader($this->scope === ExportScope::View
                 ? $spreadsheet->viewHeaders($this->columns, $dateField)
                 : $spreadsheet->masterHeaders());
 
             foreach ($this->query($checkIns)->lazy(self::CHUNK_SIZE) as $checkIn) {
-                $writer->addRow($this->scope === CheckInExportScope::View
+                $writer->addRow($this->scope === ExportScope::View
                     ? $spreadsheet->viewRow($checkIn, $this->columns, $dateField, $timezone)
                     : $spreadsheet->masterRow($checkIn, $timezone));
                 $rowCount++;
@@ -134,7 +136,7 @@ final class ExportCheckInsJob implements ShouldQueue
      */
     private function query(DashboardCheckIns $checkIns): Builder
     {
-        if ($this->scope === CheckInExportScope::View) {
+        if ($this->scope === ExportScope::View) {
             return $checkIns->query($this->user, $this->filters);
         }
 

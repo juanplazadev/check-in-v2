@@ -78,6 +78,9 @@ enum Role: string
             Permission::WriteCheckInNotes,
             Permission::SaveCheckInColumnDisplay,
             Permission::SaveCheckInColumnOrder,
+            Permission::FilterAppointments,
+            Permission::SaveAppointmentColumnDisplay,
+            Permission::SaveAppointmentColumnOrder,
             Permission::ViewCheckInPdf,
             Permission::PrintCheckInPdf,
         ];
@@ -91,6 +94,7 @@ enum Role: string
             Permission::ArchiveCheckIns,
             Permission::RestoreCheckIns,
             Permission::ExportCheckInsView,
+            Permission::ExportAppointmentsView,
         ];
 
         return match ($this) {
@@ -100,6 +104,7 @@ enum Role: string
                 Permission::ReopenCheckIns,
                 Permission::UnsyncCheckInsFromErp,
                 Permission::EditCheckIns,
+                Permission::LinkCheckInAppointments,
                 Permission::ReinstateCheckIns,
             ],
             self::Shipping => $shipping,

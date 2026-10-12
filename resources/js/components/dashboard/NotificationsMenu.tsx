@@ -15,8 +15,16 @@ import notificationRoutes from '@/routes/dashboard/notifications';
 /** Mirror the TYPE constants and toArray() of the classes in App\Notifications. */
 const CHECK_IN_RECEIVED = 'check-in.created';
 const APPOINTMENT_RECEIVED = 'appointment.booked';
-const CHECK_IN_EXPORT_READY = 'check-in-export.ready';
-const CHECK_IN_EXPORT_FAILED = 'check-in-export.failed';
+const EXPORT_READY = 'export.ready';
+const EXPORT_FAILED = 'export.failed';
+
+/** Mirrors App\Enums\ExportSubject: which table a spreadsheet export came from. */
+type ExportSubject = 'check-ins' | 'appointments';
+
+const EXPORT_SUBJECT_LABELS: Record<ExportSubject, string> = {
+    'check-ins': 'check-in',
+    appointments: 'appointment',
+};
 
 interface CheckInReceivedData {
     checkInUuid: string;
@@ -34,14 +42,16 @@ interface AppointmentReceivedData {
     scheduledFor: string;
 }
 
-interface CheckInExportReadyData {
+interface ExportReadyData {
+    subject: ExportSubject;
     filename: string;
     rowCount: number;
     /** False when the file was over the email size limit and went out without it. */
     attached: boolean;
 }
 
-interface CheckInExportFailedData {
+interface ExportFailedData {
+    subject: ExportSubject;
     filename: string;
 }
 
@@ -73,20 +83,22 @@ function titleFor(notification: DashboardNotification): string {
 
             return `${data.driverName} booked ${data.locationName} for ${data.scheduledFor} (${data.referenceNumber})`;
         }
-        case CHECK_IN_EXPORT_READY: {
-            const data = notification.data as unknown as CheckInExportReadyData;
-
+        case EXPORT_READY: {
+            const data = notification.data as unknown as ExportReadyData;
+            const subject =
+                EXPORT_SUBJECT_LABELS[data.subject] ?? 'spreadsheet';
             const rows = `${data.rowCount.toLocaleString()} row${data.rowCount === 1 ? '' : 's'}`;
 
             return data.attached
-                ? `Your check-in export ${data.filename} (${rows}) was emailed to you`
-                : `Your check-in export ${data.filename} (${rows}) was too large to email`;
+                ? `Your ${subject} export ${data.filename} (${rows}) was emailed to you`
+                : `Your ${subject} export ${data.filename} (${rows}) was too large to email`;
         }
-        case CHECK_IN_EXPORT_FAILED: {
-            const data =
-                notification.data as unknown as CheckInExportFailedData;
+        case EXPORT_FAILED: {
+            const data = notification.data as unknown as ExportFailedData;
+            const subject =
+                EXPORT_SUBJECT_LABELS[data.subject] ?? 'spreadsheet';
 
-            return `Your check-in export ${data.filename} could not be built`;
+            return `Your ${subject} export ${data.filename} could not be built`;
         }
         default:
             return 'New notification';

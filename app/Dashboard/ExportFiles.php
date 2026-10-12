@@ -9,13 +9,13 @@ use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Scratch space for check-in exports on the private local disk. A file exists
- * only while {@see \App\Jobs\ExportCheckInsJob} writes and emails it, then is
- * deleted. Anything older than a day was left by a worker killed mid-export.
+ * Scratch space for spreadsheet exports on the private local disk. A file
+ * exists only while an export job writes and emails it, then is deleted.
+ * Anything older than a day was left by a worker killed mid-export.
  */
-final readonly class CheckInExportFiles
+final readonly class ExportFiles
 {
-    public const string DIRECTORY = 'exports/check-ins';
+    public const string DIRECTORY = 'exports';
 
     public const int KEEP_DAYS = 1;
 

@@ -16,10 +16,13 @@ import DataTableDateRange, {
     fieldLabel,
 } from '@/components/dashboard/data-table/DataTableDateRange';
 import type {
-    DateRangeField,
+    DateRangeFieldOption,
     DateRangeValue,
 } from '@/components/dashboard/data-table/DataTableDateRange';
-import DataTableExport from '@/components/dashboard/data-table/DataTableExport';
+import DataTableExport, {
+    DataTableExportNotice,
+    useDataTableExport,
+} from '@/components/dashboard/data-table/DataTableExport';
 import type { ExportScope } from '@/components/dashboard/data-table/DataTableExport';
 import DataTableFilter from '@/components/dashboard/data-table/DataTableFilter';
 import DataTableSearch from '@/components/dashboard/data-table/DataTableSearch';
@@ -44,6 +47,26 @@ import {
     formatPhone,
 } from '@/lib/dashboard/format';
 import dashboardRoutes from '@/routes/dashboard';
+
+type DateRangeField = 'submitted' | 'completed' | 'erp_synced';
+
+const DATE_RANGE_FIELDS: DateRangeFieldOption<DateRangeField>[] = [
+    {
+        value: 'submitted',
+        label: 'Submitted',
+        hint: 'When the driver submitted the check-in.',
+    },
+    {
+        value: 'completed',
+        label: 'Completed',
+        hint: 'Only check-ins that have been completed.',
+    },
+    {
+        value: 'erp_synced',
+        label: 'Synced to ERP',
+        hint: 'Only check-ins that have been synced to the ERP.',
+    },
+];
 
 /** Archived is not a status: it lists soft-deleted check-ins of any status. */
 type CheckInTab = CheckInStatus | 'archived';
@@ -110,7 +133,7 @@ const COLUMN_LABELS: Record<CheckInColumn, string> = {
     truckName: 'Truck',
     trailerChute: 'Chute',
     destination: 'Destination',
-    purchaseOrders: 'POs',
+    purchaseOrders: 'Purchase orders',
     appointmentReference: 'Appointment',
     truckColor: 'Truck color',
     emptyWeight: 'Empty weight',
@@ -248,7 +271,7 @@ const buildColumns = (dateField: DateRangeField, canViewUsers: boolean) =>
         }),
         column.accessor(DATE_ACCESSORS[dateField], {
             id: 'date',
-            header: fieldLabel(dateField),
+            header: fieldLabel(DATE_RANGE_FIELDS, dateField),
             cell: ({ getValue }) => {
                 const timestamp = getValue();
 
@@ -357,7 +380,7 @@ function queryFor(
     search: string,
     status: string | undefined,
     locations: string[],
-    dateRange: DateRangeValue | null,
+    dateRange: DateRangeValue<DateRangeField> | null,
     pageSize: { perPage: number; default: number },
     sort: CheckInSort,
     page = 1,
@@ -389,7 +412,9 @@ function sortOf(filters: CheckInFilters): CheckInSort {
         : { id: filters.sort, desc: filters.direction === 'desc' };
 }
 
-function dateRangeOf(filters: CheckInFilters): DateRangeValue | null {
+function dateRangeOf(
+    filters: CheckInFilters,
+): DateRangeValue<DateRangeField> | null {
     return filters.dateField !== null &&
         filters.from !== null &&
         filters.to !== null
@@ -407,7 +432,7 @@ function ServerFilterSync({
     sort,
     searchMinLength,
 }: {
-    dateRange: DateRangeValue | null;
+    dateRange: DateRangeValue<DateRangeField> | null;
     pageSize: { perPage: number; default: number };
     sort: CheckInSort;
     searchMinLength: number;
@@ -526,26 +551,6 @@ function useColumnSettings(settings: CheckInsIndexProps['columns']) {
     };
 }
 
-type ExportPayload = Record<string, string | number | string[]>;
-
-/**
- * Queues a spreadsheet of the current view or of every check-in. The file is built in the
- * background and emailed to the user, so this only confirms the request.
- */
-function useCheckInExport() {
-    const { post, transform, processing } = useHttp<ExportPayload>({});
-    const [notice, setNotice] = useState<'queued' | 'failed' | null>(null);
-
-    const request = (payload: ExportPayload) => {
-        transform(() => payload);
-        post(dashboardRoutes.checkIns.exports.store.url())
-            .then(() => setNotice('queued'))
-            .catch(() => setNotice('failed'));
-    };
-
-    return { request, processing, notice, dismiss: () => setNotice(null) };
-}
-
 /**
  * Search is left out: only the server knows what it matches. A new check-in has no completed or
  * synced date yet, so it only matches a range over the submitted date.
@@ -601,7 +606,9 @@ export default function CheckInsIndex({
         [dateField, canViewUsers],
     );
     const columnChoices = useColumnSettings(columnSettings);
-    const exporter = useCheckInExport();
+    const exporter = useDataTableExport(
+        dashboardRoutes.checkIns.exports.store.url(),
+    );
     const recountTimer = useRef<number | undefined>(undefined);
 
     useEffect(() => () => window.clearTimeout(recountTimer.current), []);
@@ -785,10 +792,11 @@ export default function CheckInsIndex({
                 actions={
                     <>
                         <DataTableSearch
-                            placeholder="Reference, driver, plate, PO, UUID…"
+                            placeholder="Reference, driver, phone, plate, PO, UUID…"
                             minLength={searchMinLength}
                         />
                         <DataTableDateRange
+                            fields={DATE_RANGE_FIELDS}
                             value={dateRange}
                             onChange={setDateRange}
                         />
@@ -802,7 +810,7 @@ export default function CheckInsIndex({
                                 id,
                                 label:
                                     id === 'date'
-                                        ? `Date (${fieldLabel(dateField)})`
+                                        ? `Date (${fieldLabel(DATE_RANGE_FIELDS, dateField)})`
                                         : COLUMN_LABELS[id],
                             }))}
                             isVisible={(id) =>
@@ -831,29 +839,10 @@ export default function CheckInsIndex({
                 <DataTableTabs columnId="status" tabs={tabs} />
             </div>
 
-            {exporter.notice !== null && (
-                <div
-                    role="status"
-                    className={
-                        exporter.notice === 'queued'
-                            ? 'mb-5 flex items-center justify-between gap-3 rounded-lg bg-brand-green/10 px-4 py-2.5 text-sm font-medium text-brand-green'
-                            : 'mb-5 flex items-center justify-between gap-3 rounded-lg bg-red-500/10 px-4 py-2.5 text-sm font-medium text-red-600 dark:text-red-400'
-                    }
-                >
-                    <span>
-                        {exporter.notice === 'queued'
-                            ? "Export started. We'll email it to you when it's ready."
-                            : 'The export could not be started. Please try again in a minute.'}
-                    </span>
-                    <button
-                        type="button"
-                        onClick={exporter.dismiss}
-                        className="shrink-0 opacity-70 transition hover:opacity-100"
-                    >
-                        Dismiss
-                    </button>
-                </div>
-            )}
+            <DataTableExportNotice
+                notice={exporter.notice}
+                onDismiss={exporter.dismiss}
+            />
 
             {missed > 0 && (
                 <button

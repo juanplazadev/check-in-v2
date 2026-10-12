@@ -305,6 +305,8 @@ function makeCheckIn(index: number): CheckInRecord {
                 ? 'Keep reefer at 34F. Load pallets nose to tail.'
                 : null,
         appointmentReference: random() > 0.7 ? reference('A') : null,
+        appointmentUuid: null,
+        appointmentLinkedVia: null,
         locale: random() > 0.75 ? 'es' : 'en',
         createdAt: iso(createdAt),
         completedAt: status === 'completed' ? iso(createdAt + HOUR) : null,
@@ -348,7 +350,7 @@ function makeAppointment(): AppointmentRecord {
         uuid: uuid(),
         referenceNumber: reference('A'),
         status,
-        location: pick(MOCK_LOCATIONS),
+        location: { ...pick(MOCK_LOCATIONS), uuid: uuid() },
         driver: {
             name: driverName(),
             cellphone: cellphone(),

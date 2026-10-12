@@ -21,11 +21,13 @@ enum Permission: string
     case ViewNotifications = 'view notifications';
     case SearchDashboard = 'search dashboard';
     case FilterCheckIns = 'filter check-ins';
+    case FilterAppointments = 'filter appointments';
     case CompleteCheckIns = 'complete check-ins';
     case ReopenCheckIns = 'reopen check-ins';
     case SyncCheckInsToErp = 'sync check-ins to erp';
     case UnsyncCheckInsFromErp = 'unsync check-ins from erp';
     case EditCheckIns = 'edit check-ins';
+    case LinkCheckInAppointments = 'link check-in appointments';
     case ViewCheckInPdf = 'view check-in pdf';
     case PrintCheckInPdf = 'print check-in pdf';
     case EmailCheckInPdf = 'email check-in pdf';
@@ -38,8 +40,12 @@ enum Permission: string
     case RestoreCheckIns = 'restore check-ins';
     case ExportCheckInsView = 'export check-ins view';
     case ExportCheckInsMaster = 'export check-ins master';
+    case ExportAppointmentsView = 'export appointments view';
+    case ExportAppointmentsMaster = 'export appointments master';
     case SaveCheckInColumnDisplay = 'save check-in column display';
     case SaveCheckInColumnOrder = 'save check-in column order';
+    case SaveAppointmentColumnDisplay = 'save appointment column display';
+    case SaveAppointmentColumnOrder = 'save appointment column order';
     case ViewRolesAndPermissions = 'view roles and permissions';
     case AccessDriverAccount = 'access driver account';
 }

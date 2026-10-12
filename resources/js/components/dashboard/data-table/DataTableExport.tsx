@@ -1,4 +1,6 @@
+import { useHttp } from '@inertiajs/react';
 import { ChevronDown, FileSpreadsheet, Filter, Table2 } from 'lucide-react';
+import { useState } from 'react';
 
 import {
     DropdownMenu,
@@ -9,6 +11,65 @@ import {
 
 /** `view` is what the table shows (filters and visible columns); `all` is every record. */
 export type ExportScope = 'view' | 'all';
+
+type ExportPayload = Record<string, string | number | string[]>;
+
+type ExportNotice = 'queued' | 'failed' | null;
+
+/**
+ * Queues a spreadsheet at `url`. The file is built in the background and emailed to the user,
+ * so this only confirms the request.
+ */
+export function useDataTableExport(url: string) {
+    const { post, transform, processing } = useHttp<ExportPayload>({});
+    const [notice, setNotice] = useState<ExportNotice>(null);
+
+    const request = (payload: ExportPayload) => {
+        transform(() => payload);
+        post(url)
+            .then(() => setNotice('queued'))
+            .catch(() => setNotice('failed'));
+    };
+
+    return { request, processing, notice, dismiss: () => setNotice(null) };
+}
+
+/** What became of the last export request, until dismissed. */
+export function DataTableExportNotice({
+    notice,
+    onDismiss,
+}: {
+    notice: ExportNotice;
+    onDismiss: () => void;
+}) {
+    if (notice === null) {
+        return null;
+    }
+
+    return (
+        <div
+            role="status"
+            className={
+                notice === 'queued'
+                    ? 'mb-5 flex items-center justify-between gap-3 rounded-lg bg-brand-green/10 px-4 py-2.5 text-sm font-medium text-brand-green'
+                    : 'mb-5 flex items-center justify-between gap-3 rounded-lg bg-red-500/10 px-4 py-2.5 text-sm font-medium text-red-600 dark:text-red-400'
+            }
+        >
+            <span>
+                {notice === 'queued'
+                    ? "Export started. We'll email it to you when it's ready."
+                    : 'The export could not be started. Please try again in a minute.'}
+            </span>
+            <button
+                type="button"
+                onClick={onDismiss}
+                className="shrink-0 opacity-70 transition hover:opacity-100"
+            >
+                Dismiss
+            </button>
+        </div>
+    );
+}
 
 /**
  * Toolbar menu that offers an Excel export of the current view or of every record, styled like

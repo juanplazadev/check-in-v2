@@ -193,6 +193,30 @@ it('searches the check-in table across driver, plates and purchase orders', func
             ->where('checkIns.data.0.uuid', $match->uuid));
 })->with(['driver' => 'quintero', 'plate' => 'trk48', 'purchase order' => '77310']);
 
+it('searches the check-in table by driver phone in any format', function (string $term): void {
+    $match = CheckIn::factory()->create(['drivers_cellphone' => '+17875550142']);
+    CheckIn::factory()->create(['drivers_cellphone' => '+13055559999']);
+
+    $this->actingAs(allLocationsStaff())
+        ->get(route('dashboard.checkIns', ['search' => $term]))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->has('checkIns.data', 1)
+            ->where('checkIns.data.0.uuid', $match->uuid));
+})->with(['digits' => '7875550142', 'formatted' => '(787) 555-0142', 'partial' => '555-01']);
+
+it('does not match phone digits inside a term with letters', function (): void {
+    CheckIn::factory()->create([
+        'drivers_cellphone' => '+17875550142',
+        'truck_plate' => 'ABC1234',
+        'trailer_plate' => 'DEF5678',
+    ]);
+
+    $this->actingAs(allLocationsStaff())
+        ->get(route('dashboard.checkIns', ['search' => 'XQZ0142']))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->has('checkIns.data', 0));
+});
+
 it('ignores a table search shorter than the minimum length', function (): void {
     CheckIn::factory()->count(2)->create();
 

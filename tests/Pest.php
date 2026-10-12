@@ -6,9 +6,12 @@ use App\Pdf\FakeRecordPdfRenderer;
 use App\Pdf\RecordPdfRenderer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Sleep;
 use Illuminate\Support\Str;
+use Spatie\SimpleExcel\SimpleExcelReader;
+use Symfony\Component\Mime\Email;
 use Tests\TestCase;
 
 /*
@@ -80,4 +83,42 @@ function something(): void
 function confirmPassword(): void
 {
     session(['auth.password_confirmed_at' => now()->unix()]);
+}
+
+/**
+ * The one email sent during the test. For the spreadsheet export tests, where
+ * mail goes to the array transport.
+ */
+function sentExportEmail(): Email
+{
+    $messages = Mail::mailer()->getSymfonyTransport()->messages();
+
+    expect($messages)->toHaveCount(1);
+
+    return $messages->first()->getOriginalMessage();
+}
+
+/**
+ * Every row of the emailed spreadsheet, header first.
+ *
+ * @return list<list<mixed>>
+ */
+function exportedRows(): array
+{
+    $attachments = sentExportEmail()->getAttachments();
+
+    expect($attachments)->toHaveCount(1);
+
+    $path = tempnam(sys_get_temp_dir(), 'export');
+    file_put_contents($path, $attachments[0]->getBody());
+
+    try {
+        return SimpleExcelReader::create($path, 'xlsx')
+            ->noHeaderRow()
+            ->getRows()
+            ->map(fn (array $row): array => array_values($row))
+            ->all();
+    } finally {
+        unlink($path);
+    }
 }

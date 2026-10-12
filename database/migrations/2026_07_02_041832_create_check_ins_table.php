@@ -17,7 +17,8 @@ return new class extends Migration
             $table->string('reference_number', 8)->unique();
             $table->foreignId('location_id')->constrained('locations')->restrictOnDelete();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
-            $table->foreignId('appointment_id')->nullable()->constrained()->nullOnDelete();
+            // Unique so one booking can never be claimed by two check-ins; nulls do not collide.
+            $table->foreignId('appointment_id')->nullable()->unique()->constrained()->nullOnDelete();
             $table->timestampTz('appointment_linked_at')->nullable();
             $table->string('appointment_linked_via')->nullable();
             $table->foreignId('appointment_linked_by')->nullable()->constrained('users')->nullOnDelete();
@@ -88,7 +89,7 @@ return new class extends Migration
 
         // The table search is a case-insensitive "contains", which only a trigram index can
         // serve. pg_trgm is enabled in the purchase_orders migration.
-        foreach (['reference_number', 'drivers_name', 'customer', 'truck_plate', 'trailer_plate'] as $column) {
+        foreach (['reference_number', 'drivers_name', 'customer', 'truck_plate', 'trailer_plate', 'drivers_cellphone'] as $column) {
             DB::statement("create index check_ins_{$column}_trgm_index on check_ins using gin ({$column} gin_trgm_ops)");
         }
     }

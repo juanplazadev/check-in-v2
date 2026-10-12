@@ -19,4 +19,6 @@ enum UserHistoryEvent: string
     case CheckInRestored = 'check-in-restored';
     case CheckInEdited = 'check-in-edited';
     case CheckInDeleted = 'check-in-deleted';
+    case CheckInAppointmentLinked = 'check-in-appointment-linked';
+    case CheckInAppointmentUnlinked = 'check-in-appointment-unlinked';
 }

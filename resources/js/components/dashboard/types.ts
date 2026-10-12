@@ -36,6 +36,17 @@ export type CheckInColumn =
     | 'licenseRegion'
     | 'licenseExpiration';
 
+/** Mirrors App\Enums\AppointmentColumn: the appointment table columns a user may toggle. */
+export type AppointmentColumn =
+    | 'reference'
+    | 'date'
+    | 'driver'
+    | 'cellphone'
+    | 'location'
+    | 'purchaseOrders'
+    | 'status'
+    | 'checkIn';
+
 /** Mirrors App\Enums\RecordHistoryEvent. */
 export type RecordHistoryEvent =
     | 'created'
@@ -51,7 +62,10 @@ export type RecordHistoryEvent =
     | 'details-edited'
     | 'reinstated'
     | 'archived'
-    | 'restored';
+    | 'restored'
+    | 'check-in-deleted'
+    | 'appointment-linked'
+    | 'appointment-unlinked';
 
 /** An internal staff note on a check-in, newest first on the detail page. */
 export interface CheckInNote {
@@ -158,6 +172,9 @@ export interface CheckInRecord {
     purchaseOrders: string[];
     loadingInstructions: string | null;
     appointmentReference: string | null;
+    appointmentUuid: string | null;
+    /** How the booking was tied on: the driver converted it, or staff linked it (mirrors App\Enums\AppointmentLinkMethod). */
+    appointmentLinkedVia: 'conversion' | 'staff' | null;
     /** The language the driver checked in with: one of config('app.locales'), e.g. 'es'. */
     locale: string;
     createdAt: string;
@@ -175,7 +192,7 @@ export interface AppointmentRecord {
     uuid: string;
     referenceNumber: string;
     status: AppointmentStatus;
-    location: LocationSummary;
+    location: LocationSummary & { uuid: string };
     driver: {
         name: string;
         cellphone: string;
@@ -268,4 +285,15 @@ export interface DashboardLocation extends DashboardLocationSummary {
     };
     createdAt: string;
     staff: LocationStaffMember[];
+}
+
+/** A booking the link dialog suggests, from App\Dashboard\AppointmentLinkCandidates. */
+export interface AppointmentLinkSuggestion {
+    uuid: string;
+    referenceNumber: string;
+    scheduledFor: string;
+    driverName: string;
+    cellphoneLastFour: string;
+    phoneMatch: boolean;
+    nameMatch: boolean;
 }

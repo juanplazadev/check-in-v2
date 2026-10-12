@@ -222,7 +222,7 @@ return [
         ],
 
         /*
-         * Check-in spreadsheet exports. Their own supervisor rather than a
+         * Spreadsheet exports. Their own supervisor rather than a
          * lower spot in supervisor-1's queue list: queue order only decides
          * what a free worker picks next, so a long export would still hold a
          * default worker. One process at the lowest priority keeps exports

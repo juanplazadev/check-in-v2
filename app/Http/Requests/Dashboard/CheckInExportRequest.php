@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Dashboard;
 
 use App\Enums\CheckInColumn;
-use App\Enums\CheckInExportScope;
+use App\Enums\ExportScope;
 use App\Enums\Permission;
 use App\Http\Requests\Dashboard\Concerns\FiltersCheckIns;
 use App\Models\User;
@@ -28,9 +28,9 @@ final class CheckInExportRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        $permission = match (CheckInExportScope::tryFrom((string) $this->input('scope'))) {
-            CheckInExportScope::View => Permission::ExportCheckInsView,
-            CheckInExportScope::All => Permission::ExportCheckInsMaster,
+        $permission = match (ExportScope::tryFrom((string) $this->input('scope'))) {
+            ExportScope::View => Permission::ExportCheckInsView,
+            ExportScope::All => Permission::ExportCheckInsMaster,
             null => null,
         };
 
@@ -47,15 +47,15 @@ final class CheckInExportRequest extends FormRequest
 
         return [
             ...$this->checkInFilterRules(),
-            'scope' => ['required', Rule::enum(CheckInExportScope::class)],
-            'columns' => ['exclude_unless:scope,'.CheckInExportScope::View->value, 'required', 'list', 'max:'.count(CheckInColumn::cases())],
+            'scope' => ['required', Rule::enum(ExportScope::class)],
+            'columns' => ['exclude_unless:scope,'.ExportScope::View->value, 'required', 'list', 'max:'.count(CheckInColumn::cases())],
             'columns.*' => ['string', 'distinct', Rule::in(resolve(DashboardCheckInColumns::class)->available($user))],
         ];
     }
 
-    public function scope(): CheckInExportScope
+    public function scope(): ExportScope
     {
-        return CheckInExportScope::from($this->validated('scope'));
+        return ExportScope::from($this->validated('scope'));
     }
 
     /**
@@ -66,7 +66,7 @@ final class CheckInExportRequest extends FormRequest
      */
     public function columns(): array
     {
-        if ($this->scope() === CheckInExportScope::All) {
+        if ($this->scope() === ExportScope::All) {
             return [];
         }
 

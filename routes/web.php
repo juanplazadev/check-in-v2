@@ -10,7 +10,10 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\CheckInController;
 use App\Http\Controllers\CheckInDistanceController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\Dashboard\AppointmentColumnController as DashboardAppointmentColumnController;
 use App\Http\Controllers\Dashboard\AppointmentController as DashboardAppointmentController;
+use App\Http\Controllers\Dashboard\AppointmentExportController as DashboardAppointmentExportController;
+use App\Http\Controllers\Dashboard\CheckInAppointmentController as DashboardCheckInAppointmentController;
 use App\Http\Controllers\Dashboard\CheckInArchiveController as DashboardCheckInArchiveController;
 use App\Http\Controllers\Dashboard\CheckInCancelController as DashboardCheckInCancelController;
 use App\Http\Controllers\Dashboard\CheckInColumnController as DashboardCheckInColumnController;
@@ -249,6 +252,26 @@ Route::middleware('setLocale')->group(function (): void {
                     ->whereUuid('uuid')
                     ->name('checkIns.update');
 
+                // Suggestions are read when the link dialog opens. Linking by
+                // reference number is throttled tighter so a staff account
+                // cannot be used to walk the code space.
+                Route::middleware(PermissionMiddleware::using(Permission::LinkCheckInAppointments))->group(function (): void {
+                    Route::middleware('throttle:30,1')
+                        ->get('/check-ins/{uuid}/appointment', [DashboardCheckInAppointmentController::class, 'index'])
+                        ->whereUuid('uuid')
+                        ->name('checkIns.appointment.index');
+
+                    Route::middleware('throttle:10,1')
+                        ->post('/check-ins/{uuid}/appointment', [DashboardCheckInAppointmentController::class, 'store'])
+                        ->whereUuid('uuid')
+                        ->name('checkIns.appointment.store');
+
+                    Route::middleware('throttle:30,1')
+                        ->delete('/check-ins/{uuid}/appointment', [DashboardCheckInAppointmentController::class, 'destroy'])
+                        ->whereUuid('uuid')
+                        ->name('checkIns.appointment.destroy');
+                });
+
                 // POST, not GET: every reveal writes to both history trails.
                 Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::RevealDriverLicenses)])
                     ->post('/check-ins/{uuid}/license', DashboardCheckInLicenseController::class)
@@ -272,7 +295,21 @@ Route::middleware('setLocale')->group(function (): void {
             });
 
             Route::middleware(PermissionMiddleware::using(Permission::ViewAppointments))->group(function (): void {
-                Route::inertia('/appointments', 'Dashboard/Appointments/Index')->name('appointments');
+                Route::get('/appointments', [DashboardAppointmentController::class, 'index'])->name('appointments');
+
+                // Which of display and order may be saved is checked per key
+                // by AppointmentColumnsRequest.
+                Route::middleware(PermissionMiddleware::using([Permission::SaveAppointmentColumnDisplay, Permission::SaveAppointmentColumnOrder]))
+                    ->patch('/appointments/columns', DashboardAppointmentColumnController::class)
+                    ->name('appointments.columns');
+
+                // Queues a job that emails the file to the requester. Which
+                // spreadsheet may be asked for is checked per scope by
+                // AppointmentExportRequest.
+                Route::middleware(['throttle:5,1', PermissionMiddleware::using([Permission::ExportAppointmentsView, Permission::ExportAppointmentsMaster])])
+                    ->post('/appointments/exports', [DashboardAppointmentExportController::class, 'store'])
+                    ->name('appointments.exports.store');
+
                 Route::get('/appointments/{uuid}', [DashboardAppointmentController::class, 'show'])
                     ->whereUuid('uuid')
                     ->name('appointments.show');

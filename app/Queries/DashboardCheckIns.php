@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Queries;
 
 use App\Dashboard\CheckInRecordResolver;
+use App\Dashboard\PhoneSearchTerm;
 use App\Enums\CheckInColumn;
 use App\Enums\CheckInDateField;
 use App\Enums\CheckInStatus;
@@ -24,6 +25,9 @@ use Illuminate\Support\Str;
  * A search term that is a full UUID also matches the check-in by uuid. It is an exact match
  * on the unique index, checked with Str::isUuid() first, since Postgres errors on comparing
  * a uuid column to anything else.
+ *
+ * A term that reads as a phone number also matches the driver's cellphone on its digits,
+ * since phones are stored as +1XXXXXXXXXX and staff type them in any format.
  *
  * Archived is a pseudo-status: it lists soft-deleted check-ins of any status. Every other
  * filter leaves them out.
@@ -130,7 +134,7 @@ final readonly class DashboardCheckIns
         foreach ($rows as $row) {
             if ((bool) $row->archived) {
                 $archived += (int) $row->aggregate;
-            } elseif (array_key_exists($row->status, $byStatus)) {
+            } elseif (array_key_exists((string) $row->status, $byStatus)) {
                 $byStatus[$row->status] = (int) $row->aggregate;
             }
         }
@@ -233,6 +237,7 @@ final readonly class DashboardCheckIns
                 ->orWhereContains('customer', $search)
                 ->orWhereContains('truck_plate', $search)
                 ->orWhereContains('trailer_plate', $search)
+                ->when(PhoneSearchTerm::digits($search, self::MIN_SEARCH_LENGTH), fn (Builder $query, string $digits): Builder => $query->orWhereContains('drivers_cellphone', $digits))
                 ->when(Str::isUuid($search) ? Str::lower($search) : null, fn (Builder $query, string $uuid): Builder => $query->orWhere('uuid', $uuid)))
             ->union($purchaseOrders);
     }

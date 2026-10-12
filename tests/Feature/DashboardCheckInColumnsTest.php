@@ -29,7 +29,7 @@ it('offers every column to staff who see every location, even when no location c
             ->where('columns.options', array_map(fn (CheckInColumn $column): string => $column->value, CheckInColumn::cases())));
 });
 
-it('offers an optional-field column only when one of the user\'s locations collects it', function (): void {
+it("offers an optional-field column only when one of the user's locations collects it", function (): void {
     $plain = Location::factory()->create();
     $withColor = Location::factory()->create(['config' => ['checkin' => ['show_truck_color' => true]]]);
     Location::factory()->checkinAllOptionalFields()->create();

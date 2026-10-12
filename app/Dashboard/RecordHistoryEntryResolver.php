@@ -105,6 +105,14 @@ final readonly class RecordHistoryEntryResolver
                 $context['reference_number'] ?? '',
                 $context['reason'] ?? '',
             ),
+            RecordHistoryEvent::AppointmentLinked => sprintf(
+                $entry->recordable_type === 'appointment' ? 'Linked to check-in %s' : 'Linked to appointment %s',
+                $context['reference_number'] ?? '',
+            ),
+            RecordHistoryEvent::AppointmentUnlinked => sprintf(
+                $entry->recordable_type === 'appointment' ? 'Unlinked from check-in %s' : 'Unlinked from appointment %s',
+                $context['reference_number'] ?? '',
+            ),
         };
     }
 

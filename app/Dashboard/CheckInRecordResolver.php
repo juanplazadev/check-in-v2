@@ -80,6 +80,8 @@ final readonly class CheckInRecordResolver
             'purchaseOrders' => $purchaseOrders,
             'loadingInstructions' => $checkIn->loading_instructions,
             'appointmentReference' => $checkIn->appointment?->reference_number,
+            'appointmentUuid' => $checkIn->appointment?->uuid,
+            'appointmentLinkedVia' => $checkIn->appointment_linked_via?->value,
             'locale' => $checkIn->locale,
             'createdAt' => $checkIn->created_at->toIso8601String(),
             'completedAt' => $checkIn->completed_at?->toIso8601String(),

@@ -15,6 +15,8 @@ const DOT_CLASSES: Partial<Record<RecordHistoryEntry['event'], string>> = {
     reinstated: 'bg-emerald-500',
     archived: 'bg-gray-500',
     restored: 'bg-emerald-500',
+    'appointment-linked': 'bg-blue-500',
+    'appointment-unlinked': 'bg-gray-500',
 };
 
 function ChangeValue({ value }: { value: string | null }) {

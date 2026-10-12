@@ -4,23 +4,26 @@ declare(strict_types=1);
 
 namespace App\Mail;
 
-use App\Enums\CheckInExportScope;
+use App\Enums\ExportScope;
+use App\Enums\ExportSubject;
 use Carbon\CarbonInterface;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
+use Illuminate\Support\Str;
 
 /**
- * A finished check-in spreadsheet, mailed to the staff member who asked for
+ * A finished dashboard spreadsheet, mailed to the staff member who asked for
  * it. There is no shared file storage to download from, so the file travels
  * as an attachment.
  *
- * Never queued: {@see \App\Jobs\ExportCheckInsJob} sends it while the file
- * still exists and deletes the file straight after. A file over the
- * attachment limit is left off, and the mail says so.
+ * Never queued: the export job ({@see \App\Jobs\ExportCheckInsJob},
+ * {@see \App\Jobs\ExportAppointmentsJob}) sends it while the file still exists
+ * and deletes the file straight after. A file over the attachment limit is
+ * left off, and the mail says so.
  */
-final class CheckInExportMail extends Mailable
+final class ExportMail extends Mailable
 {
     public const string MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
@@ -28,8 +31,9 @@ final class CheckInExportMail extends Mailable
      * @param  string|null  $path  Absolute path of the file, or null when it was too large to attach.
      */
     public function __construct(
+        public ExportSubject $exportSubject,
         public string $filename,
-        public CheckInExportScope $scope,
+        public ExportScope $scope,
         public int $rowCount,
         public CarbonInterface $generatedAt,
         public ?string $path,
@@ -37,18 +41,20 @@ final class CheckInExportMail extends Mailable
 
     public function envelope(): Envelope
     {
-        return new Envelope(subject: 'Check-in export - '.$this->filename);
+        return new Envelope(subject: Str::ucfirst($this->exportSubject->singular()).' export - '.$this->filename);
     }
 
     public function content(): Content
     {
+        $singular = $this->exportSubject->singular();
+
         return new Content(
             view: 'mail.notification',
             with: [
                 'preheader' => $this->path === null
-                    ? 'Your check-in export was too large to email'
-                    : 'Your check-in export is attached',
-                'eyebrow' => 'Check-In Export',
+                    ? "Your {$singular} export was too large to email"
+                    : "Your {$singular} export is attached",
+                'eyebrow' => Str::title($singular).' Export',
                 'title' => $this->path === null
                     ? 'Your export was too large to email'
                     : 'Your export is ready',
@@ -58,7 +64,7 @@ final class CheckInExportMail extends Mailable
                 'referenceLabel' => 'File',
                 'referenceNumber' => $this->filename,
                 'rows' => [
-                    ['label' => 'Export', 'value' => $this->scope === CheckInExportScope::All ? 'All check-ins' : 'Current view'],
+                    ['label' => 'Export', 'value' => $this->scope === ExportScope::All ? 'All '.$this->exportSubject->plural() : 'Current view'],
                     ['label' => 'Rows', 'value' => number_format($this->rowCount)],
                     ['label' => 'Generated', 'value' => $this->generatedAt->format('M j, Y g:i A T')],
                 ],

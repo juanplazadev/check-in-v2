@@ -1,4 +1,6 @@
 import {
+    addDays,
+    addMonths,
     endOfMonth,
     format,
     isSameDay,
@@ -20,36 +22,21 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
-export type DateRangeField = 'submitted' | 'completed' | 'erp_synced';
+/** One date a table can be filtered on, such as when a record was submitted. */
+export interface DateRangeFieldOption<F extends string = string> {
+    value: F;
+    label: string;
+    hint: string;
+    /** A planned date (an appointment slot) may lie after today; a recorded one may not. */
+    allowsFuture?: boolean;
+}
 
 /** Whole calendar days as `yyyy-MM-dd`, which the server reads in the viewer's timezone. */
-export interface DateRangeValue {
-    field: DateRangeField;
+export interface DateRangeValue<F extends string = string> {
+    field: F;
     from: string;
     to: string;
 }
-
-export const DATE_RANGE_FIELDS: {
-    value: DateRangeField;
-    label: string;
-    hint: string;
-}[] = [
-    {
-        value: 'submitted',
-        label: 'Submitted',
-        hint: 'When the driver submitted the check-in.',
-    },
-    {
-        value: 'completed',
-        label: 'Completed',
-        hint: 'Only check-ins that have been completed.',
-    },
-    {
-        value: 'erp_synced',
-        label: 'Synced to ERP',
-        hint: 'Only check-ins that have been synced to the ERP.',
-    },
-];
 
 const DAY_FORMAT = 'yyyy-MM-dd';
 const WIDE_QUERY = '(min-width: 768px)';
@@ -59,8 +46,8 @@ interface Preset {
     range: (today: Date) => { from: Date; to: Date };
 }
 
-/** Every preset ends today at the latest: nothing can be submitted, completed or synced in the future. */
-const PRESETS: Preset[] = [
+/** For recorded dates: every preset ends today at the latest, since nothing is recorded in the future. */
+const PAST_PRESETS: Preset[] = [
     { label: 'Today', range: (today) => ({ from: today, to: today }) },
     {
         label: 'Yesterday',
@@ -87,16 +74,51 @@ const PRESETS: Preset[] = [
     },
 ];
 
+/** For planned dates, which mostly lie ahead. */
+const FUTURE_PRESETS: Preset[] = [
+    { label: 'Today', range: (today) => ({ from: today, to: today }) },
+    {
+        label: 'Tomorrow',
+        range: (today) => ({ from: addDays(today, 1), to: addDays(today, 1) }),
+    },
+    {
+        label: 'Next 7 days',
+        range: (today) => ({ from: today, to: addDays(today, 6) }),
+    },
+    {
+        label: 'Next 30 days',
+        range: (today) => ({ from: today, to: addDays(today, 29) }),
+    },
+    {
+        label: 'Last 7 days',
+        range: (today) => ({ from: subDays(today, 6), to: today }),
+    },
+    {
+        label: 'This month',
+        range: (today) => ({
+            from: startOfMonth(today),
+            to: endOfMonth(today),
+        }),
+    },
+    {
+        label: 'Next month',
+        range: (today) => ({
+            from: startOfMonth(addMonths(today, 1)),
+            to: endOfMonth(addMonths(today, 1)),
+        }),
+    },
+];
+
 /** Parsed as a local day; `new Date('yyyy-MM-dd')` would be UTC midnight and land on the wrong day. */
 function toDate(day: string): Date {
     return parse(day, DAY_FORMAT, new Date());
 }
 
-export function fieldLabel(field: DateRangeField): string {
-    return (
-        DATE_RANGE_FIELDS.find((option) => option.value === field)?.label ??
-        field
-    );
+export function fieldLabel<F extends string>(
+    fields: DateRangeFieldOption<F>[],
+    field: F,
+): string {
+    return fields.find((option) => option.value === field)?.label ?? field;
 }
 
 function formatRange(from: Date, to: Date): string {
@@ -109,12 +131,16 @@ function formatRange(from: Date, to: Date): string {
         : `${format(from, 'MMM d, yyyy')} - ${format(to, 'MMM d, yyyy')}`;
 }
 
-function matchingPreset(range: DateRange | undefined, today: Date) {
+function matchingPreset(
+    presets: Preset[],
+    range: DateRange | undefined,
+    today: Date,
+) {
     if (!range?.from || !range.to) {
         return undefined;
     }
 
-    return PRESETS.find((preset) => {
+    return presets.find((preset) => {
         const candidate = preset.range(today);
 
         return (
@@ -140,26 +166,31 @@ function useIsWide(): boolean {
 /**
  * Mosaic-styled date range filter: pick which date the range applies to, then a preset or a
  * custom span on the calendar. Edits stay in a draft until Apply, so picking the first day of a
- * range never fires a server visit; closing the popover discards the draft.
+ * range never fires a server visit; closing the popover discards the draft. The first field is
+ * the default.
  */
-export default function DataTableDateRange({
+export default function DataTableDateRange<F extends string>({
+    fields,
     value,
     onChange,
 }: {
-    value: DateRangeValue | null;
-    onChange: (value: DateRangeValue | null) => void;
+    fields: DateRangeFieldOption<F>[];
+    value: DateRangeValue<F> | null;
+    onChange: (value: DateRangeValue<F> | null) => void;
 }) {
     const isWide = useIsWide();
     const [open, setOpen] = useState(false);
-    const [field, setField] = useState<DateRangeField>(
-        value?.field ?? 'submitted',
-    );
+    const defaultField = fields[0].value;
+    const [field, setField] = useState<F>(value?.field ?? defaultField);
     const [range, setRange] = useState<DateRange | undefined>();
     const today = startOfDay(new Date());
+    const fieldOption = fields.find((option) => option.value === field);
+    const allowsFuture = fieldOption?.allowsFuture ?? false;
+    const presets = allowsFuture ? FUTURE_PRESETS : PAST_PRESETS;
 
     const openWithDraft = (isOpen: boolean) => {
         if (isOpen) {
-            setField(value?.field ?? 'submitted');
+            setField(value?.field ?? defaultField);
             setRange(
                 value
                     ? { from: toDate(value.from), to: toDate(value.to) }
@@ -170,7 +201,7 @@ export default function DataTableDateRange({
         setOpen(isOpen);
     };
 
-    const activePreset = matchingPreset(range, today);
+    const activePreset = matchingPreset(presets, range, today);
     const isComplete = range?.from !== undefined && range.to !== undefined;
 
     const apply = () => {
@@ -197,7 +228,7 @@ export default function DataTableDateRange({
     };
 
     const label = value
-        ? `${fieldLabel(value.field)}: ${formatRange(toDate(value.from), toDate(value.to))}`
+        ? `${fieldLabel(fields, value.field)}: ${formatRange(toDate(value.from), toDate(value.to))}`
         : 'Any date';
 
     return (
@@ -250,7 +281,7 @@ export default function DataTableDateRange({
                         aria-labelledby="date-range-field-label"
                         className="flex w-full rounded-lg bg-gray-100 p-0.5 dark:bg-gray-900/40"
                     >
-                        {DATE_RANGE_FIELDS.map((option) => (
+                        {fields.map((option) => (
                             <button
                                 key={option.value}
                                 type="button"
@@ -269,17 +300,13 @@ export default function DataTableDateRange({
                         ))}
                     </div>
                     <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        {
-                            DATE_RANGE_FIELDS.find(
-                                (option) => option.value === field,
-                            )?.hint
-                        }
+                        {fieldOption?.hint}
                     </p>
                 </div>
 
                 <div className="flex flex-col md:flex-row">
                     <ul className="flex flex-wrap gap-1.5 border-b border-gray-200 px-3 py-3 md:w-40 md:flex-col md:flex-nowrap md:gap-0.5 md:border-r md:border-b-0 dark:border-gray-700/60">
-                        {PRESETS.map((preset) => (
+                        {presets.map((preset) => (
                             <li key={preset.label}>
                                 <button
                                     type="button"
@@ -306,10 +333,12 @@ export default function DataTableDateRange({
                         numberOfMonths={isWide ? 2 : 1}
                         defaultMonth={
                             range?.from ??
-                            (isWide ? subMonths(today, 1) : today)
+                            (isWide && !allowsFuture
+                                ? subMonths(today, 1)
+                                : today)
                         }
-                        disabled={{ after: today }}
-                        endMonth={today}
+                        disabled={allowsFuture ? undefined : { after: today }}
+                        endMonth={allowsFuture ? undefined : today}
                         className="bg-transparent"
                     />
                 </div>

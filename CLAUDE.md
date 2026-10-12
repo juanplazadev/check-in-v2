@@ -204,3 +204,24 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 - IMPORTANT: Activate `inertia-react-development` when working with Inertia React client-side patterns.
 
 </laravel-boost-guidelines>
+
+# Project Conventions
+
+## Validation
+
+- Always validate user input with a Form Request (`php artisan make:request`). Never call `$request->validate()` or `Validator::make()` inline in a controller.
+- Pass only `$request->validated()` (or `safe()`) data into actions. Never pass `$request->all()`.
+- Put authorization for the request in the Form Request `authorize()` method or a policy.
+
+## SQL Injection
+
+- Always use bound parameters. Use Eloquent or the query builder with values passed as arguments.
+- In raw expressions (`whereRaw`, `selectRaw`, `orderByRaw`, `DB::select`, `DB::statement`), pass user values through the bindings array (`?` or named placeholders). Never interpolate or concatenate user input into SQL strings.
+- Column names, sort directions, and other identifiers cannot be bound. Check them against an allowlist (for example, an enum) before using them.
+
+## Action Pattern
+
+- Put business logic in action classes in `app/Actions`, not in controllers, jobs, or models. Controllers validate with a Form Request, call an action, and return a response.
+- Follow the existing shape: `final readonly class XxxAction` with constructor injection and a single public `handle()` method.
+- Each action does one thing.
+- When an operation needs more than one action, create a parent action that injects the child actions and calls them inside `DB::transaction()`, so all writes commit or roll back together. Callers use the parent action only.

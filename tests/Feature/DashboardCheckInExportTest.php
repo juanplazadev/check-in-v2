@@ -2,22 +2,19 @@
 
 declare(strict_types=1);
 
-use App\Dashboard\CheckInExportFiles;
-use App\Enums\CheckInExportScope;
+use App\Dashboard\ExportFiles;
+use App\Enums\ExportScope;
 use App\Enums\Role;
 use App\Jobs\ExportCheckInsJob;
-use App\Mail\CheckInExportMail;
+use App\Mail\ExportMail;
 use App\Models\CheckIn;
 use App\Models\Location;
 use App\Models\User;
-use App\Notifications\CheckInExportFailed;
-use App\Notifications\CheckInExportReady;
-use Illuminate\Support\Facades\Mail;
+use App\Notifications\ExportFailed;
+use App\Notifications\ExportReady;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Spatie\SimpleExcel\SimpleExcelReader;
-use Symfony\Component\Mime\Email;
 
 use function Pest\Laravel\post;
 
@@ -31,43 +28,6 @@ use function Pest\Laravel\post;
 beforeEach(function (): void {
     Storage::fake('local');
 });
-
-/**
- * The one email sent during the test.
- */
-function sentExportEmail(): Email
-{
-    $messages = Mail::mailer()->getSymfonyTransport()->messages();
-
-    expect($messages)->toHaveCount(1);
-
-    return $messages->first()->getOriginalMessage();
-}
-
-/**
- * Every row of the emailed spreadsheet, header first.
- *
- * @return list<list<mixed>>
- */
-function exportedRows(): array
-{
-    $attachments = sentExportEmail()->getAttachments();
-
-    expect($attachments)->toHaveCount(1);
-
-    $path = tempnam(sys_get_temp_dir(), 'export');
-    file_put_contents($path, $attachments[0]->getBody());
-
-    try {
-        return SimpleExcelReader::create($path, 'xlsx')
-            ->noHeaderRow()
-            ->getRows()
-            ->map(fn (array $row): array => array_values($row))
-            ->all();
-    } finally {
-        unlink($path);
-    }
-}
 
 it('forbids the master export to everyone but admins', function (Role $role): void {
     $this->actingAs(User::factory()->withRole($role)->create())
@@ -98,7 +58,7 @@ it('queues the export on its own low-priority queue', function (Role $role): voi
         ])
         ->assertAccepted();
 
-    Queue::assertPushedOn('exports', ExportCheckInsJob::class, fn (ExportCheckInsJob $job): bool => $job->scope === CheckInExportScope::View
+    Queue::assertPushedOn('exports', ExportCheckInsJob::class, fn (ExportCheckInsJob $job): bool => $job->scope === ExportScope::View
         && $job->columns === ['reference', 'customer']
         && $job->filters['status'] === 'pending'
         && $job->filters['timezone'] === 'America/Chicago');
@@ -179,12 +139,13 @@ it('emails the spreadsheet to the requester and confirms in the bell', function 
 
     expect($email->getTo()[0]->getAddress())->toBe($user->email)
         ->and($email->getAttachments()[0]->getFilename())->toBe($notification->data['filename'])
-        ->and($email->getAttachments()[0]->getContentType())->toBe(CheckInExportMail::MIME)
-        ->and($notification->type)->toBe(CheckInExportReady::TYPE)
+        ->and($email->getAttachments()[0]->getContentType())->toBe(ExportMail::MIME)
+        ->and($notification->type)->toBe(ExportReady::TYPE)
+        ->and($notification->data['subject'])->toBe('check-ins')
         ->and($notification->data['rowCount'])->toBe(2)
         ->and($notification->data['attached'])->toBeTrue()
         ->and($notification->data['filename'])->toStartWith('check-ins-master-')
-        ->and(Storage::disk('local')->allFiles(CheckInExportFiles::DIRECTORY))->toBe([]);
+        ->and(Storage::disk('local')->allFiles(ExportFiles::DIRECTORY))->toBe([]);
 });
 
 it('emails without the file when it is over the attachment limit', function (): void {
@@ -200,25 +161,25 @@ it('emails without the file when it is over the attachment limit', function (): 
     expect($email->getAttachments())->toBe([])
         ->and($email->getHtmlBody())->toContain('too large to email')
         ->and($user->notifications()->sole()->data['attached'])->toBeFalse()
-        ->and(Storage::disk('local')->allFiles(CheckInExportFiles::DIRECTORY))->toBe([]);
+        ->and(Storage::disk('local')->allFiles(ExportFiles::DIRECTORY))->toBe([]);
 });
 
 it('tells the requester when the export fails', function (): void {
     $user = User::factory()->withRole(Role::Admin)->create();
 
-    new ExportCheckInsJob($user, CheckInExportScope::All, [], [], (string) Str::uuid(), 'check-ins.xlsx')
+    new ExportCheckInsJob($user, ExportScope::All, [], [], (string) Str::uuid(), 'check-ins.xlsx')
         ->failed(new RuntimeException('disk full'));
 
-    expect($user->notifications()->sole()->type)->toBe(CheckInExportFailed::TYPE);
+    expect($user->notifications()->sole()->type)->toBe(ExportFailed::TYPE);
 });
 
 it('prunes exports left behind for over a day', function (): void {
-    $files = resolve(CheckInExportFiles::class);
+    $files = resolve(ExportFiles::class);
     $old = $files->path((string) Str::uuid());
     $recent = $files->path((string) Str::uuid());
     Storage::disk('local')->put($old, 'old');
     Storage::disk('local')->put($recent, 'recent');
-    touch(Storage::disk('local')->path($old), now()->subDays(CheckInExportFiles::KEEP_DAYS + 1)->getTimestamp());
+    touch(Storage::disk('local')->path($old), now()->subDays(ExportFiles::KEEP_DAYS + 1)->getTimestamp());
 
     $files->prune(now());
 
