@@ -7,9 +7,14 @@ use App\CheckIn\CheckInScheduleResolver;
 use App\DTOs\CheckInLocationDTO;
 use App\Enums\CheckInErpStatus;
 use App\Enums\CheckInStatus;
+use App\Enums\Role;
+use App\Events\CheckInCreated;
 use App\Models\CheckIn;
 use App\Models\Location;
 use App\Models\User;
+use App\Notifications\CheckInReceived;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Notification;
 use Inertia\Testing\AssertableInertia;
 
 /**
@@ -155,6 +160,8 @@ it('accepts a valid submission when optional fields are hidden', function (): vo
 
     $response->assertSessionHasNoErrors()
         ->assertRedirect(route('checkIn.confirmed', CheckIn::query()->sole()));
+
+    expect(CheckIn::query()->sole()->drivers_email)->toBeNull();
 });
 
 it('prefills the check-in with the signed-in driver saved license', function (): void {
@@ -164,7 +171,8 @@ it('prefills the check-in with the signed-in driver saved license', function ():
         'email' => 'john@example.com',
         'password' => 'secret-password',
         'drivers_license_number' => 'D1234567',
-        'drivers_license_state' => 'Arizona',
+        'drivers_license_state' => 'Sonora',
+        'drivers_license_country' => 'MX',
         'drivers_license_expiration_date' => '2030-05-01',
     ]);
 
@@ -174,7 +182,8 @@ it('prefills the check-in with the signed-in driver saved license', function ():
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->component('CheckInForm')
             ->where('driverLicense.number', 'D1234567')
-            ->where('driverLicense.state', 'Arizona')
+            ->where('driverLicense.state', 'Sonora')
+            ->where('driverLicense.country', 'MX')
             ->where('driverLicense.expirationDate', '2030-05-01'));
 });
 
@@ -202,7 +211,10 @@ it('captures the signed-in driver on the check-in', function (): void {
         ->post(route('checkIn.store', $location), validCheckInPayload())
         ->assertSessionHasNoErrors();
 
-    expect(CheckIn::query()->sole()->user_id)->toBe($user->id);
+    $checkIn = CheckIn::query()->sole();
+
+    expect($checkIn->user_id)->toBe($user->id)
+        ->and($checkIn->drivers_email)->toBe('john@example.com');
 });
 
 it('accepts a submission that omits the optional trailer chute', function (): void {
@@ -391,4 +403,43 @@ it('redirects the form to location select when the coordinates are missing', fun
         ->get(route('checkIn.form', $location))
         ->assertRedirect(route('checkIn.selectLocation'))
         ->assertSessionHasErrors('userCoords');
+});
+
+it('broadcasts a submitted check-in to the dashboard', function (): void {
+    $location = Location::factory()->create();
+    Event::fake([CheckInCreated::class]);
+
+    $this->withSession(freshGatePass($location))
+        ->post(route('checkIn.store', $location), validCheckInPayload())
+        ->assertSessionHasNoErrors();
+
+    Event::assertDispatchedTimes(CheckInCreated::class, 1);
+    Event::assertDispatched(
+        CheckInCreated::class,
+        fn (CheckInCreated $event): bool => $event->checkIn->is(CheckIn::query()->sole())
+            && $event->broadcastWith()['checkIn']['purchaseOrders'] === ['PO-12345'],
+    );
+});
+
+it('notifies every verified staff member who works the location of a submitted check-in, and nobody else', function (): void {
+    $location = Location::factory()->create();
+    $staff = collect(Role::staff())->map(fn (Role $role): User => User::factory()->withRole($role)->worksAt($location)->create());
+    $shippingElsewhere = User::factory()->withRole(Role::Shipping)->worksAt(Location::factory()->create())->create();
+    $driver = User::factory()->withRole(Role::Driver)->create();
+    $unverifiedStaff = User::factory()->withRole(Role::Shipping)->unverified()->create();
+    Notification::fake();
+
+    $this->withSession(freshGatePass($location))
+        ->post(route('checkIn.store', $location), validCheckInPayload())
+        ->assertSessionHasNoErrors();
+
+    $checkIn = CheckIn::query()->sole();
+
+    Notification::assertSentTo(
+        $staff,
+        CheckInReceived::class,
+        fn (CheckInReceived $notification, array $channels): bool => $notification->checkIn->is($checkIn)
+            && $channels === ['database', 'broadcast'],
+    );
+    Notification::assertNotSentTo([$driver, $unverifiedStaff, $shippingElsewhere], CheckInReceived::class);
 });

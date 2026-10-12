@@ -17,6 +17,11 @@ const STATUS_STYLES: Record<string, StatusStyle> = {
         className: 'bg-gray-400/15 text-gray-500 dark:text-gray-400',
         dot: 'bg-gray-400',
     },
+    // A soft-deleted check-in, shown beside its real status.
+    archived: {
+        className: 'bg-gray-400/15 text-gray-500 dark:text-gray-400',
+        dot: 'bg-gray-400',
+    },
     scheduled: {
         className: 'bg-blue-500/12 text-blue-700 dark:text-blue-400',
         dot: 'bg-blue-500',
@@ -30,6 +35,15 @@ const STATUS_STYLES: Record<string, StatusStyle> = {
         className:
             'bg-brand-green/12 text-brand-green ring-1 ring-brand-green/30',
         dot: 'bg-brand-green',
+    },
+    // ERP sync states (CheckInErpStatus) shown on the staff dashboard; `pending` is shared above.
+    synced: {
+        className: 'bg-brand-green/12 text-brand-green',
+        dot: 'bg-brand-green',
+    },
+    failed: {
+        className: 'bg-rose-500/12 text-rose-700 dark:text-rose-400',
+        dot: 'bg-rose-500',
     },
 };
 

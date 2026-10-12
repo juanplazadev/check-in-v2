@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Role;
 use App\Models\User;
 
 /**
@@ -15,7 +16,7 @@ it('renders every settings section without console errors', function (): void {
         'email' => 'settings-browser@example.com',
         'password' => 'secret-password',
         'email_verified_at' => now(),
-    ]);
+    ])->assignRole(Role::Driver);
 
     $this->actingAs($driver);
 
@@ -50,7 +51,7 @@ it('opens the delete dialog and asks for a password', function (): void {
         'email' => 'delete-browser@example.com',
         'password' => 'secret-password',
         'email_verified_at' => now(),
-    ]);
+    ])->assignRole(Role::Driver);
 
     $this->actingAs($driver);
 

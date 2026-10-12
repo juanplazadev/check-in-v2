@@ -33,6 +33,32 @@ return [
         'taglineSub' => "It happens. Enter your email and we'll get you back on the road.",
     ],
 
+    'confirmPassword' => [
+        'eyebrow' => 'Security check',
+        'title' => 'Confirm your password',
+        'subtitle' => 'Your profile holds your licence details, so please re-enter your password before continuing. We will not ask again for a while.',
+        'passwordLabel' => 'Password',
+        'passwordPlaceholder' => 'Enter your password',
+        'confirm' => 'Confirm',
+        'required' => 'Please confirm your password before changing your profile.',
+        'tagline' => 'Fresh from our fields to your dock.',
+        'taglineSub' => 'A quick check that it is really you before we show or change anything sensitive.',
+    ],
+
+    'verifyEmailPage' => [
+        'eyebrow' => 'One more step',
+        'title' => 'Verify your email address',
+        'subtitle' => 'We sent a verification link to :email. Open it to activate your account and see your check-ins.',
+        'resend' => 'Resend the link',
+        'sent' => "We've sent a new verification link. It can take a minute to arrive.",
+        'spamHint' => "Can't find it? Check your spam folder.",
+        'wrongEmailPrompt' => 'Wrong email address?',
+        'wrongEmailLink' => 'Change it on your profile',
+        'logout' => 'Sign out',
+        'tagline' => 'Fresh from our fields to your dock.',
+        'taglineSub' => 'Confirming your email keeps your check-in history tied to you, and lets us reach you about your appointments.',
+    ],
+
     'resetPassword' => [
         'eyebrow' => 'Password reset',
         'title' => 'Set a new password',
@@ -93,17 +119,13 @@ return [
         'reference' => 'Ref',
         'statusPending' => 'Pending',
         'statusCompleted' => 'Completed',
-        'statusCancelled' => 'Cancelled',
+        'statusCancelled' => 'Canceled',
         'nudgeAddLicenseTitle' => 'Add your license',
         'nudgeAddLicenseBody' => 'Save your license once and we\'ll fill it in for you at check-in.',
         'nudgeAddLicenseCta' => 'Add license',
         'nudgeLicenseExpiredTitle' => 'Your license has expired',
         'nudgeLicenseExpiredBody' => 'Update your expiration date so check-in stays quick and hassle-free.',
         'nudgeLicenseExpiredCta' => 'Update license',
-        'nudgeVerifyEmailTitle' => 'Verify your email',
-        'nudgeVerifyEmailBody' => 'Confirm your email address to keep your account secure.',
-        'nudgeVerifyEmailCta' => 'Resend link',
-        'nudgeVerifyEmailSent' => 'Verification link sent',
     ],
 
     'accountNav' => [
@@ -112,6 +134,8 @@ return [
         'profile' => 'Profile',
         'settings' => 'Settings',
         'emailVerified' => 'Email verified',
+        'emailUnverified' => 'Email not verified',
+        'verifyNow' => 'Verify now',
         'licenseOnFile' => 'License on file',
     ],
 
@@ -202,7 +226,7 @@ return [
         'noResultsSubtitle' => 'Try a longer time range.',
         'statusPending' => 'Pending',
         'statusCompleted' => 'Completed',
-        'statusCancelled' => 'Cancelled',
+        'statusCancelled' => 'Canceled',
         'statusScheduled' => 'Scheduled',
         'statusNoShow' => 'No show',
         'statusCheckedIn' => 'Checked in',
@@ -226,21 +250,64 @@ return [
 
     /*
      * One text message is 160 GSM-7 characters and the driver is billed for a
-     * second, so the budget is tight: the link alone is ~90 of it, since the
-     * uuid is 36 and the domain is longer in production than in development.
+     * second, so the budget matters. :url used to be the account history path
+     * plus a 36-character uuid, around 90 characters on its own. It is now a
+     * short code (see App\ShortLink\ShortLinkUrlGenerator), which brings the
+     * whole body to roughly 76 and leaves room even on a long client domain.
      *
-     * That leaves no room for the location name, which is the one variable-width
-     * value here and could be anything an admin types - so it stays out, and the
-     * linked page carries it along with the time and the rest of the detail. The
-     * app name does stay: a bare link from an unknown number is indistinguishable
-     * from a phishing text. :url requires signing in.
+     * The location name still stays out. It is the one variable-width value
+     * here, could be anything an admin types, and the linked page already
+     * carries it along with the time and the rest of the detail. The app name
+     * stays too: a bare link from an unknown number is indistinguishable from a
+     * phishing text. :url still requires signing in.
      */
     'checkInCopySms' => [
         'body' => ':app: you are checked in. Ref :reference. :url',
+        // No link: a guest has no account, so the account-history target the
+        // registered driver's link points at is unreachable for them.
+        'guestBody' => ':app: you are checked in. Ref :reference. Show this reference at the gate.',
     ],
 
     'appointmentCopySms' => [
         'body' => ':app: your appointment is booked. Ref :reference. :url',
+        'guestBody' => ':app: your appointment is booked. Ref :reference. Show this reference at the gate.',
+    ],
+
+    'appointmentReminderEmail' => [
+        'subject' => 'Reminder: your appointment :reference at :location',
+        'preheader' => 'Your appointment at :location is tomorrow.',
+        'eyebrow' => 'Reminder',
+        'title' => 'Your appointment is tomorrow',
+        'intro' => 'Here are the details for tomorrow. If your plans have changed, you can cancel from your account.',
+    ],
+
+    'appointmentReminderSms' => [
+        'body' => ':app: reminder, your appointment is tomorrow. Ref :reference. :url',
+    ],
+
+    'appointmentCancellationEmail' => [
+        'subject' => 'Canceled: your appointment :reference at :location',
+        'preheader' => 'Your booking at :location has been canceled.',
+        'eyebrow' => 'Canceled',
+        'title' => 'Your appointment has been canceled',
+        'intro' => 'The slot below has been released. If you still need to come in, book a new appointment.',
+    ],
+
+    'appointmentCancellationSms' => [
+        'body' => ':app: your appointment is canceled. Ref :reference. :url',
+    ],
+
+    'appointmentCancel' => [
+        'title' => 'Cancel this appointment',
+        'body' => 'The slot will be released and the facility will be told. This cannot be undone.',
+        'reasonLabel' => 'Why are you cancelling?',
+        'reasonPlaceholder' => 'Load canceled, truck in the shop, running late...',
+        'reasonRequired' => 'Please tell us why you are cancelling.',
+        'notCancellable' => 'This appointment can no longer be canceled online. Please call the facility.',
+        'submit' => 'Cancel appointment',
+        'confirm' => 'Yes, cancel it',
+        'dismiss' => 'Keep appointment',
+        'cancelled' => 'Appointment canceled',
     ],
 
     'recordDocumentEmail' => [
@@ -290,11 +357,11 @@ return [
         'licenseState' => 'Issuing state',
         'licenseExpiration' => 'Expires',
         'loadingInstructions' => 'Loading instructions',
-        'cancelledOn' => 'Cancelled on',
+        'cancelledOn' => 'Canceled on',
         'cancellationReason' => 'Reason',
         'statusPending' => 'Pending',
         'statusCompleted' => 'Completed',
-        'statusCancelled' => 'Cancelled',
+        'statusCancelled' => 'Canceled',
         'statusScheduled' => 'Scheduled',
         'statusNoShow' => 'No show',
         'statusCheckedIn' => 'Checked in',
@@ -319,7 +386,11 @@ return [
         'licenseNumberPlaceholder' => 'License number',
         'licenseNumberInvalid' => 'Enter a valid license number (4-20 characters).',
         'licenseStateLabel' => 'Issuing state',
-        'licenseStatePlaceholder' => 'Select a state',
+        'licenseStatePlaceholder' => 'Start typing a state',
+        'licenseCountryLabel' => 'Issuing country',
+        'licenseCountryPlaceholder' => 'Filled in from the state',
+        'licenseCountryRequired' => 'Pick a state from the list so its country is filled in.',
+        'licenseCountryInvalid' => 'Enter a 2-letter country code.',
         'licenseExpirationLabel' => 'Expiration date',
         'licenseExpirationPast' => 'Expiration date must be in the future.',
         'licenseExpirationTooFar' => 'Expiration date cannot be more than 60 years from now.',

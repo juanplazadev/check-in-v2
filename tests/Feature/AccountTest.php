@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Enums\AppointmentStatus;
 use App\Enums\CheckInStatus;
+use App\Enums\Role;
 use App\Models\Appointment;
 use App\Models\CheckIn;
 use App\Models\Location;
@@ -22,7 +23,8 @@ it('renders the driver account for an authenticated user', function (): void {
         'name' => 'John Driver',
         'email' => 'john@example.com',
         'password' => 'secret-password',
-    ]);
+        'email_verified_at' => now(),
+    ])->assignRole(Role::Driver);
 
     $this->actingAs($user)
         ->get(route('account'))
@@ -34,12 +36,28 @@ it('renders the driver account for an authenticated user', function (): void {
             ->has('translations.account.checkInNow'));
 });
 
+it('lets admins into the account area', function (): void {
+    $this->actingAs(User::factory()->withRole(Role::Admin)->create())
+        ->get(route('account'))
+        ->assertSuccessful();
+});
+
+it('forbids the account area to non-admin staff', function (Role $role, string $routeName): void {
+    $this->actingAs(User::factory()->withRole($role)->create())
+        ->get(route($routeName))
+        ->assertForbidden();
+})->with([Role::ShippingManager, Role::Shipping, Role::Sales])->with([
+    'verified surface' => 'account',
+    'pre-verification corridor' => 'account.profile',
+]);
+
 it('reports whether the driver has a license on file for the hub chips and nudges', function (): void {
     $without = User::query()->create([
         'name' => 'No License',
         'email' => 'nolicense@example.com',
         'password' => 'secret-password',
-    ]);
+        'email_verified_at' => now(),
+    ])->assignRole(Role::Driver);
 
     $this->actingAs($without)
         ->get(route('account'))
@@ -51,8 +69,9 @@ it('reports whether the driver has a license on file for the hub chips and nudge
         'name' => 'Has License',
         'email' => 'haslicense@example.com',
         'password' => 'secret-password',
+        'email_verified_at' => now(),
         'drivers_license_number' => 'D1234567',
-    ]);
+    ])->assignRole(Role::Driver);
 
     $this->actingAs($with)
         ->get(route('account'))
@@ -65,9 +84,10 @@ it('flags an expired license so the overview can nudge the driver', function ():
         'name' => 'Expired License',
         'email' => 'expired@example.com',
         'password' => 'secret-password',
+        'email_verified_at' => now(),
         'drivers_license_number' => 'D1234567',
         'drivers_license_expiration_date' => now()->subDay()->format('Y-m-d'),
-    ]);
+    ])->assignRole(Role::Driver);
 
     $this->actingAs($expired)
         ->get(route('account'))
@@ -79,9 +99,10 @@ it('flags an expired license so the overview can nudge the driver', function ():
         'name' => 'Valid License',
         'email' => 'valid@example.com',
         'password' => 'secret-password',
+        'email_verified_at' => now(),
         'drivers_license_number' => 'D7654321',
         'drivers_license_expiration_date' => now()->addYear()->format('Y-m-d'),
-    ]);
+    ])->assignRole(Role::Driver);
 
     $this->actingAs($valid)
         ->get(route('account'))
@@ -95,7 +116,8 @@ it("surfaces the driver's next appointment and recent check-ins", function (): v
         'name' => 'John Driver',
         'email' => 'john@example.com',
         'password' => 'secret-password',
-    ]);
+        'email_verified_at' => now(),
+    ])->assignRole(Role::Driver);
     $location = Location::factory()->create();
 
     $appointment = Appointment::factory()->create([
@@ -131,7 +153,8 @@ it('localises the next appointment month for the active locale', function (strin
         'name' => 'Jane Driver',
         'email' => 'jane@example.com',
         'password' => 'secret-password',
-    ]);
+        'email_verified_at' => now(),
+    ])->assignRole(Role::Driver);
     $location = Location::factory()->create();
 
     Appointment::factory()->create([

@@ -1,18 +1,15 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
     CalendarDays,
     CalendarPlus,
-    Check,
     ChevronRight,
     Clock,
     IdCard,
-    Mail,
     MapPin,
     PackageOpen,
     Truck,
 } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
-import { useState } from 'react';
 
 import EmptyState from '@/components/EmptyState';
 import StatusBadge from '@/components/StatusBadge';
@@ -62,14 +59,9 @@ interface AccountTranslations {
     nudgeLicenseExpiredTitle: string;
     nudgeLicenseExpiredBody: string;
     nudgeLicenseExpiredCta: string;
-    nudgeVerifyEmailTitle: string;
-    nudgeVerifyEmailBody: string;
-    nudgeVerifyEmailCta: string;
-    nudgeVerifyEmailSent: string;
 }
 
 interface PageProps {
-    auth: { user: { name: string; email_verified_at?: string | null } };
     currentLocale: string;
     hasLicense: boolean;
     licenseExpired: boolean;
@@ -136,7 +128,6 @@ function NudgeCard({
 
 export default function Account() {
     const {
-        auth,
         currentLocale,
         hasLicense,
         licenseExpired,
@@ -145,9 +136,6 @@ export default function Account() {
         translations,
     } = usePage<PageProps>().props;
     const t = translations.account;
-    const verified = Boolean(auth.user.email_verified_at);
-
-    const [verifySent, setVerifySent] = useState(false);
 
     const hour = new Date().getHours();
     const greeting =
@@ -162,14 +150,6 @@ export default function Account() {
         month: 'long',
         day: 'numeric',
     }).format(new Date());
-
-    const resendVerification = () => {
-        router.post(
-            '/email/verification-notification',
-            {},
-            { preserveScroll: true, onSuccess: () => setVerifySent(true) },
-        );
-    };
 
     return (
         <AccountLayout>
@@ -203,32 +183,11 @@ export default function Account() {
                     <ChevronRight className="relative h-5 w-5 shrink-0 text-white/85 transition-transform group-hover:translate-x-0.5" />
                 </Link>
 
-                {/* Smart nudges */}
-                {(!verified || !hasLicense || licenseExpired) && (
+                {/* Smart nudges. No verify-email nudge here: this page sits
+                    behind the "verified" middleware, so an unverified driver
+                    never reaches it. They get the dedicated notice page. */}
+                {(!hasLicense || licenseExpired) && (
                     <div className="space-y-3">
-                        {!verified && (
-                            <NudgeCard
-                                icon={Mail}
-                                title={t.nudgeVerifyEmailTitle}
-                                body={t.nudgeVerifyEmailBody}
-                                action={
-                                    verifySent ? (
-                                        <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-green">
-                                            <Check className="h-3.5 w-3.5" />
-                                            {t.nudgeVerifyEmailSent}
-                                        </span>
-                                    ) : (
-                                        <button
-                                            type="button"
-                                            onClick={resendVerification}
-                                            className="inline-flex cursor-pointer items-center rounded-full border border-amber-300 bg-white/60 px-3 py-1.5 text-xs font-semibold text-amber-700 transition-colors hover:bg-white dark:border-amber-500/30 dark:bg-transparent dark:text-amber-400 dark:hover:bg-amber-500/10"
-                                        >
-                                            {t.nudgeVerifyEmailCta}
-                                        </button>
-                                    )
-                                }
-                            />
-                        )}
                         {!hasLicense && (
                             <NudgeCard
                                 icon={IdCard}

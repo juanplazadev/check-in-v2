@@ -1,5 +1,6 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
+import { useState } from 'react';
 
 import RecordActions from '@/components/history/RecordActions';
 import {
@@ -7,15 +8,39 @@ import {
     DetailSection,
 } from '@/components/history/RecordDetailCard';
 import StatusBadge from '@/components/StatusBadge';
+import {
+    AlertDialog,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
+import { Textarea } from '@/components/ui/textarea';
 import AccountLayout from '@/layouts/AccountLayout';
 import { history as accountHistory } from '@/routes/account';
 import {
+    cancel as appointmentCancel,
     email as appointmentEmail,
     pdf as appointmentPdf,
 } from '@/routes/account/history/appointment';
 
 import type { RecordTranslations } from './recordTranslations';
 import { recordStatusLabel } from './recordTranslations';
+
+interface CancelTranslations {
+    title: string;
+    body: string;
+    reasonLabel: string;
+    reasonPlaceholder: string;
+    submit: string;
+    confirm: string;
+    dismiss: string;
+}
 
 interface AppointmentDetail {
     uuid: string;
@@ -35,13 +60,41 @@ interface AppointmentDetail {
 
 interface PageProps {
     appointment: AppointmentDetail;
-    translations: { accountHistoryRecord: RecordTranslations };
+    translations: {
+        accountHistoryRecord: RecordTranslations;
+        appointmentCancel: CancelTranslations;
+    };
     [key: string]: unknown;
 }
 
 export default function HistoryAppointment() {
     const { appointment, translations } = usePage<PageProps>().props;
     const t = translations.accountHistoryRecord;
+    const tc = translations.appointmentCancel;
+
+    const [cancelOpen, setCancelOpen] = useState(false);
+    const cancelForm = useForm({ reason: '' });
+
+    // Mirrors CancelAppointmentAction::isCancellable(). The server re-checks it,
+    // so this only decides whether the button is worth showing.
+    const cancellable =
+        appointment.status === 'scheduled' && appointment.isUpcoming;
+
+    const openCancelDialog = (open: boolean) => {
+        setCancelOpen(open);
+
+        if (!open) {
+            cancelForm.reset('reason');
+            cancelForm.clearErrors();
+        }
+    };
+
+    const cancelAppointment = () => {
+        cancelForm.post(appointmentCancel(appointment.uuid).url, {
+            preserveScroll: true,
+            onSuccess: () => setCancelOpen(false),
+        });
+    };
 
     return (
         <AccountLayout>
@@ -134,6 +187,93 @@ export default function HistoryAppointment() {
                         emailSent: t.emailSent,
                     }}
                 />
+
+                {cancellable && (
+                    <AlertDialog
+                        open={cancelOpen}
+                        onOpenChange={openCancelDialog}
+                    >
+                        <AlertDialogTrigger asChild>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                data-testid="cancel-appointment"
+                                className="h-11 w-full cursor-pointer rounded-4xl border-red-200 text-sm font-semibold text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-500/30 dark:text-red-400 dark:hover:bg-red-500/10"
+                            >
+                                {tc.submit}
+                            </Button>
+                        </AlertDialogTrigger>
+
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>{tc.title}</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    {tc.body}
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+
+                            <Field
+                                data-invalid={
+                                    !!cancelForm.errors.reason || undefined
+                                }
+                            >
+                                <FieldLabel htmlFor="cancel_reason">
+                                    {tc.reasonLabel}
+                                </FieldLabel>
+                                <Textarea
+                                    id="cancel_reason"
+                                    name="cancel_reason"
+                                    rows={3}
+                                    maxLength={500}
+                                    placeholder={tc.reasonPlaceholder}
+                                    value={cancelForm.data.reason}
+                                    aria-invalid={
+                                        !!cancelForm.errors.reason || undefined
+                                    }
+                                    onChange={(e) =>
+                                        cancelForm.setData(
+                                            'reason',
+                                            e.target.value,
+                                        )
+                                    }
+                                />
+                                <FieldError>
+                                    {cancelForm.errors.reason}
+                                </FieldError>
+                            </Field>
+
+                            <AlertDialogFooter>
+                                <AlertDialogCancel asChild>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="h-11 w-full cursor-pointer rounded-4xl text-sm font-semibold sm:w-auto sm:px-5"
+                                    >
+                                        {tc.dismiss}
+                                    </Button>
+                                </AlertDialogCancel>
+                                {/*
+                                 * A plain Button, not AlertDialogAction, for the same
+                                 * reason as the delete-account dialog: that one closes
+                                 * on click and would discard a rejected reason before
+                                 * its error could be shown.
+                                 */}
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    disabled={
+                                        cancelForm.processing ||
+                                        cancelForm.data.reason.trim() === ''
+                                    }
+                                    onClick={cancelAppointment}
+                                    className="h-11 w-full cursor-pointer rounded-4xl text-sm font-semibold sm:w-auto sm:px-5"
+                                >
+                                    {tc.confirm}
+                                </Button>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                )}
             </div>
         </AccountLayout>
     );

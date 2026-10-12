@@ -69,7 +69,7 @@ final readonly class CheckInScheduleResolver
     private function formatOpenCloseTime(LocationScheduleDTO $schedule): string
     {
         return match (true) {
-            $schedule->openTime && $schedule->closeTime => $schedule->openTime->format('g:i A').' - '.$schedule->closeTime->format('g:i A T'),
+            $schedule->openTime instanceof CarbonInterface && $schedule->closeTime instanceof CarbonInterface => $schedule->openTime->format('g:i A').' - '.$schedule->closeTime->format('g:i A T'),
             ! $schedule->isOpen && ! $schedule->openTime && ! $schedule->closeTime => __('messages.checkInSelectLocation.closedToday'),
             default => 'N/A',
         };

@@ -29,6 +29,9 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+/.ai
+/.claude
+/.cursor
 
 **/caddy
 frankenphp

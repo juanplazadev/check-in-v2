@@ -8,25 +8,31 @@ use App\DTOs\CheckInLocationDTO;
 use App\Enums\CheckInErpStatus;
 use App\Enums\CheckInStatus;
 use App\Enums\RecordHistoryEvent;
+use App\Enums\ReferenceType;
 use App\Locale\LocaleManager;
 use App\Models\CheckIn;
 use App\Models\Location;
 use App\Models\User;
 use App\Queries\CheckInLocation;
+use App\Reference\ReferenceNumberGenerator;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
-use Random\RandomException;
 use RuntimeException;
+use Throwable;
 
 final readonly class CreateCheckInAction
 {
     public function __construct(
         private LocaleManager $localeManager,
         private RecordHistoryAction $history,
+        private ReferenceNumberGenerator $references,
     ) {}
 
     /**
      * @param  array<string, mixed>  $validated
+     *
+     * @throws Throwable
      */
     public function handle(
         array $validated,
@@ -37,18 +43,26 @@ final readonly class CreateCheckInAction
 
         throw_if(! $location instanceof Location, RuntimeException::class, 'Invalid location');
 
-        $checkIn = CheckIn::query()->create([
-            ...Arr::except($validated, ['po_numbers']),
-            'uuid' => Str::uuid()->toString(),
-            'reference_number' => $this->generateReferenceNumber(),
-            'location_id' => $location->id,
-            'user_id' => $user?->id,
-            'status' => CheckInStatus::Pending,
-            'erp_status' => CheckInErpStatus::Pending,
-            'locale' => $this->localeManager->getLocale(request()),
-        ]);
+        // Generating a reference and inserting it are not one atomic step, so
+        // two concurrent check-ins can pass the uniqueness check and collide on
+        // the index. Retrying draws a fresh reference.
+        $checkIn = retry(
+            times: 3,
+            callback: fn (): CheckIn => CheckIn::query()->create([
+                ...Arr::except($validated, ['po_numbers']),
+                'uuid' => Str::uuid()->toString(),
+                'reference_number' => $this->references->generate(ReferenceType::CheckIn),
+                'location_id' => $location->id,
+                'user_id' => $user?->id,
+                'drivers_email' => $user?->email,
+                'status' => CheckInStatus::Pending,
+                'erp_status' => CheckInErpStatus::Pending,
+                'locale' => $this->localeManager->getLocale(request()),
+            ]),
+            sleepMilliseconds: 0,
+            when: fn (Throwable $e): bool => $e instanceof UniqueConstraintViolationException,
+        );
 
-        // The opening row of the trail an admin reads.
         $this->history->handle(
             record: $checkIn,
             event: RecordHistoryEvent::Created,
@@ -56,22 +70,5 @@ final readonly class CreateCheckInAction
         );
 
         return $checkIn;
-    }
-
-    /**
-     * @throws RandomException
-     */
-    private function generateReferenceNumber(): string
-    {
-        // Excludes ambiguous characters (0/O, 1/I/L) to make references easy to read and type.
-        $chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-
-        do {
-            $reference = range(1, 8)
-                    |> (fn ($x): array => array_map(fn (): string => $chars[random_int(0, mb_strlen($chars) - 1)], $x))
-                    |> (fn ($x): string => implode('', $x));
-        } while (CheckIn::query()->where('reference_number', $reference)->exists());
-
-        return $reference;
     }
 }

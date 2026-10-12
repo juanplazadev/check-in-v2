@@ -10,13 +10,16 @@
     "nightwatch_mcp": false,
     "sail": false,
     "skills": [
+        "infer-conventions",
         "fortify-development",
         "laravel-best-practices",
+        "testing-best-practices",
         "configuring-horizon",
         "octane-development",
         "wayfinder-development",
-        "pest-testing",
         "inertia-react-development",
+        "echo-react-development",
+        "echo-development",
         "tailwindcss-development"
     ]
 }

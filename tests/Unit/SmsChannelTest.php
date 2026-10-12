@@ -30,7 +30,7 @@ final class TextableNotification extends Notification
     }
 }
 
-/** A notification with no SMS payload, which the channel must simply skip. */
+/** A notification with no SMS payload, which must never be routed to the channel. */
 final class MailOnlyNotification extends Notification {}
 
 function notifiableWith(?string $number): object
@@ -57,21 +57,23 @@ it('hands the message to the sender', function (): void {
 });
 
 /*
- * A driver can clear their number between the notification being queued and the
- * worker picking it up, so this path is reachable in production.
+ * SkipUnroutableSms cancels a text with no number before it gets here. A quiet
+ * return used to let Laravel log the text as sent, so reaching this is a bug.
  */
-it('sends nothing when the notifiable has no number', function (): void {
+it('throws when the notifiable has no number', function (): void {
     $sender = new RecordingSmsSender;
 
-    new SmsChannel($sender)->send(notifiableWith(null), new TextableNotification);
+    expect(fn () => new SmsChannel($sender)->send(notifiableWith(null), new TextableNotification))
+        ->toThrow(LogicException::class);
 
     expect($sender->sent)->toBeEmpty();
 });
 
-it('sends nothing when the notification has no text payload', function (): void {
+it('throws when the notification has no text payload', function (): void {
     $sender = new RecordingSmsSender;
 
-    new SmsChannel($sender)->send(notifiableWith('+12015550123'), new MailOnlyNotification);
+    expect(fn () => new SmsChannel($sender)->send(notifiableWith('+12015550123'), new MailOnlyNotification))
+        ->toThrow(LogicException::class);
 
     expect($sender->sent)->toBeEmpty();
 });

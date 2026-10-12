@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Dashboard\MatchesSearchTerm;
+use App\Dashboard\VisibleOnDashboard;
 use App\Enums\AppointmentStatus;
+use App\ShortLink\HasShortLink;
 use Carbon\CarbonImmutable;
 use Database\Factories\AppointmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\RouteKey;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -30,20 +35,26 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read string|null $cancelled_reason
  * @property-read CarbonImmutable|null $claimed_at
  * @property-read string|null $claimed_via
+ * @property-read CarbonImmutable|null $reminder_sent_at
  * @property-read CarbonImmutable $created_at
  * @property-read CarbonImmutable $updated_at
  * @property-read CarbonImmutable|null $deleted_at
  * @property-read Location $location
  * @property-read User|null $user
+ * @property-read CheckIn|null $checkIn
  */
-#[Fillable(['uuid', 'reference_number', 'location_id', 'user_id', 'scheduled_for', 'drivers_name', 'drivers_cellphone', 'locale', 'status', 'cancelled_at', 'cancelled_reason', 'claimed_at', 'claimed_via'])]
+#[Fillable(['uuid', 'reference_number', 'location_id', 'user_id', 'scheduled_for', 'drivers_name', 'drivers_cellphone', 'locale', 'status', 'cancelled_at', 'cancelled_reason', 'claimed_at', 'claimed_via', 'reminder_sent_at'])]
 #[Hidden(['id'])]
+#[RouteKey('uuid')]
 final class Appointment extends Model
 {
     /** @use HasFactory<AppointmentFactory> */
     use HasFactory;
 
+    use HasShortLink;
+    use MatchesSearchTerm;
     use SoftDeletes;
+    use VisibleOnDashboard;
 
     /**
      * @return BelongsTo<Location, $this>
@@ -70,6 +81,16 @@ final class Appointment extends Model
     }
 
     /**
+     * The check-in this booking turned into, once the driver arrives.
+     *
+     * @return HasOne<CheckIn, $this>
+     */
+    public function checkIn(): HasOne
+    {
+        return $this->hasOne(CheckIn::class);
+    }
+
+    /**
      * The append-only trail of what happened to this booking. See
      * {@see CheckIn::history()}.
      *
@@ -80,11 +101,6 @@ final class Appointment extends Model
         return $this->morphMany(RecordHistory::class, 'recordable')->oldest();
     }
 
-    public function getRouteKeyName(): string
-    {
-        return 'uuid';
-    }
-
     protected function casts(): array
     {
         return [
@@ -93,6 +109,7 @@ final class Appointment extends Model
             'status' => AppointmentStatus::class,
             'cancelled_at' => 'datetime',
             'claimed_at' => 'datetime',
+            'reminder_sent_at' => 'datetime',
         ];
     }
 }

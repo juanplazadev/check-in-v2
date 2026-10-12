@@ -12,12 +12,14 @@ use App\Notifications\Channels\SmsChannel;
 use App\Sms\SmsMessage;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
+use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Queue\SerializesModels;
 
 /**
  * The driver's own confirmation of a booking. See {@see CheckInCopy} for why
- * this is a notification and why the text carries no signed URL.
+ * this is a notification, why the text carries no signed URL, and why the guest
+ * path is texts only with no link at all.
  */
 final class AppointmentCopy extends Notification implements RecordNotification, ShouldQueue
 {
@@ -36,11 +38,15 @@ final class AppointmentCopy extends Notification implements RecordNotification, 
     }
 
     /**
+     * A guest is reachable only by text, so there is no preference to consult.
+     *
      * @return list<string>
      */
-    public function via(User $notifiable): array
+    public function via(User|AnonymousNotifiable $notifiable): array
     {
-        return $notifiable->notificationChannels();
+        return $notifiable instanceof User
+            ? $notifiable->notificationChannels()
+            : [SmsChannel::class];
     }
 
     /**
@@ -59,14 +65,27 @@ final class AppointmentCopy extends Notification implements RecordNotification, 
         return new AppointmentCopyMail($this->appointment)->to($notifiable->email);
     }
 
-    public function toSms(User $notifiable): SmsMessage
+    /** Auth-gated, shortened, and link-free for guests, all for the reasons in {@see CheckInCopy::toSms()}. */
+    public function toSms(User|AnonymousNotifiable $notifiable): SmsMessage
     {
+        $to = (string) $notifiable->routeNotificationFor('sms');
+
+        if (! $notifiable instanceof User) {
+            return new SmsMessage(
+                to: $to,
+                body: __('messages.appointmentCopySms.guestBody', [
+                    'app' => (string) config('app.name'),
+                    'reference' => $this->appointment->reference_number,
+                ]),
+            );
+        }
+
         return new SmsMessage(
-            to: (string) $notifiable->cellphone,
+            to: $to,
             body: __('messages.appointmentCopySms.body', [
                 'app' => (string) config('app.name'),
                 'reference' => $this->appointment->reference_number,
-                'url' => route('account.history.appointment', $this->appointment->uuid),
+                'url' => $this->appointment->shortUrl(),
             ]),
         );
     }

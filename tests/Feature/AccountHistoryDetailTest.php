@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Role;
 use App\Models\Appointment;
 use App\Models\CheckIn;
 use App\Models\Location;
@@ -18,7 +19,8 @@ function detailDriver(string $email = 'driver@example.com'): User
         'name' => 'John Driver',
         'email' => $email,
         'password' => 'secret-password',
-    ]);
+        'email_verified_at' => now(),
+    ])->assignRole(Role::Driver);
 }
 
 it('redirects guests away from the detail pages', function (): void {

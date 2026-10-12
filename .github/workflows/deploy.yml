@@ -52,6 +52,7 @@ jobs:
         run: docker push ghcr.io/${{ github.repository }}:${{ github.sha }} && docker push ghcr.io/${{ github.repository }}:latest
       - name: Deploy
         env:
+          IMAGE_REPO: ghcr.io/${{ github.repository }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
           cp /opt/da-server/check-in/.env .env

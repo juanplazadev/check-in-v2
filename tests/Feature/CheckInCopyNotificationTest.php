@@ -75,10 +75,30 @@ it('sends the driver their copy by default', function (): void {
  * No form collects an email address or a phone number from a guest, so there is
  * nowhere to send a copy and no preference to read.
  */
-it('sends nothing for a guest check-in', function (): void {
+it('texts a guest their check-in confirmation', function (): void {
+    // The check-in form requires a cellphone and collects no email, so a text
+    // is both the only way to reach a guest and the only thing they could have
+    // expected. No account means no preference to consult.
     checkInAs(null);
 
-    Notification::assertNothingSent();
+    Notification::assertSentOnDemand(
+        CheckInCopy::class,
+        fn (CheckInCopy $notification, array $channels, object $notifiable): bool => $channels === [SmsChannel::class]
+            && $notifiable->routes['sms'] === '+12015550123',
+    );
+});
+
+it('sends a guest a text with the reference and no link', function (): void {
+    $checkIn = CheckIn::factory()->create(['drivers_cellphone' => '+12015550123']);
+
+    $body = new CheckInCopy($checkIn)
+        ->toSms(Notification::route('sms', '+12015550123'))
+        ->body;
+
+    // A guest cannot reach the auth-gated target a registered driver's link
+    // points at, so the text carries the reference alone.
+    expect($body)->toContain($checkIn->reference_number)
+        ->and($body)->not->toContain('http');
 });
 
 it('sends nothing when the driver has turned the copy off', function (): void {
@@ -142,7 +162,7 @@ it('carries the locale stamped on the check-in', function (): void {
     );
 });
 
-it('renders the text message with the reference and a link to the record', function (): void {
+it('renders the text message with the reference and a short link to the record', function (): void {
     $driver = copyDriver([
         'cellphone' => '+12015550123',
         'notification_channel' => NotificationChannel::Sms,
@@ -155,8 +175,30 @@ it('renders the text message with the reference and a link to the record', funct
         $checkIn = $notification->checkIn;
 
         return str_contains($message->body, $checkIn->reference_number)
-            && str_contains($message->body, route('account.history.checkIn', $checkIn->uuid))
+            && str_contains($message->body, $checkIn->shortUrl())
             && $message->to === '+12015550123';
+    });
+});
+
+/*
+ * The link is short, but it still resolves to the auth-gated record rather than
+ * exposing it, which is the property the shortening had to preserve.
+ */
+it('sends a short link that expands to the record', function (): void {
+    $driver = copyDriver([
+        'cellphone' => '+12015550123',
+        'notification_channel' => NotificationChannel::Sms,
+    ]);
+
+    checkInAs($driver);
+
+    Notification::assertSentTo($driver, CheckInCopy::class, function (CheckInCopy $notification) use ($driver): bool {
+        $checkIn = $notification->checkIn;
+        $url = $notification->toSms($driver)->body;
+
+        // The old link was the account history path plus a 36-character uuid.
+        return ! str_contains($url, $checkIn->uuid)
+            && str_contains($url, '/r/'.$checkIn->shortLink()->firstOrFail()->code);
     });
 });
 
@@ -173,6 +215,24 @@ it('keeps the text message inside one segment in every locale', function (string
     $checkIn = CheckIn::factory()->forUser($driver)->create();
 
     $body = new CheckInCopy($checkIn)->toSms($driver)->body;
+
+    expect(mb_strlen($body))->toBeLessThanOrEqual(160)
+        ->and($body)->toContain($checkIn->reference_number);
+})->with(['en', 'es', 'fr']);
+
+/*
+ * The guest body trades the link for an instruction, so it has its own budget
+ * to hold. Guests are the larger audience, which makes a second billed segment
+ * here more expensive than on the registered-driver path.
+ */
+it('keeps the guest text inside one segment in every locale', function (string $locale): void {
+    App::setLocale($locale);
+
+    $checkIn = CheckIn::factory()->create(['drivers_cellphone' => '+12015550123']);
+
+    $body = new CheckInCopy($checkIn)
+        ->toSms(Notification::route('sms', '+12015550123'))
+        ->body;
 
     expect(mb_strlen($body))->toBeLessThanOrEqual(160)
         ->and($body)->toContain($checkIn->reference_number);

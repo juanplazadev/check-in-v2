@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Actions;
 
 use App\DTOs\AppointmentLocationDTO;
+use App\Events\AppointmentCreated;
 use App\Models\Appointment;
 use App\Models\User;
+use App\Notifications\AppointmentReceived;
 use Illuminate\Support\Facades\DB;
 use Throwable;
 
@@ -17,6 +19,7 @@ final readonly class BookAppointmentAction
         private CreatePurchaseOrdersAction $createPurchaseOrders,
         private SendAppointmentBookedEmailAction $sendAppointmentBookedEmail,
         private SendAppointmentCopyAction $sendAppointmentCopy,
+        private NotifyStaffAction $notifyStaff,
     ) {}
 
     /**
@@ -40,6 +43,12 @@ final readonly class BookAppointmentAction
 
         // The driver's own copy, if they are signed in and have asked for it.
         $this->sendAppointmentCopy->handle($appointment);
+
+        // Into the notification bell of every staff member who works this location.
+        $this->notifyStaff->handle(new AppointmentReceived($appointment), $appointment->location_id);
+
+        // Onto the live queue's arriving rail.
+        event(new AppointmentCreated($appointment));
 
         return $appointment;
     }

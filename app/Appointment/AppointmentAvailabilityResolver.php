@@ -47,7 +47,7 @@ final readonly class AppointmentAvailabilityResolver
             ]);
         }
 
-        if ($schedule->hasOverride && $schedule->openTime && $schedule->closeTime) {
+        if ($schedule->hasOverride && $schedule->openTime instanceof CarbonInterface && $schedule->closeTime instanceof CarbonInterface) {
             return __('messages.appointmentBooking.outsideSpecialHours', [
                 'name' => $location->name,
                 'time' => $appointmentDateTime->format('g:i A T'),
@@ -58,7 +58,7 @@ final readonly class AppointmentAvailabilityResolver
         }
 
         // No exception - outside regular business hours
-        if ($schedule->openTime && $schedule->closeTime) {
+        if ($schedule->openTime instanceof CarbonInterface && $schedule->closeTime instanceof CarbonInterface) {
             return __('messages.appointmentBooking.outsideRegularHours', [
                 'name' => $location->name,
                 'time' => $appointmentDateTime->format('g:i A T'),

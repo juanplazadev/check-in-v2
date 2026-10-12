@@ -63,10 +63,27 @@ it('sends the driver their copy by default', function (): void {
     Notification::assertSentTo($driver, AppointmentCopy::class);
 });
 
-it('sends nothing for a guest booking', function (): void {
+it('texts a guest their booking confirmation', function (): void {
+    // See CheckInCopyNotificationTest: the form requires a cellphone and
+    // collects no email, so a guest is reachable by text alone.
     bookAs(null);
 
-    Notification::assertNothingSent();
+    Notification::assertSentOnDemand(
+        AppointmentCopy::class,
+        fn (AppointmentCopy $notification, array $channels, object $notifiable): bool => $channels === [SmsChannel::class]
+            && $notifiable->routes['sms'] === '+12015550123',
+    );
+});
+
+it('sends a guest a text with the reference and no link', function (): void {
+    $appointment = Appointment::factory()->create(['drivers_cellphone' => '+12015550123']);
+
+    $body = new AppointmentCopy($appointment)
+        ->toSms(Notification::route('sms', '+12015550123'))
+        ->body;
+
+    expect($body)->toContain($appointment->reference_number)
+        ->and($body)->not->toContain('http');
 });
 
 it('sends nothing when the driver has turned the copy off', function (): void {
@@ -121,7 +138,7 @@ it('carries the locale stamped on the booking', function (): void {
     );
 });
 
-it('renders the text message with the reference and a link to the record', function (): void {
+it('renders the text message with the reference and a short link to the record', function (): void {
     $driver = bookingDriver(['cellphone' => '+12015550123']);
     $appointment = Appointment::factory()->forUser($driver)->create();
 
@@ -129,7 +146,9 @@ it('renders the text message with the reference and a link to the record', funct
 
     expect($message->to)->toBe('+12015550123')
         ->and($message->body)->toContain($appointment->reference_number)
-        ->and($message->body)->toContain(route('account.history.appointment', $appointment->uuid));
+        ->and($message->body)->toContain($appointment->shortUrl())
+        // The old link carried the 36-character uuid inline.
+        ->and($message->body)->not->toContain($appointment->uuid);
 });
 
 it('keeps the text message inside one segment in every locale', function (string $locale): void {

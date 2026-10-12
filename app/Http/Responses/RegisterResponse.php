@@ -12,6 +12,6 @@ final class RegisterResponse implements RegisterResponseContract
 {
     public function toResponse($request): RedirectResponse
     {
-        return redirect()->intended(HomeRedirect::for());
+        return redirect()->intended(HomeRedirect::for($request->user()));
     }
 }

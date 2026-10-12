@@ -2,7 +2,9 @@
 
 declare(strict_types=1);
 
+use App\Auth\HomeRedirect;
 use App\Auth\RegistrationGate;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -40,4 +42,30 @@ Route::middleware(['guest', 'setLocale'])->group(function (): void {
         'token' => $token,
         'email' => request('email'),
     ]))->name('password.reset');
+});
+
+/*
+| Signed in but not yet verified. This is where the "verified" middleware sends
+| drivers, and it has to exist for that middleware to work at all: Fortify runs
+| with views => false, so it registers only the POST resend and the signed GET
+| link, never this prompt. Deliberately not behind "verified" itself.
+*/
+Route::middleware(['auth', 'setLocale'])->group(function (): void {
+    Route::get('/email/verify', fn (Request $request) => $request->user()->hasVerifiedEmail()
+        ? redirect()->intended(HomeRedirect::for($request->user()))
+        : inertia('Auth/VerifyEmail', ['status' => session('status')]))
+        ->name('verification.notice');
+
+    /*
+    | Where the "password.confirm" middleware sends drivers, and missing for the
+    | same reason verification.notice was: Fortify registers this GET only when
+    | views are enabled (vendor routes.php, `if ($enableViews)`), so with
+    | views => false it owns the POST at the same path and nothing else.
+    |
+    | Deliberately not behind "verified". The profile page is the escape hatch
+    | for a driver who mistyped their email at registration, and gating that
+    | hatch behind a screen they cannot reach would close it.
+    */
+    Route::get('/user/confirm-password', fn () => inertia('Auth/ConfirmPassword'))
+        ->name('password.confirm');
 });

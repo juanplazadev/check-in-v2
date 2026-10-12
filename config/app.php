@@ -47,6 +47,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Running Under Sail
+    |--------------------------------------------------------------------------
+    |
+    | Set by Sail's containers. Read through config for the same reason as the
+    | commit above. Decides which processes `artisan dev` starts.
+    |
+    */
+
+    'sail' => (bool) env('LARAVEL_SAIL', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |
@@ -263,6 +275,24 @@ return [
     */
 
     'registration_window_ttl' => 60 * 15,
+
+    /*
+    |--------------------------------------------------------------------------
+    | Appointment Reminder Hour
+    |--------------------------------------------------------------------------
+    |
+    | The hour (0-23) on the day before an appointment at which the driver's
+    | reminder goes out, resolved in the location's own timezone rather than
+    | the app's. A fixed local hour is what the settings copy promises ("a
+    | reminder the day before") and it keeps the message out of the middle of
+    | the night, which a plain "24 hours before the slot" rule would not for
+    | early-morning appointments.
+    |
+    | Default: 17 (5pm the day before, local to the location)
+    |
+    */
+
+    'appointment_reminder_hour' => (int) env('APPOINTMENT_REMINDER_HOUR', 17),
 
     /*
     |--------------------------------------------------------------------------

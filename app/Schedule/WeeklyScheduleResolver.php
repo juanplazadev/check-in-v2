@@ -95,7 +95,7 @@ final readonly class WeeklyScheduleResolver
 
     private function buildDay(LocationScheduleDTO $schedule, CarbonInterface $day, CarbonInterface $localNow): ScheduleDayDTO
     {
-        $hours = $schedule->openTime && $schedule->closeTime
+        $hours = $schedule->openTime instanceof CarbonInterface && $schedule->closeTime instanceof CarbonInterface
             ? $schedule->openTime->format('g:i A').' – '.$schedule->closeTime->format('g:i A')
             : null;
 

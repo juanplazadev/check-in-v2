@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Fortify;
 
 use App\Auth\RegistrationGate;
+use App\Enums\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -58,6 +59,8 @@ final readonly class CreateNewUser implements CreatesNewUsers
             'pending_check_in_id' => $claimType === 'check_in' ? $claimId : null,
             'pending_appointment_id' => $claimType === 'appointment' ? $claimId : null,
         ]);
+
+        $user->assignRole(Role::Driver);
 
         $this->registrationGate->consume();
 

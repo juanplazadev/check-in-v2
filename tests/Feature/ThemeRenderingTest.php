@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Role;
 use App\Enums\Theme;
 use App\Models\User;
 
@@ -13,7 +14,8 @@ function themeDriver(?Theme $theme = null): User
         'name' => 'John Driver',
         'email' => 'driver@example.com',
         'password' => 'secret-password',
-    ]);
+        'email_verified_at' => now(),
+    ])->assignRole(Role::Driver);
 
     if ($theme instanceof Theme) {
         $user->forceFill(['theme' => $theme])->save();

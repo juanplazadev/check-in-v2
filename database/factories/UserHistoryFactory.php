@@ -10,6 +10,9 @@ use App\Models\UserHistory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Override;
 
+/**
+ * @extends Factory<UserHistory>
+ */
 final class UserHistoryFactory extends Factory
 {
     #[Override]
@@ -23,8 +26,8 @@ final class UserHistoryFactory extends Factory
         return [
             // User does not use HasFactory, so build the owner by hand.
             'user_id' => fn (): int => User::query()->create([
-                'name' => $this->faker->name(),
-                'email' => $this->faker->unique()->safeEmail(),
+                'name' => fake()->name(),
+                'email' => fake()->unique()->safeEmail(),
                 'password' => 'password',
             ])->id,
             'event' => UserHistoryEvent::ProfileUpdated,

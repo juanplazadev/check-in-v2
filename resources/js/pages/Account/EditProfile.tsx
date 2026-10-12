@@ -4,8 +4,10 @@ import { IdCard, Lock, User } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { useMemo } from 'react';
 
+import CountryDisplay from '@/components/CountryDisplay';
 import { DatePicker } from '@/components/DatePickerTime';
 import LicenseCard from '@/components/LicenseCard';
+import LocationAutocomplete from '@/components/LocationAutocomplete';
 import { PhoneInput, formatUsPhone } from '@/components/PhoneInput';
 import SavedPill from '@/components/SavedPill';
 import SectionCard from '@/components/SectionCard';
@@ -13,7 +15,6 @@ import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import AccountLayout from '@/layouts/AccountLayout';
-import { US_STATES } from '@/lib/usStates';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -35,6 +36,8 @@ interface AccountProfileTranslations {
     licenseNumberPlaceholder: string;
     licenseStateLabel: string;
     licenseStatePlaceholder: string;
+    licenseCountryLabel: string;
+    licenseCountryPlaceholder: string;
     licenseExpirationLabel: string;
     licenseSecure: string;
     licenseEmpty: string;
@@ -53,6 +56,7 @@ interface PageProps {
     license: {
         number: string | null;
         state: string | null;
+        country: string | null;
         expirationDate: string | null;
     };
     translations: { accountProfile: AccountProfileTranslations };
@@ -91,6 +95,7 @@ export default function EditProfile() {
         ),
         drivers_license_number: license.number ?? '',
         drivers_license_state: license.state ?? '',
+        drivers_license_country: license.country ?? '',
         drivers_license_expiration_date: license.expirationDate ?? '',
     });
 
@@ -235,6 +240,9 @@ export default function EditProfile() {
                             name={profile.data.name}
                             number={profile.data.drivers_license_number || null}
                             state={profile.data.drivers_license_state || null}
+                            country={
+                                profile.data.drivers_license_country || null
+                            }
                             expirationDate={
                                 profile.data.drivers_license_expiration_date ||
                                 null
@@ -244,7 +252,7 @@ export default function EditProfile() {
                             className="mx-auto max-w-sm"
                         />
 
-                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:[&>:last-child:nth-child(odd)]:col-span-2">
                             <Field
                                 data-invalid={
                                     !!profile.errors.drivers_license_number ||
@@ -288,36 +296,56 @@ export default function EditProfile() {
                                 <FieldLabel htmlFor="drivers_license_state">
                                     {t.licenseStateLabel}
                                 </FieldLabel>
-                                <select
+                                <LocationAutocomplete
+                                    level="state"
                                     id="drivers_license_state"
-                                    name="drivers_license_state"
                                     value={profile.data.drivers_license_state}
-                                    aria-invalid={
-                                        !!profile.errors
-                                            .drivers_license_state || undefined
+                                    onChange={(value) =>
+                                        // Typing invalidates the derived country.
+                                        profile.setData((data) => ({
+                                            ...data,
+                                            drivers_license_state: value,
+                                            drivers_license_country: '',
+                                        }))
                                     }
-                                    onChange={(e) =>
-                                        profile.setData(
-                                            'drivers_license_state',
-                                            e.target.value,
-                                        )
+                                    onSelect={(result) =>
+                                        profile.setData((data) => ({
+                                            ...data,
+                                            drivers_license_state: result.state,
+                                            drivers_license_country:
+                                                result.countryCode,
+                                        }))
                                     }
-                                    className="h-9 w-full min-w-0 rounded-4xl border border-input bg-input/30 px-3 py-1 text-base transition-colors outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-[3px] aria-invalid:ring-destructive/20 md:text-sm"
-                                >
-                                    <option value="">
-                                        {t.licenseStatePlaceholder}
-                                    </option>
-                                    {US_STATES.map((state) => (
-                                        <option
-                                            key={state.abbr}
-                                            value={state.name}
-                                        >
-                                            {state.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                    placeholder={t.licenseStatePlaceholder}
+                                    maxLength={30}
+                                    invalid={
+                                        !!profile.errors.drivers_license_state
+                                    }
+                                />
                                 <FieldError>
                                     {profile.errors.drivers_license_state}
+                                </FieldError>
+                            </Field>
+
+                            <Field
+                                data-invalid={
+                                    !!profile.errors.drivers_license_country ||
+                                    undefined
+                                }
+                            >
+                                <FieldLabel htmlFor="drivers_license_country">
+                                    {t.licenseCountryLabel}
+                                </FieldLabel>
+                                <CountryDisplay
+                                    id="drivers_license_country"
+                                    value={profile.data.drivers_license_country}
+                                    invalid={
+                                        !!profile.errors.drivers_license_country
+                                    }
+                                    placeholder={t.licenseCountryPlaceholder}
+                                />
+                                <FieldError>
+                                    {profile.errors.drivers_license_country}
                                 </FieldError>
                             </Field>
                         </div>

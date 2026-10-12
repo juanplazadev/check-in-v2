@@ -66,6 +66,7 @@ final class CheckInController extends Controller
             'driverLicense' => $user instanceof User ? [
                 'number' => $user->drivers_license_number,
                 'state' => $user->drivers_license_state,
+                'country' => $user->drivers_license_country,
                 'expirationDate' => $user->drivers_license_expiration_date?->format('Y-m-d'),
             ] : null,
         ]);

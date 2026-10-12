@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Actions\RecordHistoryAction;
+use App\Encryption\BlindIndex;
 use App\Enums\RecordHistoryEvent;
+use App\Events\AppointmentUpdated;
+use App\Events\CheckInUpdated;
 use App\Models\Appointment;
 use App\Models\AppointmentSchedule;
 use App\Models\AppointmentScheduleOverride;
@@ -13,8 +16,11 @@ use App\Models\CheckIn;
 use App\Models\CheckInSchedule;
 use App\Models\CheckInScheduleOverride;
 use App\Models\Location;
+use App\Models\User;
 use App\Pdf\BrowsershotRecordPdfRenderer;
 use App\Pdf\RecordPdfRenderer;
+use App\Reference\RandomCode;
+use App\Reference\SecureRandomCode;
 use App\Schedule\WeeklyScheduleResolver;
 use App\Sms\LogSmsSender;
 use App\Sms\SmsSender;
@@ -23,6 +29,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Encryption\Encrypter;
+use Illuminate\Foundation\DevCommands;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
@@ -50,6 +58,13 @@ final class AppServiceProvider extends ServiceProvider
          * carrier up needs a non-production guard of their own.
          */
         $this->app->bind(SmsSender::class, LogSmsSender::class);
+
+        /*
+         * Reference numbers and short link codes both draw from here. Bound so
+         * a test can script the draw and force the collision each generator
+         * guards against, which is otherwise too rare to cover.
+         */
+        $this->app->bind(RandomCode::class, SecureRandomCode::class);
     }
 
     /**
@@ -58,6 +73,18 @@ final class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureDevCommands();
+    }
+
+    /**
+     * Under Sail the containers already run Octane, Horizon and Reverb, so
+     * `artisan dev` only starts Vite and Pail.
+     */
+    private function configureDevCommands(): void
+    {
+        if (config('app.sail')) {
+            DevCommands::only('vite', 'logs');
+        }
     }
 
     /**
@@ -67,11 +94,7 @@ final class AppServiceProvider extends ServiceProvider
     private function registerDatabaseEncrypter(): void
     {
         $this->app->singleton('db.encrypter', function (): Encrypter {
-            $key = (string) config('app.db_encryption_key');
-
-            throw_if($key === '', RuntimeException::class, 'DB_ENCRYPTION_KEY is not set. Generate one with: php -r "echo \'base64:\'.base64_encode(random_bytes(32));"');
-
-            $encrypter = new Encrypter($this->parseEncryptionKey($key), config('app.cipher'));
+            $encrypter = new Encrypter($this->databaseEncryptionKey(), config('app.cipher'));
 
             $previousKeys = array_map(
                 $this->parseEncryptionKey(...),
@@ -80,6 +103,23 @@ final class AppServiceProvider extends ServiceProvider
 
             return $previousKeys === [] ? $encrypter : $encrypter->previousKeys($previousKeys);
         });
+
+        // A subkey, so the hash key is never the encryption key itself.
+        $this->app->singleton(BlindIndex::class, fn (): BlindIndex => new BlindIndex(
+            hash_hkdf('sha256', $this->databaseEncryptionKey(), 32, 'blind-index'),
+        ));
+    }
+
+    /**
+     * The raw bytes of DB_ENCRYPTION_KEY, failing loudly when it is unset.
+     */
+    private function databaseEncryptionKey(): string
+    {
+        $key = (string) config('app.db_encryption_key');
+
+        throw_if($key === '', RuntimeException::class, 'DB_ENCRYPTION_KEY is not set. Generate one with: php -r "echo \'base64:\'.base64_encode(random_bytes(32));"');
+
+        return $this->parseEncryptionKey($key);
     }
 
     /**
@@ -124,6 +164,8 @@ final class AppServiceProvider extends ServiceProvider
         $this->flushScheduleCacheOnDataChanges();
 
         $this->recordStatusTransitions();
+        $this->broadcastCheckInStatusChanges();
+        $this->broadcastAppointmentChanges();
     }
 
     /*
@@ -168,10 +210,16 @@ final class AppServiceProvider extends ServiceProvider
                         ? $value->value
                         : $value;
 
+                    // Credit the signed-in staff member who made the change;
+                    // without one (queue jobs, guest flows) the record's own
+                    // user stays the actor.
+                    $actor = Auth::user();
+
                     resolve(RecordHistoryAction::class)->handle(
                         record: $record,
                         event: RecordHistoryEvent::StatusChanged,
                         subject: $column,
+                        user: $actor instanceof User ? $actor : null,
                         context: [
                             'from' => $scalar($record->getOriginal($column)),
                             'to' => $scalar($record->getAttribute($column)),
@@ -180,6 +228,36 @@ final class AppServiceProvider extends ServiceProvider
                 }
             });
         }
+    }
+
+    /**
+     * Push status and ERP status changes to open staff dashboards.
+     *
+     * Like {@see self::recordStatusTransitions()}, this misses mass
+     * Query::update(); a future bulk status update has to dispatch
+     * CheckInUpdated itself.
+     */
+    private function broadcastCheckInStatusChanges(): void
+    {
+        CheckIn::updated(static function (CheckIn $checkIn): void {
+            if ($checkIn->wasChanged(['status', 'erp_status'])) {
+                event(new CheckInUpdated($checkIn));
+            }
+        });
+    }
+
+    /**
+     * Push status and time changes to the live queue's arriving rail, so a
+     * cancelled, missed or arrived booking leaves it. Misses mass
+     * Query::update() for the same reason as above.
+     */
+    private function broadcastAppointmentChanges(): void
+    {
+        Appointment::updated(static function (Appointment $appointment): void {
+            if ($appointment->wasChanged(['status', 'scheduled_for'])) {
+                event(new AppointmentUpdated($appointment));
+            }
+        });
     }
 
     /**

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Database\Factories;
 
 use App\Enums\AppointmentStatus;
+use App\Enums\ReferenceType;
 use App\Models\Appointment;
 use App\Models\Location;
 use App\Models\User;
+use App\Reference\ReferenceNumberGenerator;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Date;
@@ -23,18 +25,13 @@ final class AppointmentFactory extends Factory
 
     public function definition(): array
     {
-        $chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-
         return [
-            'uuid' => $this->faker->uuid(),
-            'reference_number' => implode('', array_map(
-                fn (): string => $chars[random_int(0, mb_strlen($chars) - 1)],
-                range(1, 8),
-            )),
+            'uuid' => fake()->uuid(),
+            'reference_number' => resolve(ReferenceNumberGenerator::class)->generate(ReferenceType::Appointment),
             'scheduled_for' => Date::now(),
-            'drivers_name' => $this->faker->name(),
-            'drivers_cellphone' => '+1'.$this->faker->numerify('##########'),
-            'locale' => $this->faker->randomElement(['en', 'es']),
+            'drivers_name' => fake()->name(),
+            'drivers_cellphone' => '+1'.fake()->numerify('##########'),
+            'locale' => fake()->randomElement(['en', 'es']),
 
             // A freshly booked appointment is Scheduled and has never been
             // cancelled or claimed. Those fields belong to the states below;
@@ -45,6 +42,7 @@ final class AppointmentFactory extends Factory
             'cancelled_reason' => null,
             'claimed_at' => null,
             'claimed_via' => null,
+            'reminder_sent_at' => null,
 
             'created_at' => Date::now(),
             'updated_at' => Date::now(),
@@ -117,7 +115,7 @@ final class AppointmentFactory extends Factory
         return $this->state(fn (array $attributes): array => [
             'status' => AppointmentStatus::Cancelled,
             'cancelled_at' => Date::now(),
-            'cancelled_reason' => $reason ?? $this->faker->sentence(),
+            'cancelled_reason' => $reason ?? fake()->sentence(),
         ]);
     }
 
@@ -132,6 +130,17 @@ final class AppointmentFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'status' => AppointmentStatus::CheckedIn,
+        ]);
+    }
+
+    /**
+     * The day-before reminder has already gone out, so the hourly sweep must
+     * leave this booking alone.
+     */
+    public function reminded(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'reminder_sent_at' => Date::now(),
         ]);
     }
 }

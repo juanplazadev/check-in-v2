@@ -9,21 +9,17 @@ use App\Account\HistoryRecordFinder;
 use App\Account\HistoryRecordResolver;
 use App\Account\HistoryResolver;
 use App\Account\OverviewResolver;
+use App\Actions\CancelAppointmentAction;
+use App\Http\Requests\CancelAppointmentRequest;
 use App\Http\Requests\HistoryFilterRequest;
 use App\Http\Requests\HistoryRecordRequest;
-use App\Mail\RecordDocumentMail;
-use App\Models\Appointment;
-use App\Models\CheckIn;
 use App\Models\User;
-use App\Pdf\RecordPdfDocument;
-use App\Pdf\RecordPdfDocumentFactory;
-use App\Pdf\RecordPdfStore;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Response as HttpResponse;
-use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Throwable;
 
 final class AccountController extends Controller
 {
@@ -70,44 +66,39 @@ final class AccountController extends Controller
         ]);
     }
 
-    public function checkInPdf(
-        HistoryRecordRequest $request,
+    /**
+     * Let a driver give back a slot they booked.
+     *
+     * Only ever their own: the booking is resolved through
+     * {@see HistoryRecordFinder}, which scopes by user_id and so 404s on
+     * someone else's rather than 403ing and confirming it exists. Guest
+     * bookings carry no user_id and are unreachable here by construction -
+     * those drivers call the facility.
+     *
+     * @throws ValidationException
+     * @throws Throwable
+     */
+    public function cancelAppointment(
+        CancelAppointmentRequest $request,
         #[CurrentUser] User $user,
         HistoryRecordFinder $finder,
-        RecordPdfDocumentFactory $documents,
-        RecordPdfStore $store,
-    ): HttpResponse {
-        $document = $documents->forCheckIn($finder->checkIn($user, $request->uuid()));
-
-        return $this->inlinePdf($document, $store->bytes($document));
-    }
-
-    public function appointmentPdf(
-        HistoryRecordRequest $request,
-        #[CurrentUser] User $user,
-        HistoryRecordFinder $finder,
-        RecordPdfDocumentFactory $documents,
-        RecordPdfStore $store,
-    ): HttpResponse {
-        $document = $documents->forAppointment($finder->appointment($user, $request->uuid()));
-
-        return $this->inlinePdf($document, $store->bytes($document));
-    }
-
-    public function emailCheckInPdf(
-        HistoryRecordRequest $request,
-        #[CurrentUser] User $user,
-        HistoryRecordFinder $finder,
+        CancelAppointmentAction $cancelAppointment,
     ): RedirectResponse {
-        return $this->queueDocument($user, $finder->checkIn($user, $request->uuid()));
-    }
+        $appointment = $finder->appointment($user, $request->uuid());
 
-    public function emailAppointmentPdf(
-        HistoryRecordRequest $request,
-        #[CurrentUser] User $user,
-        HistoryRecordFinder $finder,
-    ): RedirectResponse {
-        return $this->queueDocument($user, $finder->appointment($user, $request->uuid()));
+        // Re-checked here and not only in the UI: the page could have been open
+        // since before the slot passed, or the booking cancelled in another tab.
+        if (! $cancelAppointment->isCancellable($appointment)) {
+            throw ValidationException::withMessages([
+                'reason' => __('messages.appointmentCancel.notCancellable'),
+            ]);
+        }
+
+        $cancelAppointment->handle($appointment, $request->reason());
+
+        // The page confirms via useForm's recentlySuccessful, the pattern the
+        // rest of the account screens already use.
+        return back();
     }
 
     public function editProfile(#[CurrentUser] User $user): Response
@@ -118,40 +109,9 @@ final class AccountController extends Controller
             'license' => [
                 'number' => $user->drivers_license_number,
                 'state' => $user->drivers_license_state,
+                'country' => $user->drivers_license_country,
                 'expirationDate' => $user->drivers_license_expiration_date?->format('Y-m-d'),
             ],
-        ]);
-    }
-
-    /**
-     * Sent only to the driver's own address, never one supplied by the request.
-     * The locale is captured now so the worker renders the language the driver
-     * was actually using, matching how the verification email already works.
-     */
-    private function queueDocument(User $user, CheckIn|Appointment $record): RedirectResponse
-    {
-        Mail::to($user->email)->queue(
-            new RecordDocumentMail($record)
-                ->onQueue('pdf')
-                ->locale(app()->getLocale()),
-        );
-
-        // The page confirms via useForm's recentlySuccessful, the pattern the
-        // profile page already uses; there is no flash plumbing in this app.
-        return back();
-    }
-
-    /**
-     * Inline, not attachment. An attachment disappears into the phone's
-     * Downloads folder; inline opens the document in the built-in viewer, where
-     * the share sheet still offers Save to Files, Print and Mail.
-     */
-    private function inlinePdf(RecordPdfDocument $document, string $bytes): HttpResponse
-    {
-        return response($bytes, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => sprintf('inline; filename="%s"', $document->fileName),
-            'Content-Length' => (string) mb_strlen($bytes, '8bit'),
         ]);
     }
 }

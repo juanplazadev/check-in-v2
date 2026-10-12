@@ -1,6 +1,7 @@
 import { Eye, EyeOff, Lock, ShieldCheck, User } from 'lucide-react';
 import { useState } from 'react';
 
+import { countryName } from '@/lib/countryFlag';
 import { stateAbbr } from '@/lib/usStates';
 
 interface LicenseCardProps {
@@ -8,6 +9,8 @@ interface LicenseCardProps {
     number: string | null;
     /** Stored state name (e.g. "Arizona"). */
     state: string | null;
+    /** Stored ISO-2 country code (e.g. "MX"), or null. */
+    country?: string | null;
     /** Expiration as YYYY-MM-DD, or null. */
     expirationDate: string | null;
     /** Localized label for the "Encrypted" security chip. */
@@ -78,6 +81,7 @@ export default function LicenseCard({
     name,
     number,
     state,
+    country = null,
     expirationDate,
     secureLabel,
     emptyLabel,
@@ -91,7 +95,11 @@ export default function LicenseCard({
     const initials = initialsOf(name);
 
     const shownNumber = hasNumber
-        ? group(revealed ? number!.toUpperCase() : maskExceptLast4(number!.toUpperCase()))
+        ? group(
+              revealed
+                  ? number!.toUpperCase()
+                  : maskExceptLast4(number!.toUpperCase()),
+          )
         : '•••• •••• ••••';
 
     return (
@@ -103,7 +111,7 @@ export default function LicenseCard({
                 aria-hidden
                 className="pointer-events-none absolute -right-2 bottom-0 text-[7rem] leading-none font-black tracking-tighter text-white/5 select-none"
             >
-                {abbr ?? 'US'}
+                {abbr ?? country ?? 'US'}
             </span>
 
             {/* Sheen */}
@@ -117,7 +125,10 @@ export default function LicenseCard({
                 <div className="flex items-start justify-between">
                     <div>
                         <p className="text-[0.65rem] font-semibold tracking-[0.2em] text-white/60 uppercase">
-                            {state ?? 'United States'}
+                            {state ??
+                                (country
+                                    ? countryName(country)
+                                    : 'United States')}
                         </p>
                         <p className="mt-0.5 text-sm font-bold tracking-wide text-white">
                             Driver License
@@ -157,7 +168,11 @@ export default function LicenseCard({
                                 <button
                                     type="button"
                                     onClick={() => setRevealed((v) => !v)}
-                                    aria-label={revealed ? 'Hide number' : 'Reveal number'}
+                                    aria-label={
+                                        revealed
+                                            ? 'Hide number'
+                                            : 'Reveal number'
+                                    }
                                     aria-pressed={revealed}
                                     className="-mt-1 inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white"
                                 >

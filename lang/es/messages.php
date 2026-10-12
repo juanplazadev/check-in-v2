@@ -33,6 +33,32 @@ return [
         'taglineSub' => 'Sucede. Ingresa tu correo y te ayudamos a volver al camino.',
     ],
 
+    'confirmPassword' => [
+        'eyebrow' => 'Verificación de seguridad',
+        'title' => 'Confirma tu contraseña',
+        'subtitle' => 'Tu perfil contiene los datos de tu licencia, así que vuelve a ingresar tu contraseña para continuar. No te lo pediremos de nuevo por un rato.',
+        'passwordLabel' => 'Contraseña',
+        'passwordPlaceholder' => 'Ingresa tu contraseña',
+        'confirm' => 'Confirmar',
+        'required' => 'Confirma tu contraseña antes de cambiar tu perfil.',
+        'tagline' => 'Frescura de nuestros campos a su muelle.',
+        'taglineSub' => 'Una comprobación rápida de que eres tú antes de mostrar o cambiar algo delicado.',
+    ],
+
+    'verifyEmailPage' => [
+        'eyebrow' => 'Un paso más',
+        'title' => 'Verifica tu correo electrónico',
+        'subtitle' => 'Enviamos un enlace de verificación a :email. Ábrelo para activar tu cuenta y ver tus registros.',
+        'resend' => 'Reenviar el enlace',
+        'sent' => 'Enviamos un nuevo enlace de verificación. Puede tardar un minuto en llegar.',
+        'spamHint' => '¿No lo encuentras? Revisa tu carpeta de correo no deseado.',
+        'wrongEmailPrompt' => '¿Correo electrónico incorrecto?',
+        'wrongEmailLink' => 'Cámbialo en tu perfil',
+        'logout' => 'Cerrar sesión',
+        'tagline' => 'Frescura de nuestros campos a su muelle.',
+        'taglineSub' => 'Confirmar tu correo mantiene tu historial de registros ligado a ti y nos permite contactarte sobre tus citas.',
+    ],
+
     'resetPassword' => [
         'eyebrow' => 'Restablecer contraseña',
         'title' => 'Crea una nueva contraseña',
@@ -97,10 +123,6 @@ return [
         'nudgeAddLicenseTitle' => 'Agrega tu licencia',
         'nudgeAddLicenseBody' => 'Guarda tu licencia una vez y la completaremos por ti en el registro.',
         'nudgeAddLicenseCta' => 'Agregar licencia',
-        'nudgeVerifyEmailTitle' => 'Verifica tu correo',
-        'nudgeVerifyEmailBody' => 'Confirma tu correo electrónico para mantener tu cuenta segura.',
-        'nudgeVerifyEmailCta' => 'Reenviar enlace',
-        'nudgeVerifyEmailSent' => 'Enlace de verificación enviado',
     ],
 
     'accountNav' => [
@@ -109,6 +131,8 @@ return [
         'profile' => 'Perfil',
         'settings' => 'Ajustes',
         'emailVerified' => 'Correo verificado',
+        'emailUnverified' => 'Correo sin verificar',
+        'verifyNow' => 'Verificar ahora',
         'licenseOnFile' => 'Licencia guardada',
     ],
 
@@ -228,10 +252,49 @@ return [
      */
     'checkInCopySms' => [
         'body' => ':app: tu registro está hecho. Ref :reference. :url',
+        'guestBody' => ':app: tu registro está hecho. Ref :reference. Muestra esta referencia en la entrada.',
+    ],
+
+    'appointmentReminderEmail' => [
+        'subject' => 'Recordatorio: tu cita :reference en :location',
+        'preheader' => 'Tu cita en :location es mañana.',
+        'eyebrow' => 'Recordatorio',
+        'title' => 'Tu cita es mañana',
+        'intro' => 'Estos son los detalles para mañana. Si tus planes cambiaron, puedes cancelar desde tu cuenta.',
+    ],
+
+    'appointmentReminderSms' => [
+        'body' => ':app: recordatorio, tu cita es mañana. Ref :reference. :url',
+    ],
+
+    'appointmentCancellationEmail' => [
+        'subject' => 'Cancelada: tu cita :reference en :location',
+        'preheader' => 'Tu cita en :location ha sido cancelada.',
+        'eyebrow' => 'Cancelada',
+        'title' => 'Tu cita ha sido cancelada',
+        'intro' => 'El horario ha quedado libre. Si aún necesitas venir, agenda una nueva cita.',
+    ],
+
+    'appointmentCancellationSms' => [
+        'body' => ':app: tu cita fue cancelada. Ref :reference. :url',
+    ],
+
+    'appointmentCancel' => [
+        'title' => 'Cancelar esta cita',
+        'body' => 'El horario quedará libre y avisaremos a la instalación. Esto no se puede deshacer.',
+        'reasonLabel' => '¿Por qué cancelas?',
+        'reasonPlaceholder' => 'Se canceló la carga, el camión está en el taller, voy retrasado...',
+        'reasonRequired' => 'Dinos por qué estás cancelando.',
+        'notCancellable' => 'Esta cita ya no se puede cancelar en línea. Llama a la instalación.',
+        'submit' => 'Cancelar cita',
+        'confirm' => 'Sí, cancelarla',
+        'dismiss' => 'Mantener la cita',
+        'cancelled' => 'Cita cancelada',
     ],
 
     'appointmentCopySms' => [
         'body' => ':app: tu cita está agendada. Ref :reference. :url',
+        'guestBody' => ':app: tu cita está agendada. Ref :reference. Muestra esta referencia en la entrada.',
     ],
 
     'recordDocumentEmail' => [
@@ -310,7 +373,11 @@ return [
         'licenseNumberPlaceholder' => 'Número de licencia',
         'licenseNumberInvalid' => 'Ingresa un número de licencia válido (4 a 20 caracteres).',
         'licenseStateLabel' => 'Estado emisor',
-        'licenseStatePlaceholder' => 'Selecciona un estado',
+        'licenseStatePlaceholder' => 'Empieza a escribir un estado',
+        'licenseCountryLabel' => 'País emisor',
+        'licenseCountryPlaceholder' => 'Se completa a partir del estado',
+        'licenseCountryRequired' => 'Elige un estado de la lista para completar su país.',
+        'licenseCountryInvalid' => 'Ingresa un código de país de 2 letras.',
         'licenseExpirationLabel' => 'Fecha de vencimiento',
         'licenseSecure' => 'Cifrado',
         'licenseEmpty' => 'Aún no hay licencia registrada',

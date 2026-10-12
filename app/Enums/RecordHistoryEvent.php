@@ -16,8 +16,18 @@ enum RecordHistoryEvent: string
     case Created = 'created';
     case NotificationSent = 'notification-sent';
     case NotificationFailed = 'notification-failed';
+    case NotificationSkipped = 'notification-skipped';
     case EmployeeNotificationQueued = 'employee-notification-queued';
     case StatusChanged = 'status-changed';
     case Claimed = 'claimed';
     case AccountDeleted = 'account-deleted';
+    case NoteAdded = 'note-added';
+    case LicenseViewed = 'license-viewed';
+    case DetailsEdited = 'details-edited';
+    case Reinstated = 'reinstated';
+    case Archived = 'archived';
+    case Restored = 'restored';
+    case CheckInDeleted = 'check-in-deleted';
+    case AppointmentLinked = 'appointment-linked';
+    case AppointmentUnlinked = 'appointment-unlinked';
 }

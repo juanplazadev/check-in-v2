@@ -32,8 +32,12 @@ it('renders the check-in details the driver needs', function (): void {
 
     $html = new CheckInCopyMail($checkIn)->render();
 
+    // Escaped before comparing: these come from faker, which happily generates
+    // company names like "O'Kon Inc", and Blade renders that as O&#039;Kon Inc.
+    // Comparing raw made this test fail only when the random name happened to
+    // contain an apostrophe.
     expect($html)->toContain($checkIn->reference_number)
-        ->and($html)->toContain($checkIn->location->name)
+        ->and($html)->toContain(e($checkIn->location->name))
         ->and($html)->toContain('Acme Produce')
         ->and($html)->toContain('Phoenix, Arizona, US')
         ->and($html)->toContain('Truck 42');
@@ -97,7 +101,8 @@ it('renders the booking copy with its own details', function (): void {
 
     $html = new AppointmentCopyMail($appointment)->render();
 
+    // Escaped for the same reason as above - faker names carry apostrophes.
     expect($html)->toContain($appointment->reference_number)
-        ->and($html)->toContain($appointment->location->name)
-        ->and($html)->toContain($appointment->drivers_name);
+        ->and($html)->toContain(e($appointment->location->name))
+        ->and($html)->toContain(e($appointment->drivers_name));
 });

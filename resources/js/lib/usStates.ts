@@ -79,3 +79,22 @@ export function stateAbbr(state?: string | null): string | null {
 
     return NAME_TO_ABBR[trimmed.toLowerCase()] ?? null;
 }
+
+/**
+ * Display name for a stored state. Check-ins store full names, but older or seeded rows may hold
+ * a US code; that is expanded. Anything else (a Canadian or Mexican name) passes through.
+ */
+export function stateName(
+    state?: string | null,
+    country?: string | null,
+): string {
+    const trimmed = state?.trim() ?? '';
+
+    if (trimmed.length !== 2 || (country && country.toUpperCase() !== 'US')) {
+        return trimmed;
+    }
+
+    return (
+        US_STATES.find((s) => s.abbr === trimmed.toUpperCase())?.name ?? trimmed
+    );
+}

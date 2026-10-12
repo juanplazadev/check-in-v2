@@ -19,3 +19,24 @@ staging.example.com {
 
 	reverse_proxy check-in-checkin-1:80
 }
+
+# The short link host for texted URLs. A separate block only so the link domain
+# can be a client's own; it proxies to the same container, because the redirect
+# route carries no domain constraint and answers on any host that reaches the
+# app. Adding another client domain means another block like this and nothing
+# in the application.
+#
+# Set SHORTLINK_HOST to this hostname in the server-side .env, and
+# SHORTLINK_PREFIX= (empty) so codes sit at the root and save two characters.
+# Without SHORTLINK_HOST the app keeps building links on APP_URL, so this block
+# would resolve but never be handed out.
+#
+# Horizon is blocked here too: this host has no reason to reach it, and the
+# block costs nothing.
+go.dockin.app {
+	handle /horizon* {
+		respond 404
+	}
+
+	reverse_proxy check-in-checkin-1:80
+}

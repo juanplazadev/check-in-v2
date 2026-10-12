@@ -27,6 +27,7 @@ final readonly class RecordHistoryAction
      */
     private const array REDACTED = [
         'drivers_license_number',
+        'drivers_license_hash',
         'password',
         'two_factor_secret',
         'two_factor_recovery_codes',

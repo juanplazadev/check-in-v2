@@ -4,6 +4,7 @@ import {
     History,
     IdCard,
     LayoutGrid,
+    MailWarning,
     Settings,
     UserRound,
 } from 'lucide-react';
@@ -17,6 +18,7 @@ import {
     profile as accountProfile,
     settings as accountSettings,
 } from '@/routes/account';
+import { notice as verificationNotice } from '@/routes/verification';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,6 +28,8 @@ interface AccountNavTranslations {
     profile: string;
     settings: string;
     emailVerified: string;
+    emailUnverified: string;
+    verifyNow: string;
     licenseOnFile: string;
 }
 
@@ -99,26 +103,31 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
     const settingsActive = activeKey === 'settings';
     const verified = Boolean(auth.user.email_verified_at);
 
-    const tabs: Tab[] = [
-        {
-            key: 'overview',
-            href: account().url,
-            label: t.overview,
-            icon: LayoutGrid,
-        },
-        {
-            key: 'history',
-            href: accountHistory().url,
-            label: t.history,
-            icon: History,
-        },
-        {
-            key: 'profile',
-            href: accountProfile().url,
-            label: t.profile,
-            icon: UserRound,
-        },
-    ];
+    // Profile is the only account page reachable before the email is verified
+    // (it is the escape hatch for a mistyped address), so while unverified the
+    // other tabs would every one of them bounce off the verified middleware.
+    const tabs: Tab[] = (
+        [
+            {
+                key: 'overview',
+                href: account().url,
+                label: t.overview,
+                icon: LayoutGrid,
+            },
+            {
+                key: 'history',
+                href: accountHistory().url,
+                label: t.history,
+                icon: History,
+            },
+            {
+                key: 'profile',
+                href: accountProfile().url,
+                label: t.profile,
+                icon: UserRound,
+            },
+        ] satisfies Tab[]
+    ).filter((tab) => verified || tab.key === 'profile');
 
     return (
         <AppLayout>
@@ -146,34 +155,48 @@ export default function AccountLayout({ children }: { children: ReactNode }) {
 
                         {/* Settings lives here rather than as a 4th tab: a
                             fourth segment drops each tab to ~78px at 375px,
-                            which clips the label. */}
-                        <Link
-                            href={accountSettings().url}
-                            aria-label={t.settings}
-                            aria-current={settingsActive ? 'page' : undefined}
-                            className={`flex size-11 shrink-0 items-center justify-center rounded-full transition-colors ${
-                                settingsActive
-                                    ? 'bg-brand-green/10 text-brand-green'
-                                    : 'text-gray-500 hover:bg-gray-100 hover:text-brand-grey dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'
-                            }`}
-                        >
-                            <Settings className="h-5 w-5" />
-                        </Link>
+                            which clips the label. Hidden while unverified for
+                            the same reason as the tabs above: it is gated. */}
+                        {verified && (
+                            <Link
+                                href={accountSettings().url}
+                                aria-label={t.settings}
+                                aria-current={
+                                    settingsActive ? 'page' : undefined
+                                }
+                                className={`flex size-11 shrink-0 items-center justify-center rounded-full transition-colors ${
+                                    settingsActive
+                                        ? 'bg-brand-green/10 text-brand-green'
+                                        : 'text-gray-500 hover:bg-gray-100 hover:text-brand-grey dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'
+                                }`}
+                            >
+                                <Settings className="h-5 w-5" />
+                            </Link>
+                        )}
                     </div>
 
-                    {(verified || hasLicense) && (
-                        <div className="mt-4 flex flex-wrap gap-2">
-                            {verified && (
-                                <Chip
-                                    icon={BadgeCheck}
-                                    label={t.emailVerified}
-                                />
-                            )}
-                            {hasLicense && (
-                                <Chip icon={IdCard} label={t.licenseOnFile} />
-                            )}
-                        </div>
-                    )}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        {verified ? (
+                            <Chip icon={BadgeCheck} label={t.emailVerified} />
+                        ) : (
+                            /* Actionable rather than decorative: this is the
+                               one place an unverified driver can get back to
+                               the resend screen without signing out. */
+                            <Link
+                                href={verificationNotice().url}
+                                className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
+                            >
+                                <MailWarning className="h-3.5 w-3.5" />
+                                {t.emailUnverified}
+                                <span className="font-semibold underline underline-offset-2">
+                                    {t.verifyNow}
+                                </span>
+                            </Link>
+                        )}
+                        {hasLicense && (
+                            <Chip icon={IdCard} label={t.licenseOnFile} />
+                        )}
+                    </div>
                 </div>
             </div>
 

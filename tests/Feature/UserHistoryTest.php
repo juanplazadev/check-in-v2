@@ -40,6 +40,15 @@ function profilePayload(array $overrides = []): array
     ];
 }
 
+/*
+ * The profile page and the profile-update endpoint sit behind password
+ * confirmation. These tests are about what the profile does, not about the
+ * gate, so they satisfy it up front. PasswordConfirmationTest covers the gate.
+ */
+beforeEach(function (): void {
+    confirmPassword();
+});
+
 it('records a profile update with the before and after values', function (): void {
     Notification::fake();
 
@@ -68,6 +77,7 @@ it('records that the license number changed without storing it', function (): vo
         ->put('/user/profile-information', profilePayload([
             'drivers_license_number' => 'D1234567',
             'drivers_license_state' => 'Arizona',
+            'drivers_license_country' => 'US',
             'drivers_license_expiration_date' => '2030-05-01',
         ]))
         ->assertSessionHasNoErrors();
@@ -76,6 +86,7 @@ it('records that the license number changed without storing it', function (): vo
 
     expect($history->changes['drivers_license_number'])->toBe(['changed' => true])
         ->and($history->changes['drivers_license_state'])->toBe(['from' => null, 'to' => 'Arizona'])
+        ->and($history->changes['drivers_license_country'])->toBe(['from' => null, 'to' => 'US'])
         ->and($history->changes['drivers_license_expiration_date'])->toBe(['from' => null, 'to' => '2030-05-01']);
 
     // The trail has no Encrypted cast of its own, so the raw column must never

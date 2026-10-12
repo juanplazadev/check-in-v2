@@ -221,4 +221,24 @@ return [
 
     'max_execution_time' => 30,
 
+    /*
+    |--------------------------------------------------------------------------
+    | FrankenPHP Caddy Environment
+    |--------------------------------------------------------------------------
+    |
+    | Merged over the variables Octane feeds its Caddyfile. The extra directives
+    | slot (Mercure's, unused here) proxies the live dashboard's websocket to
+    | Reverb, so the browser connects over this server's https endpoint rather
+    | than to Reverb's plain-ws port. Unset REVERB_PROXY_UPSTREAM to disable.
+    |
+    */
+
+    'caddy' => [
+        'env' => [
+            'CADDY_SERVER_EXTRA_DIRECTIVES' => env('REVERB_PROXY_UPSTREAM')
+                ? 'reverse_proxy /app/* '.env('REVERB_PROXY_UPSTREAM')
+                : '',
+        ],
+    ],
+
 ];

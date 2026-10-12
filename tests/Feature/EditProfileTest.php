@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Role;
 use App\Models\User;
 use App\Notifications\VerifyEmail;
 use Illuminate\Support\Facades\Hash;
@@ -17,8 +18,17 @@ function makeDriver(array $attributes = []): User
         'email' => 'john@example.com',
         'password' => 'secret-password',
         ...$attributes,
-    ]);
+    ])->assignRole(Role::Driver);
 }
+
+/*
+ * The profile page and the profile-update endpoint sit behind password
+ * confirmation. These tests are about what the profile does, not about the
+ * gate, so they satisfy it up front. PasswordConfirmationTest covers the gate.
+ */
+beforeEach(function (): void {
+    confirmPassword();
+});
 
 it('redirects guests from the profile page', function (): void {
     get(route('account.profile'))->assertRedirect(route('login'));
@@ -101,6 +111,7 @@ it('exposes the saved license to the profile page but hides the number from the 
     $user = makeDriver([
         'drivers_license_number' => 'D1234567',
         'drivers_license_state' => 'Texas',
+        'drivers_license_country' => 'US',
         'drivers_license_expiration_date' => '2031-01-15',
     ]);
 
@@ -110,6 +121,7 @@ it('exposes the saved license to the profile page but hides the number from the 
             ->where('hasLicense', true)
             ->where('license.number', 'D1234567')
             ->where('license.state', 'Texas')
+            ->where('license.country', 'US')
             ->where('license.expirationDate', '2031-01-15')
             ->missing('auth.user.drivers_license_number'));
 });
@@ -124,6 +136,7 @@ it('saves the drivers license to the profile', function (): void {
             'cellphone' => '',
             'drivers_license_number' => 'D1234567',
             'drivers_license_state' => 'Arizona',
+            'drivers_license_country' => 'US',
             'drivers_license_expiration_date' => '2030-05-01',
         ])
         ->assertSessionHasNoErrors();
@@ -132,7 +145,43 @@ it('saves the drivers license to the profile', function (): void {
 
     expect($user->drivers_license_number)->toBe('D1234567')
         ->and($user->drivers_license_state)->toBe('Arizona')
+        ->and($user->drivers_license_country)->toBe('US')
         ->and($user->drivers_license_expiration_date->format('Y-m-d'))->toBe('2030-05-01');
+});
+
+it('saves a license state from another supported country with its country code', function (): void {
+    $user = makeDriver();
+
+    $this->actingAs($user)
+        ->put('/user/profile-information', [
+            'name' => 'John Driver',
+            'email' => 'john@example.com',
+            'cellphone' => '',
+            'drivers_license_state' => 'Sonora',
+            'drivers_license_country' => 'mx',
+        ])
+        ->assertSessionHasNoErrors();
+
+    $user->refresh();
+
+    expect($user->drivers_license_state)->toBe('Sonora')
+        ->and($user->drivers_license_country)->toBe('MX');
+});
+
+it('rejects a license state that was typed without picking its country', function (): void {
+    $user = makeDriver();
+
+    $this->actingAs($user)
+        ->put('/user/profile-information', [
+            'name' => 'John Driver',
+            'email' => 'john@example.com',
+            'cellphone' => '',
+            'drivers_license_state' => 'Arizona',
+            'drivers_license_country' => '',
+        ])
+        ->assertSessionHasErrors(['drivers_license_country'], null, 'updateProfileInformation');
+
+    expect($user->refresh()->drivers_license_state)->toBeNull();
 });
 
 it('rejects a license expiration date in the past', function (): void {
@@ -145,6 +194,7 @@ it('rejects a license expiration date in the past', function (): void {
             'cellphone' => '',
             'drivers_license_number' => 'D1234567',
             'drivers_license_state' => 'Arizona',
+            'drivers_license_country' => 'US',
             'drivers_license_expiration_date' => now()->subDay()->format('Y-m-d'),
         ])
         ->assertSessionHasErrors(['drivers_license_expiration_date'], null, 'updateProfileInformation');
@@ -160,6 +210,7 @@ it('rejects a license expiration date more than 60 years out', function (): void
             'cellphone' => '',
             'drivers_license_number' => 'D1234567',
             'drivers_license_state' => 'Arizona',
+            'drivers_license_country' => 'US',
             'drivers_license_expiration_date' => now()->addYears(61)->format('Y-m-d'),
         ])
         ->assertSessionHasErrors(['drivers_license_expiration_date'], null, 'updateProfileInformation');
@@ -175,6 +226,7 @@ it('accepts a far-future Arizona license within the 60 year window', function ()
             'cellphone' => '',
             'drivers_license_number' => 'D1234567',
             'drivers_license_state' => 'Arizona',
+            'drivers_license_country' => 'US',
             'drivers_license_expiration_date' => now()->addYears(45)->format('Y-m-d'),
         ])
         ->assertSessionHasNoErrors();
@@ -184,6 +236,7 @@ it('clears the license fields when submitted empty', function (): void {
     $user = makeDriver([
         'drivers_license_number' => 'D1234567',
         'drivers_license_state' => 'Arizona',
+        'drivers_license_country' => 'US',
         'drivers_license_expiration_date' => '2030-05-01',
     ]);
 
@@ -194,6 +247,7 @@ it('clears the license fields when submitted empty', function (): void {
             'cellphone' => '',
             'drivers_license_number' => '',
             'drivers_license_state' => '',
+            'drivers_license_country' => 'US',
             'drivers_license_expiration_date' => '',
         ])
         ->assertSessionHasNoErrors();
@@ -202,6 +256,7 @@ it('clears the license fields when submitted empty', function (): void {
 
     expect($user->drivers_license_number)->toBeNull()
         ->and($user->drivers_license_state)->toBeNull()
+        ->and($user->drivers_license_country)->toBeNull()
         ->and($user->drivers_license_expiration_date)->toBeNull();
 });
 
