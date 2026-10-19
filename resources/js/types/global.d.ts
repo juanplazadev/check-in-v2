@@ -9,5 +9,9 @@ declare module '@inertiajs/core' {
             commit: string | null;
             [key: string]: unknown;
         };
+        /** Set with Inertia::flash() on the server; shown by FlashToaster in the dashboard layout. */
+        flashDataType: {
+            toast?: { type: 'success' | 'error'; message: string };
+        };
     }
 }

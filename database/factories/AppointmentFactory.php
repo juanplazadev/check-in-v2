@@ -110,11 +110,12 @@ final class AppointmentFactory extends Factory
         ]);
     }
 
-    public function cancelled(?string $reason = null): static
+    public function cancelled(?string $reason = null, ?User $by = null): static
     {
         return $this->state(fn (array $attributes): array => [
             'status' => AppointmentStatus::Cancelled,
             'cancelled_at' => Date::now(),
+            'cancelled_by' => $by?->id,
             'cancelled_reason' => $reason ?? fake()->sentence(),
         ]);
     }
@@ -141,6 +142,16 @@ final class AppointmentFactory extends Factory
     {
         return $this->state(fn (array $attributes): array => [
             'reminder_sent_at' => Date::now(),
+        ]);
+    }
+
+    /**
+     * Archive the appointment: soft-deleted, so it lists only on the archived tab.
+     */
+    public function archived(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'deleted_at' => Date::now(),
         ]);
     }
 }

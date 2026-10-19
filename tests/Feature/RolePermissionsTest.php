@@ -14,23 +14,24 @@ use App\Models\User;
 $staffBasics = [
     'view overview', 'view live queue', 'view check-ins', 'view appointments', 'view locations',
     'view notifications', 'search dashboard', 'filter check-ins', 'sync check-ins to erp',
-    'write check-in notes', 'save check-in column display', 'save check-in column order',
-    'view check-in pdf', 'print check-in pdf', 'filter appointments',
-    'save appointment column display', 'save appointment column order',
+    'write check-in notes', 'write appointment notes', 'save check-in column display',
+    'save check-in column order', 'view check-in pdf', 'print check-in pdf', 'filter appointments',
+    'save appointment column display', 'save appointment column order', 'view appointment pdf',
+    'print appointment pdf',
 ];
 
 $shipping = [
     ...$staffBasics,
-    'complete check-ins', 'email check-in pdf', 'cancel check-ins',
-    'reveal driver licenses', 'archive check-ins', 'restore check-ins', 'export check-ins view',
-    'export appointments view',
+    'complete check-ins', 'email check-in pdf', 'email appointment pdf', 'cancel check-ins', 'cancel appointments',
+    'reveal driver licenses', 'archive check-ins', 'restore check-ins', 'archive appointments',
+    'restore appointments', 'export check-ins view', 'export appointments view',
 ];
 
 dataset('role permissions', [
     'admin' => [Role::Admin, array_column(Permission::cases(), 'value')],
     'shipping manager' => [Role::ShippingManager, [
         ...$shipping,
-        'reopen check-ins', 'unsync check-ins from erp', 'edit check-ins', 'reinstate check-ins',
+        'reopen check-ins', 'unsync check-ins from erp', 'edit check-ins', 'reinstate check-ins', 'reinstate appointments',
         'link check-in appointments',
     ]],
     'shipping' => [Role::Shipping, $shipping],
@@ -45,11 +46,12 @@ it('grants each role exactly its permissions', function (Role $role, array $expe
         ->toBe(collect($expected)->sort()->values()->all());
 })->with('role permissions');
 
-it('only lets admins view users or roles and permissions, delete check-ins, and export the master spreadsheets', function (Role $role): void {
+it('only lets admins view users or roles and permissions, delete check-ins or appointments, and export the master spreadsheets', function (Role $role): void {
     $user = User::factory()->withRole($role)->create();
 
     expect($user->can(Permission::ViewUsers))->toBe($role === Role::Admin)
         ->and($user->can(Permission::DeleteCheckIns))->toBe($role === Role::Admin)
+        ->and($user->can(Permission::DeleteAppointments))->toBe($role === Role::Admin)
         ->and($user->can(Permission::ExportCheckInsMaster))->toBe($role === Role::Admin)
         ->and($user->can(Permission::ExportAppointmentsMaster))->toBe($role === Role::Admin)
         ->and($user->can(Permission::ViewRolesAndPermissions))->toBe($role === Role::Admin);

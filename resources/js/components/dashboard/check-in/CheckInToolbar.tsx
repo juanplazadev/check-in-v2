@@ -10,7 +10,6 @@ import {
     FileText,
     Fingerprint,
     Link2,
-    Mail,
     MessageSquare,
     MoreHorizontal,
     Pencil,
@@ -20,7 +19,6 @@ import {
     Trash2,
     Undo2,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 
 import CheckInArchiveController from '@/actions/App/Http/Controllers/Dashboard/CheckInArchiveController';
@@ -28,24 +26,27 @@ import CheckInCancelController from '@/actions/App/Http/Controllers/Dashboard/Ch
 import CheckInCompleteController from '@/actions/App/Http/Controllers/Dashboard/CheckInCompleteController';
 import CheckInDeleteController from '@/actions/App/Http/Controllers/Dashboard/CheckInDeleteController';
 import CheckInPdfController from '@/actions/App/Http/Controllers/Dashboard/CheckInPdfController';
+import CheckInPdfEmailController from '@/actions/App/Http/Controllers/Dashboard/CheckInPdfEmailController';
 import CheckInReinstateController from '@/actions/App/Http/Controllers/Dashboard/CheckInReinstateController';
 import CheckInReopenController from '@/actions/App/Http/Controllers/Dashboard/CheckInReopenController';
 import CheckInRestoreController from '@/actions/App/Http/Controllers/Dashboard/CheckInRestoreController';
 import EditCheckInDialog from '@/components/dashboard/check-in/EditCheckInDialog';
+import {
+    CopyItem,
+    DeleteRecordDialog,
+    EmailPdfItem,
+    ImpactList,
+    MENU_CLASSES,
+    plural,
+    ReasonDialog,
+    SECONDARY_BUTTON,
+    StatusConfirmDialog,
+} from '@/components/dashboard/RecordActionDialogs';
 import type {
     CheckInDeletionImpact,
     CheckInFormFields,
     CheckInRecord,
 } from '@/components/dashboard/types';
-import {
-    AlertDialog,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -54,10 +55,8 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Field, FieldError, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { useCan } from '@/hooks/useCan';
+import { printPdf } from '@/lib/dashboard/printPdf';
 import type { Permission } from '@/types/auth';
 
 export type CheckInAction =
@@ -98,7 +97,7 @@ const ACTION_PERMISSIONS: Record<CheckInAction, Permission> = {
 /**
  * The one place the toolbar's unwired actions run. None of them reach the backend yet; wire each
  * case here once its route exists. Complete, reopen, cancel, reinstate, archive, restore, delete, edit and
- * the PDF view and print are wired in the toolbar itself.
+ * the PDF view, print and email are wired in the toolbar itself.
  */
 function performAction(
     action: Exclude<
@@ -113,16 +112,11 @@ function performAction(
         | 'edit'
         | 'view-pdf'
         | 'print-pdf'
+        | 'email-pdf'
     >,
 ): void {
     void action;
 }
-
-const MENU_CLASSES =
-    'dashboard rounded-lg border border-gray-200 bg-white p-1.5 shadow-lg ring-0 dark:border-gray-700/60 dark:bg-gray-800';
-
-const SECONDARY_BUTTON =
-    'btn gap-2 border-gray-200 bg-white text-gray-600 hover:border-gray-300 data-[state=open]:border-gray-300 dark:border-gray-700/60 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-600 dark:data-[state=open]:border-gray-600';
 
 type CopyTarget = 'reference' | 'uuid' | 'link';
 
@@ -158,6 +152,9 @@ export default function CheckInToolbar({
     const [deleting, setDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [printing, setPrinting] = useState(false);
+    const [emailing, setEmailing] = useState(false);
+    const [emailed, setEmailed] = useState(false);
+    const [emailError, setEmailError] = useState<string | null>(null);
 
     useEffect(() => {
         if (copied === null) {
@@ -168,6 +165,16 @@ export default function CheckInToolbar({
 
         return () => window.clearTimeout(timeout);
     }, [copied]);
+
+    useEffect(() => {
+        if (!emailed) {
+            return;
+        }
+
+        const timeout = window.setTimeout(() => setEmailed(false), 2500);
+
+        return () => window.clearTimeout(timeout);
+    }, [emailed]);
 
     const copy = (target: CopyTarget) => {
         const text = {
@@ -310,36 +317,26 @@ export default function CheckInToolbar({
 
     const pdfUrl = CheckInPdfController.url(checkIn.uuid);
 
-    /**
-     * Prints without leaving the page: the PDF loads into a hidden same-origin frame and the
-     * browser's print dialog opens on it. Where a frame cannot print (some mobile browsers), the
-     * PDF opens in a new tab instead, whose viewer offers Print.
-     */
-    const printPdf = () => {
+    const print = () => {
         setPrinting(true);
+        printPdf(pdfUrl, () => setPrinting(false));
+    };
 
-        const frame = document.createElement('iframe');
-        frame.style.position = 'fixed';
-        frame.style.width = '0';
-        frame.style.height = '0';
-        frame.style.border = '0';
-        frame.src = pdfUrl;
-
-        frame.onload = () => {
-            setPrinting(false);
-
-            try {
-                frame.contentWindow?.focus();
-                frame.contentWindow?.print();
-            } catch {
-                window.open(pdfUrl, '_blank', 'noopener');
-            }
-
-            // Removing the frame while the dialog is open cancels the print in some browsers.
-            window.setTimeout(() => frame.remove(), 60_000);
-        };
-
-        document.body.appendChild(frame);
+    const emailPdf = () => {
+        router.post(
+            CheckInPdfEmailController.url(checkIn.uuid),
+            {},
+            {
+                preserveScroll: true,
+                onStart: () => {
+                    setEmailing(true);
+                    setEmailError(null);
+                },
+                onSuccess: () => setEmailed(true),
+                onError: (errors) => setEmailError(errors.email ?? null),
+                onFinish: () => setEmailing(false),
+            },
+        );
     };
 
     const pending = checkIn.status === 'pending';
@@ -429,30 +426,20 @@ export default function CheckInToolbar({
                             <DropdownMenuItem
                                 className="rounded-md"
                                 disabled={printing}
-                                onSelect={printPdf}
+                                onSelect={print}
                             >
                                 <Printer />
                                 {printing ? 'Preparing…' : 'Print'}
                             </DropdownMenuItem>
                         )}
                         {can('email-pdf') && (
-                            <DropdownMenuItem
-                                className="items-start rounded-md"
-                                disabled={checkIn.driver.email === null}
-                                onSelect={() => performAction('email-pdf')}
-                            >
-                                <Mail className="mt-0.5" />
-                                <span>
-                                    <span className="block">
-                                        Email to driver
-                                    </span>
-                                    {checkIn.driver.email === null && (
-                                        <span className="block text-xs text-gray-500 dark:text-gray-400">
-                                            No email on file
-                                        </span>
-                                    )}
-                                </span>
-                            </DropdownMenuItem>
+                            <EmailPdfItem
+                                email={checkIn.driver.email}
+                                emailing={emailing}
+                                emailed={emailed}
+                                error={emailError}
+                                onEmail={emailPdf}
+                            />
                         )}
                         {can('sms-pdf') && (
                             <DropdownMenuItem
@@ -614,23 +601,39 @@ export default function CheckInToolbar({
                 busy={restoring}
                 onConfirm={restore}
             />
-            <ArchiveDialog
+            <ReasonDialog
                 open={archiveOpen}
                 onOpenChange={changeArchiveOpen}
-                referenceNumber={checkIn.referenceNumber}
-                archiving={archiving}
+                id="archive_reason"
+                title={`Archive check-in ${checkIn.referenceNumber}?`}
+                description="It leaves the check-ins list and shows only under Archived. It can be restored at any time. This is recorded in the check-in's history."
+                label="Reason (optional)"
+                placeholder="Why is this check-in being archived?"
+                required={false}
+                keepLabel="Keep check-in"
+                confirmLabel="Archive check-in"
+                tone="neutral"
+                busy={archiving}
                 error={archiveError}
                 onConfirm={archive}
             />
-            <CancelDialog
+            <ReasonDialog
                 open={cancelOpen}
                 onOpenChange={changeCancelOpen}
-                referenceNumber={checkIn.referenceNumber}
-                cancelling={cancelling}
+                id="cancel_reason"
+                title={`Cancel check-in ${checkIn.referenceNumber}?`}
+                description="The check-in moves to canceled. The driver is not notified. This is recorded in the check-in's history."
+                label="Reason"
+                placeholder="Why is this check-in being canceled?"
+                required
+                keepLabel="Keep check-in"
+                confirmLabel="Cancel check-in"
+                tone="danger"
+                busy={cancelling}
                 error={cancelError}
                 onConfirm={cancel}
             />
-            <DeleteDialog
+            <CheckInDeleteDialog
                 open={deleteOpen}
                 onOpenChange={changeDeleteOpen}
                 referenceNumber={checkIn.referenceNumber}
@@ -642,250 +645,8 @@ export default function CheckInToolbar({
     );
 }
 
-function CopyItem({
-    icon,
-    label,
-    copied,
-    onCopy,
-}: {
-    icon: ReactNode;
-    label: string;
-    copied: boolean;
-    onCopy: () => void;
-}) {
-    return (
-        <DropdownMenuItem
-            className="rounded-md"
-            onSelect={(event) => {
-                // Keep the menu open so the "Copied" confirmation is visible.
-                event.preventDefault();
-                onCopy();
-            }}
-        >
-            {icon}
-            <span className="flex-1">{label}</span>
-            {copied && (
-                <span className="text-xs font-medium text-brand-green">
-                    Copied
-                </span>
-            )}
-        </DropdownMenuItem>
-    );
-}
-
-/** Confirms a status change that takes no input, such as reopening or reinstating. */
-function StatusConfirmDialog({
-    open,
-    onOpenChange,
-    title,
-    description,
-    keepLabel,
-    confirmLabel,
-    busy,
-    onConfirm,
-}: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    title: string;
-    description: string;
-    keepLabel: string;
-    confirmLabel: string;
-    busy: boolean;
-    onConfirm: () => void;
-}) {
-    return (
-        <AlertDialog open={open} onOpenChange={onOpenChange}>
-            <AlertDialogContent className="dashboard">
-                <AlertDialogHeader>
-                    <AlertDialogTitle>{title}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        {description}
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-
-                <AlertDialogFooter>
-                    <AlertDialogCancel asChild>
-                        <button
-                            type="button"
-                            disabled={busy}
-                            className={SECONDARY_BUTTON}
-                        >
-                            {keepLabel}
-                        </button>
-                    </AlertDialogCancel>
-                    <button
-                        type="button"
-                        disabled={busy}
-                        onClick={onConfirm}
-                        className="btn bg-gray-900 text-gray-100 hover:bg-gray-800 disabled:opacity-50 dark:bg-gray-100 dark:text-gray-800 dark:hover:bg-white"
-                    >
-                        {confirmLabel}
-                    </button>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    );
-}
-
-function CancelDialog({
-    open,
-    onOpenChange,
-    referenceNumber,
-    cancelling,
-    error,
-    onConfirm,
-}: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    referenceNumber: string;
-    cancelling: boolean;
-    /** The server's refusal, e.g. a missing reason or a check-in no longer pending. */
-    error: string | null;
-    onConfirm: (reason: string) => void;
-}) {
-    const [reason, setReason] = useState('');
-
-    const changeOpen = (next: boolean) => {
-        onOpenChange(next);
-
-        if (!next) {
-            setReason('');
-        }
-    };
-
-    return (
-        <AlertDialog open={open} onOpenChange={changeOpen}>
-            <AlertDialogContent className="dashboard">
-                <AlertDialogHeader>
-                    <AlertDialogTitle>
-                        Cancel check-in {referenceNumber}?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                        The check-in moves to canceled. The driver is not
-                        notified. This is recorded in the check-in's history.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-
-                <Field data-invalid={error !== null || undefined}>
-                    <FieldLabel htmlFor="cancel_reason">Reason</FieldLabel>
-                    <Textarea
-                        id="cancel_reason"
-                        rows={3}
-                        maxLength={500}
-                        placeholder="Why is this check-in being canceled?"
-                        value={reason}
-                        aria-invalid={error !== null}
-                        onChange={(event) => setReason(event.target.value)}
-                    />
-                    {error !== null && <FieldError>{error}</FieldError>}
-                </Field>
-
-                <AlertDialogFooter>
-                    <AlertDialogCancel asChild>
-                        <button
-                            type="button"
-                            disabled={cancelling}
-                            className={SECONDARY_BUTTON}
-                        >
-                            Keep check-in
-                        </button>
-                    </AlertDialogCancel>
-                    <button
-                        type="button"
-                        disabled={cancelling || reason.trim() === ''}
-                        onClick={() => onConfirm(reason.trim())}
-                        className="btn bg-rose-500 text-white hover:bg-rose-600 disabled:opacity-50"
-                    >
-                        Cancel check-in
-                    </button>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    );
-}
-
-function ArchiveDialog({
-    open,
-    onOpenChange,
-    referenceNumber,
-    archiving,
-    error,
-    onConfirm,
-}: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    referenceNumber: string;
-    archiving: boolean;
-    /** The server's refusal, e.g. a reason too long or a check-in that is still pending. */
-    error: string | null;
-    /** Called with the trimmed reason, empty when none was given. */
-    onConfirm: (reason: string) => void;
-}) {
-    const [reason, setReason] = useState('');
-
-    const changeOpen = (next: boolean) => {
-        onOpenChange(next);
-
-        if (!next) {
-            setReason('');
-        }
-    };
-
-    return (
-        <AlertDialog open={open} onOpenChange={changeOpen}>
-            <AlertDialogContent className="dashboard">
-                <AlertDialogHeader>
-                    <AlertDialogTitle>
-                        Archive check-in {referenceNumber}?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                        It leaves the check-ins list and shows only under
-                        Archived. It can be restored at any time. This is
-                        recorded in the check-in's history.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-
-                <Field data-invalid={error !== null || undefined}>
-                    <FieldLabel htmlFor="archive_reason">
-                        Reason (optional)
-                    </FieldLabel>
-                    <Textarea
-                        id="archive_reason"
-                        rows={3}
-                        maxLength={500}
-                        placeholder="Why is this check-in being archived?"
-                        value={reason}
-                        aria-invalid={error !== null}
-                        onChange={(event) => setReason(event.target.value)}
-                    />
-                    {error !== null && <FieldError>{error}</FieldError>}
-                </Field>
-
-                <AlertDialogFooter>
-                    <AlertDialogCancel asChild>
-                        <button
-                            type="button"
-                            disabled={archiving}
-                            className={SECONDARY_BUTTON}
-                        >
-                            Keep check-in
-                        </button>
-                    </AlertDialogCancel>
-                    <button
-                        type="button"
-                        disabled={archiving}
-                        onClick={() => onConfirm(reason.trim())}
-                        className="btn bg-gray-900 text-gray-100 hover:bg-gray-800 disabled:opacity-50 dark:bg-gray-100 dark:text-gray-800 dark:hover:bg-white"
-                    >
-                        Archive check-in
-                    </button>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    );
-}
-
-function DeleteDialog({
+/** The check-in delete confirmation, with counts of what goes fetched each time it opens. */
+function CheckInDeleteDialog({
     open,
     onOpenChange,
     referenceNumber,
@@ -897,16 +658,12 @@ function DeleteDialog({
     onOpenChange: (open: boolean) => void;
     referenceNumber: string;
     deleting: boolean;
-    /** The server's refusal, e.g. a missing or too long reason. */
     error: string | null;
-    /** Called with the trimmed reason. */
     onConfirm: (reason: string) => void;
 }) {
     const { deletionImpact } = usePage<{
         deletionImpact?: CheckInDeletionImpact | null;
     }>().props;
-    const [reason, setReason] = useState('');
-    const [confirmation, setConfirmation] = useState('');
 
     // The counts are an optional prop: fetched each time the dialog opens, so they are current.
     useEffect(() => {
@@ -915,231 +672,104 @@ function DeleteDialog({
         }
     }, [open]);
 
-    const changeOpen = (next: boolean) => {
-        onOpenChange(next);
-
-        if (!next) {
-            setReason('');
-            setConfirmation('');
-        }
-    };
-
-    const ready =
-        reason.trim() !== '' &&
-        confirmation.trim() === referenceNumber &&
-        !deleting;
-
     return (
-        <AlertDialog open={open} onOpenChange={changeOpen}>
-            <AlertDialogContent className="dashboard max-h-[90vh] overflow-y-auto">
-                <AlertDialogHeader>
-                    <AlertDialogTitle>
-                        Permanently delete check-in {referenceNumber}?
-                    </AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This cannot be undone. The check-in and everything
-                        attached to it is erased from the database, whatever its
-                        status. If it is still pending, the truck drops off the
-                        live queue for everyone. To keep the record, archive it
-                        instead.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-
-                <div className="space-y-4 text-sm">
-                    {deletionImpact ? (
-                        <>
-                            <ImpactList
-                                title="Deleted permanently"
-                                tone="danger"
-                                items={[
-                                    {
-                                        label: 'The check-in and all its details: driver, truck, trailer, load and license',
-                                        active: true,
-                                    },
-                                    {
-                                        label: `${plural(deletionImpact.historyEntries, 'history entry', 'history entries')}, including the record of every notification sent`,
-                                        active:
-                                            deletionImpact.historyEntries > 0,
-                                    },
-                                    {
-                                        label: plural(
-                                            deletionImpact.notes,
-                                            'internal note',
-                                            'internal notes',
-                                        ),
-                                        active: deletionImpact.notes > 0,
-                                    },
-                                    {
-                                        label: plural(
-                                            deletionImpact.purchaseOrders,
-                                            'purchase order',
-                                            'purchase orders',
-                                        ),
-                                        active:
-                                            deletionImpact.purchaseOrders > 0,
-                                    },
-                                    {
-                                        label: `${plural(deletionImpact.staffNotifications, 'staff notification', 'staff notifications')} in dashboard bells`,
-                                        active:
-                                            deletionImpact.staffNotifications >
-                                            0,
-                                    },
-                                    {
-                                        label: deletionImpact.hasShortLink
-                                            ? 'The short link texted to the driver, which stops working'
-                                            : 'No short link was sent to the driver',
-                                        active: deletionImpact.hasShortLink,
-                                    },
-                                    {
-                                        label: `${plural(deletionImpact.pendingClaims, 'pending account claim', 'pending account claims')} for this check-in`,
-                                        active:
-                                            deletionImpact.pendingClaims > 0,
-                                    },
-                                ]}
+        <DeleteRecordDialog
+            open={open}
+            onOpenChange={onOpenChange}
+            referenceNumber={referenceNumber}
+            title={`Permanently delete check-in ${referenceNumber}?`}
+            description="This cannot be undone. The check-in and everything attached to it is erased from the database, whatever its status. If it is still pending, the truck drops off the live queue for everyone. To keep the record, archive it instead."
+            placeholder="Why is this check-in being deleted?"
+            keepLabel="Keep check-in"
+            deleting={deleting}
+            error={error}
+            onConfirm={onConfirm}
+            impact={
+                deletionImpact ? (
+                    <>
+                        <ImpactList
+                            title="Deleted permanently"
+                            tone="danger"
+                            items={[
+                                {
+                                    label: 'The check-in and all its details: driver, truck, trailer, load and license',
+                                    active: true,
+                                },
+                                {
+                                    label: `${plural(deletionImpact.historyEntries, 'history entry', 'history entries')}, including the record of every notification sent`,
+                                    active: deletionImpact.historyEntries > 0,
+                                },
+                                {
+                                    label: plural(
+                                        deletionImpact.notes,
+                                        'internal note',
+                                        'internal notes',
+                                    ),
+                                    active: deletionImpact.notes > 0,
+                                },
+                                {
+                                    label: plural(
+                                        deletionImpact.purchaseOrders,
+                                        'purchase order',
+                                        'purchase orders',
+                                    ),
+                                    active: deletionImpact.purchaseOrders > 0,
+                                },
+                                {
+                                    label: `${plural(deletionImpact.staffNotifications, 'staff notification', 'staff notifications')} in dashboard bells`,
+                                    active:
+                                        deletionImpact.staffNotifications > 0,
+                                },
+                                {
+                                    label: deletionImpact.hasShortLink
+                                        ? 'The short link texted to the driver, which stops working'
+                                        : 'No short link was sent to the driver',
+                                    active: deletionImpact.hasShortLink,
+                                },
+                                {
+                                    label: `${plural(deletionImpact.pendingClaims, 'pending account claim', 'pending account claims')} for this check-in`,
+                                    active: deletionImpact.pendingClaims > 0,
+                                },
+                            ]}
+                        />
+                        <ImpactList
+                            title="Kept"
+                            tone="neutral"
+                            items={[
+                                {
+                                    label:
+                                        deletionImpact.appointmentReference ===
+                                        null
+                                            ? 'No linked appointment'
+                                            : `Appointment ${deletionImpact.appointmentReference} stays as it is, no longer linked, and its history notes the deletion`,
+                                    active:
+                                        deletionImpact.appointmentReference !==
+                                        null,
+                                },
+                                {
+                                    label: 'Your account history records the deletion, the reference number and your reason',
+                                    active: true,
+                                },
+                                {
+                                    label: deletionImpact.driverHasAccount
+                                        ? "The driver's account keeps working, but this check-in leaves their history"
+                                        : 'The driver has no account',
+                                    active: deletionImpact.driverHasAccount,
+                                },
+                            ]}
+                        />
+                    </>
+                ) : (
+                    <div className="animate-pulse space-y-2" aria-hidden>
+                        {Array.from({ length: 6 }, (_, index) => (
+                            <div
+                                key={index}
+                                className="h-4 rounded bg-gray-100 dark:bg-gray-700/60"
                             />
-                            <ImpactList
-                                title="Kept"
-                                tone="neutral"
-                                items={[
-                                    {
-                                        label:
-                                            deletionImpact.appointmentReference ===
-                                            null
-                                                ? 'No linked appointment'
-                                                : `Appointment ${deletionImpact.appointmentReference} stays as it is, no longer linked, and its history notes the deletion`,
-                                        active:
-                                            deletionImpact.appointmentReference !==
-                                            null,
-                                    },
-                                    {
-                                        label: 'Your account history records the deletion, the reference number and your reason',
-                                        active: true,
-                                    },
-                                    {
-                                        label: deletionImpact.driverHasAccount
-                                            ? "The driver's account keeps working, but this check-in leaves their history"
-                                            : 'The driver has no account',
-                                        active: deletionImpact.driverHasAccount,
-                                    },
-                                ]}
-                            />
-                        </>
-                    ) : (
-                        <div className="animate-pulse space-y-2" aria-hidden>
-                            {Array.from({ length: 6 }, (_, index) => (
-                                <div
-                                    key={index}
-                                    className="h-4 rounded bg-gray-100 dark:bg-gray-700/60"
-                                />
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                <Field data-invalid={error !== null || undefined}>
-                    <FieldLabel htmlFor="delete_reason">Reason</FieldLabel>
-                    <Textarea
-                        id="delete_reason"
-                        rows={3}
-                        maxLength={500}
-                        placeholder="Why is this check-in being deleted?"
-                        value={reason}
-                        aria-invalid={error !== null}
-                        onChange={(event) => setReason(event.target.value)}
-                    />
-                    {error !== null && <FieldError>{error}</FieldError>}
-                </Field>
-
-                <Field>
-                    <FieldLabel htmlFor="delete_confirmation">
-                        Type{' '}
-                        <span className="font-mono font-semibold">
-                            {referenceNumber}
-                        </span>{' '}
-                        to confirm
-                    </FieldLabel>
-                    <Input
-                        id="delete_confirmation"
-                        autoComplete="off"
-                        value={confirmation}
-                        onChange={(event) =>
-                            setConfirmation(event.target.value)
-                        }
-                    />
-                </Field>
-
-                <AlertDialogFooter>
-                    <AlertDialogCancel asChild>
-                        <button
-                            type="button"
-                            disabled={deleting}
-                            className={SECONDARY_BUTTON}
-                        >
-                            Keep check-in
-                        </button>
-                    </AlertDialogCancel>
-                    <button
-                        type="button"
-                        disabled={!ready}
-                        onClick={() => onConfirm(reason.trim())}
-                        className="btn bg-rose-500 text-white hover:bg-rose-600 disabled:opacity-50"
-                    >
-                        Delete permanently
-                    </button>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-    );
-}
-
-function plural(count: number, one: string, many: string): string {
-    return `${count} ${count === 1 ? one : many}`;
-}
-
-/**
- * One section of the delete dialog's impact summary. Items that do not apply to this check-in are
- * muted rather than hidden, so every kind of attached record is always listed.
- */
-function ImpactList({
-    title,
-    tone,
-    items,
-}: {
-    title: string;
-    tone: 'danger' | 'neutral';
-    items: { label: string; active: boolean }[];
-}) {
-    return (
-        <div
-            className={
-                tone === 'danger'
-                    ? 'rounded-lg border border-rose-200 bg-rose-50 p-3 dark:border-rose-500/30 dark:bg-rose-500/10'
-                    : 'rounded-lg border border-gray-200 p-3 dark:border-gray-700/60'
+                        ))}
+                    </div>
+                )
             }
-        >
-            <div
-                className={
-                    tone === 'danger'
-                        ? 'mb-2 text-xs font-semibold text-rose-600 uppercase dark:text-rose-400'
-                        : 'mb-2 text-xs font-semibold text-gray-500 uppercase dark:text-gray-400'
-                }
-            >
-                {title}
-            </div>
-            <ul className="list-disc space-y-1 pl-5">
-                {items.map((item) => (
-                    <li
-                        key={item.label}
-                        className={
-                            item.active
-                                ? 'text-gray-800 dark:text-gray-100'
-                                : 'text-gray-400 dark:text-gray-500'
-                        }
-                    >
-                        {item.label}
-                    </li>
-                ))}
-            </ul>
-        </div>
+        />
     );
 }

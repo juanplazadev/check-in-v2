@@ -64,8 +64,10 @@ export type RecordHistoryEvent =
     | 'archived'
     | 'restored'
     | 'check-in-deleted'
+    | 'appointment-deleted'
     | 'appointment-linked'
-    | 'appointment-unlinked';
+    | 'appointment-unlinked'
+    | 'pdf-emailed';
 
 /** An internal staff note on a check-in, newest first on the detail page. */
 export interface CheckInNote {
@@ -125,6 +127,22 @@ export interface CheckInDeletionImpact {
     hasShortLink: boolean;
     pendingClaims: number;
     appointmentReference: string | null;
+    driverHasAccount: boolean;
+    archived: boolean;
+}
+
+/**
+ * What permanently deleting an appointment removes, from App\Dashboard\AppointmentDeletionImpact.
+ * Only sent on a partial reload, when the delete dialog opens.
+ */
+export interface AppointmentDeletionImpact {
+    historyEntries: number;
+    notes: number;
+    purchaseOrders: number;
+    staffNotifications: number;
+    hasShortLink: boolean;
+    pendingClaims: number;
+    checkInReference: string | null;
     driverHasAccount: boolean;
     archived: boolean;
 }
@@ -196,6 +214,8 @@ export interface AppointmentRecord {
     driver: {
         name: string;
         cellphone: string;
+        /** The driver's account email; appointments store none of their own. */
+        email: string | null;
         hasAccount: boolean;
     };
     scheduledFor: string;
@@ -204,6 +224,8 @@ export interface AppointmentRecord {
     /** The check-in this booking turned into, once the driver arrived. */
     checkIn: { uuid: string; referenceNumber: string } | null;
     createdAt: string;
+    /** When staff archived it, or null while it is live. */
+    archivedAt: string | null;
     history: RecordHistoryEntry[];
 }
 

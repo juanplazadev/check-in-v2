@@ -10,9 +10,17 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\CheckInController;
 use App\Http\Controllers\CheckInDistanceController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\Dashboard\AppointmentArchiveController as DashboardAppointmentArchiveController;
+use App\Http\Controllers\Dashboard\AppointmentCancelController as DashboardAppointmentCancelController;
 use App\Http\Controllers\Dashboard\AppointmentColumnController as DashboardAppointmentColumnController;
 use App\Http\Controllers\Dashboard\AppointmentController as DashboardAppointmentController;
+use App\Http\Controllers\Dashboard\AppointmentDeleteController as DashboardAppointmentDeleteController;
 use App\Http\Controllers\Dashboard\AppointmentExportController as DashboardAppointmentExportController;
+use App\Http\Controllers\Dashboard\AppointmentNoteController as DashboardAppointmentNoteController;
+use App\Http\Controllers\Dashboard\AppointmentPdfController as DashboardAppointmentPdfController;
+use App\Http\Controllers\Dashboard\AppointmentPdfEmailController as DashboardAppointmentPdfEmailController;
+use App\Http\Controllers\Dashboard\AppointmentReinstateController as DashboardAppointmentReinstateController;
+use App\Http\Controllers\Dashboard\AppointmentRestoreController as DashboardAppointmentRestoreController;
 use App\Http\Controllers\Dashboard\CheckInAppointmentController as DashboardCheckInAppointmentController;
 use App\Http\Controllers\Dashboard\CheckInArchiveController as DashboardCheckInArchiveController;
 use App\Http\Controllers\Dashboard\CheckInCancelController as DashboardCheckInCancelController;
@@ -24,6 +32,7 @@ use App\Http\Controllers\Dashboard\CheckInExportController as DashboardCheckInEx
 use App\Http\Controllers\Dashboard\CheckInLicenseController as DashboardCheckInLicenseController;
 use App\Http\Controllers\Dashboard\CheckInNoteController as DashboardCheckInNoteController;
 use App\Http\Controllers\Dashboard\CheckInPdfController as DashboardCheckInPdfController;
+use App\Http\Controllers\Dashboard\CheckInPdfEmailController as DashboardCheckInPdfEmailController;
 use App\Http\Controllers\Dashboard\CheckInReinstateController as DashboardCheckInReinstateController;
 use App\Http\Controllers\Dashboard\CheckInReopenController as DashboardCheckInReopenController;
 use App\Http\Controllers\Dashboard\CheckInRestoreController as DashboardCheckInRestoreController;
@@ -205,6 +214,12 @@ Route::middleware('setLocale')->group(function (): void {
                     ->whereUuid('uuid')
                     ->name('checkIns.pdf');
 
+                // Sent only to the driver's address on file; logged on both history trails.
+                Route::middleware(['throttle:10,1', PermissionMiddleware::using(Permission::EmailCheckInPdf)])
+                    ->post('/check-ins/{uuid}/pdf/email', DashboardCheckInPdfEmailController::class)
+                    ->whereUuid('uuid')
+                    ->name('checkIns.pdf.email');
+
                 Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::WriteCheckInNotes)])
                     ->post('/check-ins/{uuid}/notes', DashboardCheckInNoteController::class)
                     ->whereUuid('uuid')
@@ -309,6 +324,50 @@ Route::middleware('setLocale')->group(function (): void {
                 Route::middleware(['throttle:5,1', PermissionMiddleware::using([Permission::ExportAppointmentsView, Permission::ExportAppointmentsMaster])])
                     ->post('/appointments/exports', [DashboardAppointmentExportController::class, 'store'])
                     ->name('appointments.exports.store');
+
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::WriteAppointmentNotes)])
+                    ->post('/appointments/{uuid}/notes', DashboardAppointmentNoteController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.notes.store');
+
+                // Printing needs the same bytes as viewing, so either permission opens the file.
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using([Permission::ViewAppointmentPdf, Permission::PrintAppointmentPdf])])
+                    ->get('/appointments/{uuid}/pdf', DashboardAppointmentPdfController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.pdf');
+
+                // Sent only to the driver's account address; logged on both history trails.
+                Route::middleware(['throttle:10,1', PermissionMiddleware::using(Permission::EmailAppointmentPdf)])
+                    ->post('/appointments/{uuid}/pdf/email', DashboardAppointmentPdfEmailController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.pdf.email');
+
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::CancelAppointments)])
+                    ->post('/appointments/{uuid}/cancel', DashboardAppointmentCancelController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.cancel');
+
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ReinstateAppointments)])
+                    ->post('/appointments/{uuid}/reinstate', DashboardAppointmentReinstateController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.reinstate');
+
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ArchiveAppointments)])
+                    ->post('/appointments/{uuid}/archive', DashboardAppointmentArchiveController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.archive');
+
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::RestoreAppointments)])
+                    ->post('/appointments/{uuid}/restore', DashboardAppointmentRestoreController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.restore');
+
+                // Permanent, in any status. The reason is required by
+                // AppointmentDeleteRequest.
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::DeleteAppointments)])
+                    ->delete('/appointments/{uuid}', DashboardAppointmentDeleteController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.destroy');
 
                 Route::get('/appointments/{uuid}', [DashboardAppointmentController::class, 'show'])
                     ->whereUuid('uuid')

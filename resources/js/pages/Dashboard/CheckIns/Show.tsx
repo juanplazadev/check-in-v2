@@ -1,12 +1,13 @@
 import { Head, router } from '@inertiajs/react';
 
+import CheckInNoteController from '@/actions/App/Http/Controllers/Dashboard/CheckInNoteController';
 import BackLink from '@/components/dashboard/BackLink';
 import CheckInHero from '@/components/dashboard/check-in/CheckInHero';
 import CheckInSideRail from '@/components/dashboard/check-in/CheckInSideRail';
 import DriverCard from '@/components/dashboard/check-in/DriverCard';
 import EquipmentCard from '@/components/dashboard/check-in/EquipmentCard';
 import LoadCard from '@/components/dashboard/check-in/LoadCard';
-import NotesCard from '@/components/dashboard/check-in/NotesCard';
+import NotesCard from '@/components/dashboard/NotesCard';
 import type {
     CheckInFormFields,
     CheckInNote,
@@ -75,7 +76,7 @@ export default function CheckInShow({
                     <EquipmentCard checkIn={checkIn} fields={fields} />
                     <NotesCard
                         key={checkIn.uuid}
-                        checkInUuid={checkIn.uuid}
+                        action={CheckInNoteController(checkIn.uuid)}
                         notes={notes}
                     />
                 </div>

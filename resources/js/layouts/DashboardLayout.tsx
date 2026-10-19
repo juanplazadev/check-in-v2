@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 
+import FlashToaster from '@/components/dashboard/FlashToaster';
 import Header from '@/components/dashboard/Header';
 import { LiveAlertsProvider } from '@/components/dashboard/live/LiveAlerts';
 import Sidebar from '@/components/dashboard/Sidebar';
@@ -34,6 +35,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         </div>
                     </main>
                 </div>
+
+                <FlashToaster />
             </LiveAlertsProvider>
         </div>
     );

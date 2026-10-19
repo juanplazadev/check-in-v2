@@ -76,6 +76,7 @@ enum Role: string
             Permission::FilterCheckIns,
             Permission::SyncCheckInsToErp,
             Permission::WriteCheckInNotes,
+            Permission::WriteAppointmentNotes,
             Permission::SaveCheckInColumnDisplay,
             Permission::SaveCheckInColumnOrder,
             Permission::FilterAppointments,
@@ -83,16 +84,22 @@ enum Role: string
             Permission::SaveAppointmentColumnOrder,
             Permission::ViewCheckInPdf,
             Permission::PrintCheckInPdf,
+            Permission::ViewAppointmentPdf,
+            Permission::PrintAppointmentPdf,
         ];
 
         $shipping = [
             ...$staffBasics,
             Permission::CompleteCheckIns,
             Permission::EmailCheckInPdf,
+            Permission::EmailAppointmentPdf,
             Permission::CancelCheckIns,
+            Permission::CancelAppointments,
             Permission::RevealDriverLicenses,
             Permission::ArchiveCheckIns,
             Permission::RestoreCheckIns,
+            Permission::ArchiveAppointments,
+            Permission::RestoreAppointments,
             Permission::ExportCheckInsView,
             Permission::ExportAppointmentsView,
         ];
@@ -106,6 +113,7 @@ enum Role: string
                 Permission::EditCheckIns,
                 Permission::LinkCheckInAppointments,
                 Permission::ReinstateCheckIns,
+                Permission::ReinstateAppointments,
             ],
             self::Shipping => $shipping,
             self::Sales => [...$staffBasics, Permission::ViewAllLocations],

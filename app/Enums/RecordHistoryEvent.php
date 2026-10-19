@@ -28,6 +28,8 @@ enum RecordHistoryEvent: string
     case Archived = 'archived';
     case Restored = 'restored';
     case CheckInDeleted = 'check-in-deleted';
+    case AppointmentDeleted = 'appointment-deleted';
     case AppointmentLinked = 'appointment-linked';
     case AppointmentUnlinked = 'appointment-unlinked';
+    case PdfEmailed = 'pdf-emailed';
 }

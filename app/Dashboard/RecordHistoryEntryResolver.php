@@ -105,6 +105,11 @@ final readonly class RecordHistoryEntryResolver
                 $context['reference_number'] ?? '',
                 $context['reason'] ?? '',
             ),
+            RecordHistoryEvent::AppointmentDeleted => sprintf(
+                'Appointment %s permanently deleted (reason: %s)',
+                $context['reference_number'] ?? '',
+                $context['reason'] ?? '',
+            ),
             RecordHistoryEvent::AppointmentLinked => sprintf(
                 $entry->recordable_type === 'appointment' ? 'Linked to check-in %s' : 'Linked to appointment %s',
                 $context['reference_number'] ?? '',
@@ -113,6 +118,9 @@ final readonly class RecordHistoryEntryResolver
                 $entry->recordable_type === 'appointment' ? 'Unlinked from check-in %s' : 'Unlinked from appointment %s',
                 $context['reference_number'] ?? '',
             ),
+            RecordHistoryEvent::PdfEmailed => isset($context['status'])
+                ? sprintf('PDF emailed to %s (status: %s)', $context['recipient'] ?? 'the driver', $this->statusLabel($context['status']))
+                : sprintf('PDF emailed to %s', $context['recipient'] ?? 'the driver'),
         };
     }
 
