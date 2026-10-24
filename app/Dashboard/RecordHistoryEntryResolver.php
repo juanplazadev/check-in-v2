@@ -7,6 +7,7 @@ namespace App\Dashboard;
 use App\Enums\RecordHistoryEvent;
 use App\Models\RecordHistory;
 use App\Phone\PhoneFormatter;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Str;
 
 /**
@@ -17,7 +18,8 @@ use Illuminate\Support\Str;
 final readonly class RecordHistoryEntryResolver
 {
     /**
-     * What a staff edit can change, as the timeline labels it.
+     * What a staff edit can change, as the timeline labels it: a check-in's
+     * fields, then a location's, with its address fields prefixed `address.`.
      *
      * @var array<string, string>
      */
@@ -45,6 +47,23 @@ final readonly class RecordHistoryEntryResolver
         'trailer_plate_country' => 'Trailer plate country',
         'trailer_chute' => 'Trailer chute',
         'empty_weight_lbs' => 'Empty weight (lbs)',
+        'name' => 'Name',
+        'abbreviation' => 'Abbreviation',
+        'timezone' => 'Timezone',
+        'phone' => 'Phone',
+        'phone_ext' => 'Phone ext.',
+        'email' => 'Email',
+        'max_distance_allowed' => 'Check-in radius (mi)',
+        'is_active' => 'Status',
+        'is_checkins_enabled' => 'Check-ins',
+        'is_appointments_enabled' => 'Appointments',
+        'address.street1' => 'Street',
+        'address.street2' => 'Street line 2',
+        'address.city' => 'City',
+        'address.state' => 'State',
+        'address.zip_code' => 'ZIP code',
+        'address.zip_code_4' => 'ZIP+4',
+        'address.country' => 'Country',
     ];
 
     public function __construct(private PhoneFormatter $phone) {}
@@ -121,6 +140,22 @@ final readonly class RecordHistoryEntryResolver
             RecordHistoryEvent::PdfEmailed => isset($context['status'])
                 ? sprintf('PDF emailed to %s (status: %s)', $context['recipient'] ?? 'the driver', $this->statusLabel($context['status']))
                 : sprintf('PDF emailed to %s', $context['recipient'] ?? 'the driver'),
+            RecordHistoryEvent::LocationUserAttached => sprintf('%s added to this location', $context['name'] ?? 'A user'),
+            RecordHistoryEvent::LocationUserDetached => sprintf('%s removed from this location', $context['name'] ?? 'A user'),
+            RecordHistoryEvent::CheckInsPaused => sprintf(
+                'Check-ins paused %s (reason: %s)',
+                isset($context['until']) ? 'until '.Date::parse($context['until'])->format('g:i A') : 'until resumed',
+                $context['reason'] ?? '',
+            ),
+            RecordHistoryEvent::CheckInsResumed => 'Check-ins resumed',
+            RecordHistoryEvent::AppointmentsPaused => sprintf(
+                'Appointments paused %s (reason: %s)',
+                isset($context['until']) ? 'until '.Date::parse($context['until'])->format('M j, g:i A') : 'until resumed',
+                $context['reason'] ?? '',
+            ),
+            RecordHistoryEvent::AppointmentsResumed => 'Appointments resumed',
+            RecordHistoryEvent::LocationDeleted => sprintf('Location deleted (reason: %s)', $context['reason'] ?? ''),
+            RecordHistoryEvent::LocationRestored => 'Location restored',
         };
     }
 
@@ -161,6 +196,13 @@ final readonly class RecordHistoryEntryResolver
 
         if ($value === null || $value === '') {
             return null;
+        }
+
+        if (is_bool($value)) {
+            return match ($field) {
+                'is_active' => $value ? 'Active' : 'Inactive',
+                default => $value ? 'On' : 'Off',
+            };
         }
 
         if ($field === 'drivers_cellphone') {

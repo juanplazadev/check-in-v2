@@ -15,6 +15,16 @@ export function formatCalendarDate(date: string): string {
     return format(parseISO(date), 'MM/dd/yyyy');
 }
 
+/** A wall-clock time (HH:MM) with no date or time zone, such as an opening hour. */
+export function formatClockTime(time: string): string {
+    return format(parseISO(`1970-01-01T${time}`), 'h:mm a');
+}
+
+/** An ISO datetime read on its own wall clock, ignoring its offset, such as a time in a location's zone. */
+export function formatWallDateTime(timestamp: string): string {
+    return format(parseISO(timestamp.slice(0, 19)), 'MMM d, h:mm a');
+}
+
 export function formatTime(timestamp: string): string {
     return format(new Date(timestamp), 'h:mm a');
 }

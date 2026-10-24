@@ -114,6 +114,7 @@ enum Role: string
                 Permission::LinkCheckInAppointments,
                 Permission::ReinstateCheckIns,
                 Permission::ReinstateAppointments,
+                Permission::PauseCheckIns,
             ],
             self::Shipping => $shipping,
             self::Sales => [...$staffBasics, Permission::ViewAllLocations],

@@ -128,3 +128,35 @@ it('rejects check-in when the driver is farther than the allowed yard radius', f
             ]),
         ]);
 });
+
+it('rejects check-in while staff have paused check-ins, with their reason', function (): void {
+    $this->travelTo('2026-06-15 14:00:00');
+
+    $location = Location::factory()
+        ->checkinsPaused('Yard is full')
+        ->for(Address::factory()->state(['latitude' => 40.7128, 'longitude' => -74.006]))
+        ->create();
+
+    $this->travel(6)->hours();
+
+    $this->withSession(['userCoordinates' => ['latitude' => 40.7128, 'longitude' => -74.006, 'storedAt' => now()->timestamp]])
+        ->post(route('checkIn.gate', $location))
+        ->assertSessionHasErrors([
+            'uuid' => __('messages.checkInSelectLocation.closedForCheckInWithReason', ['name' => $location->name, 'reason' => 'Yard is full']),
+        ]);
+});
+
+it('allows check-in once a timed pause has ended', function (): void {
+    $this->travelTo('2026-06-15 14:00:00');
+
+    $location = Location::factory()
+        ->checkinsPaused('Yard is full', now()->addMinutes(30))
+        ->for(Address::factory()->state(['latitude' => 40.7128, 'longitude' => -74.006]))
+        ->create();
+
+    $this->travel(30)->minutes();
+
+    $this->withSession(['userCoordinates' => ['latitude' => 40.7128, 'longitude' => -74.006, 'storedAt' => now()->timestamp]])
+        ->post(route('checkIn.gate', $location))
+        ->assertRedirect(route('checkIn.form', $location));
+});

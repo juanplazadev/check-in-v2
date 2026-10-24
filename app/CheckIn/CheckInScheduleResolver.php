@@ -18,6 +18,7 @@ final readonly class CheckInScheduleResolver
     public function __construct(
         private CheckInLocations $locationSchedules,
         private LocationScheduleParser $locationScheduleParser,
+        private CheckInPause $pause,
         private AddressManager $address,
     ) {}
 
@@ -33,7 +34,7 @@ final readonly class CheckInScheduleResolver
     public function buildDTO(Location $location, CarbonInterface $now): CheckInLocationDTO
     {
         $localNow = $now->setTimezone($location->timezone);
-        $schedule = $this->resolveSchedule($location, $localNow);
+        $schedule = $this->pause->apply($location, $this->resolveSchedule($location, $localNow), $localNow);
 
         return new CheckInLocationDTO(
             id: $location->uuid,

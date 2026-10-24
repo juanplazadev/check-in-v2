@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Enums;
 
 /**
- * What kind of thing happened to a check-in or a booking.
+ * What kind of thing happened to a check-in, a booking or a location.
  *
  * Deliberately small and stable. Which message went out is carried by the
  * `subject` slug, not by a case here, so a new notification type never needs a
@@ -32,4 +32,12 @@ enum RecordHistoryEvent: string
     case AppointmentLinked = 'appointment-linked';
     case AppointmentUnlinked = 'appointment-unlinked';
     case PdfEmailed = 'pdf-emailed';
+    case LocationUserAttached = 'location-user-attached';
+    case LocationUserDetached = 'location-user-detached';
+    case CheckInsPaused = 'check-ins-paused';
+    case CheckInsResumed = 'check-ins-resumed';
+    case AppointmentsPaused = 'appointments-paused';
+    case AppointmentsResumed = 'appointments-resumed';
+    case LocationDeleted = 'location-deleted';
+    case LocationRestored = 'location-restored';
 }

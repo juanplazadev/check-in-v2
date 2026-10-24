@@ -29,4 +29,13 @@ enum UserHistoryEvent: string
     case AppointmentRestored = 'appointment-restored';
     case AppointmentPdfEmailed = 'appointment-pdf-emailed';
     case AppointmentDeleted = 'appointment-deleted';
+    case LocationUserAttached = 'location-user-attached';
+    case LocationUserDetached = 'location-user-detached';
+    case LocationEdited = 'location-edited';
+    case LocationCheckInsPaused = 'location-check-ins-paused';
+    case LocationCheckInsResumed = 'location-check-ins-resumed';
+    case LocationAppointmentsPaused = 'location-appointments-paused';
+    case LocationAppointmentsResumed = 'location-appointments-resumed';
+    case LocationDeleted = 'location-deleted';
+    case LocationRestored = 'location-restored';
 }

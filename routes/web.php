@@ -38,7 +38,14 @@ use App\Http\Controllers\Dashboard\CheckInReopenController as DashboardCheckInRe
 use App\Http\Controllers\Dashboard\CheckInRestoreController as DashboardCheckInRestoreController;
 use App\Http\Controllers\Dashboard\CheckInUpdateController as DashboardCheckInUpdateController;
 use App\Http\Controllers\Dashboard\LiveQueueController;
+use App\Http\Controllers\Dashboard\LocationAppointmentPauseController as DashboardLocationAppointmentPauseController;
+use App\Http\Controllers\Dashboard\LocationCheckInPauseController as DashboardLocationCheckInPauseController;
 use App\Http\Controllers\Dashboard\LocationController as DashboardLocationController;
+use App\Http\Controllers\Dashboard\LocationDeleteController as DashboardLocationDeleteController;
+use App\Http\Controllers\Dashboard\LocationDetailsController as DashboardLocationDetailsController;
+use App\Http\Controllers\Dashboard\LocationRestoreController as DashboardLocationRestoreController;
+use App\Http\Controllers\Dashboard\LocationStatusController as DashboardLocationStatusController;
+use App\Http\Controllers\Dashboard\LocationUserController as DashboardLocationUserController;
 use App\Http\Controllers\Dashboard\NotificationController as DashboardNotificationController;
 use App\Http\Controllers\Dashboard\RolePermissionController as DashboardRolePermissionController;
 use App\Http\Controllers\Dashboard\SearchController as DashboardSearchController;
@@ -386,6 +393,58 @@ Route::middleware('setLocale')->group(function (): void {
                 Route::get('/locations/{uuid}', [DashboardLocationController::class, 'show'])
                     ->whereUuid('uuid')
                     ->name('locations.show');
+
+                // One page per section of a location, sharing LocationLayout.
+                Route::prefix('/locations/{uuid}')->whereUuid('uuid')->group(function (): void {
+                    Route::get('/details', [DashboardLocationController::class, 'details'])->name('locations.details');
+                    Route::get('/users', [DashboardLocationController::class, 'users'])->name('locations.users');
+                    Route::get('/check-ins/hours', [DashboardLocationController::class, 'checkInHours'])->name('locations.checkInHours');
+                    Route::get('/check-ins/options', [DashboardLocationController::class, 'checkInOptions'])->name('locations.checkInOptions');
+                    Route::get('/appointments/hours', [DashboardLocationController::class, 'appointmentHours'])->name('locations.appointmentHours');
+                    Route::get('/appointments/options', [DashboardLocationController::class, 'appointmentOptions'])->name('locations.appointmentOptions');
+                    Route::get('/closures', [DashboardLocationController::class, 'closures'])->name('locations.closures');
+                    Route::get('/history', [DashboardLocationController::class, 'history'])->name('locations.history');
+
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::EditLocations)])
+                        ->patch('/details', [DashboardLocationDetailsController::class, 'update'])
+                        ->name('locations.details.update');
+
+                    // Taking a location, or one of its features, out of service for drivers and guests.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ManageLocationStatus)])
+                        ->patch('/status', [DashboardLocationStatusController::class, 'update'])
+                        ->name('locations.status.update');
+
+                    // A soft delete: past check-ins and appointments keep the location.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::DeleteLocations)])
+                        ->delete('', DashboardLocationDeleteController::class)
+                        ->name('locations.destroy');
+
+                    // An emergency stop on new check-ins; appointments carry on.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::PauseCheckIns)])->group(function (): void {
+                        Route::post('/check-ins/pause', [DashboardLocationCheckInPauseController::class, 'store'])->name('locations.checkInPause.store');
+                        Route::delete('/check-ins/pause', [DashboardLocationCheckInPauseController::class, 'destroy'])->name('locations.checkInPause.destroy');
+                    });
+
+                    // Stops new bookings on every day; booked appointments and check-ins carry on.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::PauseAppointments)])->group(function (): void {
+                        Route::post('/appointments/pause', [DashboardLocationAppointmentPauseController::class, 'store'])->name('locations.appointmentPause.store');
+                        Route::delete('/appointments/pause', [DashboardLocationAppointmentPauseController::class, 'destroy'])->name('locations.appointmentPause.destroy');
+                    });
+
+                    // Attaching decides which locations a location-scoped user sees.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ManageLocationUsers)])->group(function (): void {
+                        Route::post('/users', [DashboardLocationUserController::class, 'store'])->name('locations.users.store');
+                        Route::delete('/users/{userUuid}', [DashboardLocationUserController::class, 'destroy'])
+                            ->whereUuid('userUuid')
+                            ->name('locations.users.destroy');
+                    });
+                });
+
+                // Outside the section group: a deleted location has no page to look up.
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::RestoreLocations)])
+                    ->post('/locations/{uuid}/restore', DashboardLocationRestoreController::class)
+                    ->whereUuid('uuid')
+                    ->name('locations.restore');
             });
 
             Route::middleware(PermissionMiddleware::using(Permission::ViewRolesAndPermissions))

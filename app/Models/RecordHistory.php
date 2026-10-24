@@ -16,8 +16,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 /**
- * An append-only trail of what happened to a check-in or a booking: what was
- * sent, on which channel, in which language, and what the record did next.
+ * An append-only trail of what happened to a check-in, a booking or a
+ * location: what was sent, on which channel, in which language, and what the
+ * record did next, or which staff edit changed it.
  *
  * @property-read int $id
  * @property-read string $recordable_type

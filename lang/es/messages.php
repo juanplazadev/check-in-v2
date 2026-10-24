@@ -512,6 +512,7 @@ return [
 
     'appointmentBooking' => [
         'closedForAppointmentsOnDate' => ':name no está disponible para citas el :date. Por favor elija otro día.',
+        'pausedWithReason' => ':name no está aceptando nuevas citas en este momento (:reason). Por favor intente más tarde.',
         'closedForAppointmentsOnDateWithReason' => ':name no está disponible para citas el :date (:reason). Por favor elija otro día.',
         'outsideSpecialHours' => ':name no está abierto a las :time el :date. El horario especial ese día es :open - :close. Por favor elija otra fecha u hora.',
         'outsideRegularHours' => ':name no está abierto a las :time el :date. El horario de atención ese día es :open - :close. Por favor elija otra fecha u hora.',

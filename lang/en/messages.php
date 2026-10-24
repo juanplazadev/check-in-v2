@@ -536,6 +536,7 @@ return [
 
     'appointmentBooking' => [
         'closedForAppointmentsOnDate' => ':name is not available for appointments on :date. Please choose another day.',
+        'pausedWithReason' => ':name is not taking new appointments right now (:reason). Please try again later.',
         'closedForAppointmentsOnDateWithReason' => '::name is not available for appointments on :date (:reason). Please choose another day.',
         'outsideSpecialHours' => ':name is not open at :time on :date. Special hours that day are :open - :close. Please choose another date or time.',
         'outsideRegularHours' => ':name is not open at :time on :date. Business hours that day are :open - :close. Please choose another date or time.',

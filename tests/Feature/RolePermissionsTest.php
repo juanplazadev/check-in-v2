@@ -32,7 +32,7 @@ dataset('role permissions', [
     'shipping manager' => [Role::ShippingManager, [
         ...$shipping,
         'reopen check-ins', 'unsync check-ins from erp', 'edit check-ins', 'reinstate check-ins', 'reinstate appointments',
-        'link check-in appointments',
+        'link check-in appointments', 'pause check-ins',
     ]],
     'shipping' => [Role::Shipping, $shipping],
     'sales' => [Role::Sales, [...$staffBasics, 'view all locations']],
@@ -46,7 +46,7 @@ it('grants each role exactly its permissions', function (Role $role, array $expe
         ->toBe(collect($expected)->sort()->values()->all());
 })->with('role permissions');
 
-it('only lets admins view users or roles and permissions, delete check-ins or appointments, and export the master spreadsheets', function (Role $role): void {
+it('only lets admins view users or roles and permissions, manage location users, edit locations, change location status, pause appointments, delete check-ins or appointments, and export the master spreadsheets', function (Role $role): void {
     $user = User::factory()->withRole($role)->create();
 
     expect($user->can(Permission::ViewUsers))->toBe($role === Role::Admin)
@@ -54,5 +54,11 @@ it('only lets admins view users or roles and permissions, delete check-ins or ap
         ->and($user->can(Permission::DeleteAppointments))->toBe($role === Role::Admin)
         ->and($user->can(Permission::ExportCheckInsMaster))->toBe($role === Role::Admin)
         ->and($user->can(Permission::ExportAppointmentsMaster))->toBe($role === Role::Admin)
-        ->and($user->can(Permission::ViewRolesAndPermissions))->toBe($role === Role::Admin);
+        ->and($user->can(Permission::ViewRolesAndPermissions))->toBe($role === Role::Admin)
+        ->and($user->can(Permission::ManageLocationUsers))->toBe($role === Role::Admin)
+        ->and($user->can(Permission::EditLocations))->toBe($role === Role::Admin)
+        ->and($user->can(Permission::ManageLocationStatus))->toBe($role === Role::Admin)
+        ->and($user->can(Permission::PauseAppointments))->toBe($role === Role::Admin)
+        ->and($user->can(Permission::DeleteLocations))->toBe($role === Role::Admin)
+        ->and($user->can(Permission::RestoreLocations))->toBe($role === Role::Admin);
 })->with(Role::cases());

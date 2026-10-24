@@ -43,6 +43,21 @@ final readonly class LocationDirectory
     }
 
     /**
+     * Soft-deleted locations, most recently deleted first, for the restore
+     * list. Unscoped: only admins may restore, and they see every location.
+     *
+     * @return Collection<int, Location>
+     */
+    public function deleted(): Collection
+    {
+        return Location::query()
+            ->onlyTrashed()
+            ->with('address')
+            ->latest('deleted_at')
+            ->get();
+    }
+
+    /**
      * @return Builder<Location>
      */
     private function visibleTo(User $viewer): Builder

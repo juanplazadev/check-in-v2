@@ -280,12 +280,14 @@ export function DeleteRecordDialog({
     impact,
     placeholder,
     keepLabel,
+    confirmLabel = 'Delete permanently',
     deleting,
     error,
     onConfirm,
 }: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    /** Typed back to confirm; a reference number, or a name. */
     referenceNumber: string;
     title: string;
     description: string;
@@ -293,6 +295,7 @@ export function DeleteRecordDialog({
     impact: ReactNode;
     placeholder: string;
     keepLabel: string;
+    confirmLabel?: string;
     deleting: boolean;
     /** The server's refusal, e.g. a missing or too long reason. */
     error: string | null;
@@ -376,7 +379,7 @@ export function DeleteRecordDialog({
                         onClick={() => onConfirm(reason.trim())}
                         className={DANGER_CONFIRM_BUTTON}
                     >
-                        Delete permanently
+                        {confirmLabel}
                     </button>
                 </AlertDialogFooter>
             </AlertDialogContent>

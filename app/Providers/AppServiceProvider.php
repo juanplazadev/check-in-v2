@@ -368,6 +368,7 @@ final class AppServiceProvider extends ServiceProvider
         Relation::morphMap([
             'appointment' => Appointment::class,
             'check_in' => CheckIn::class,
+            'location' => Location::class,
         ]);
     }
 }

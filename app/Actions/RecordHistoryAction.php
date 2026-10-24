@@ -7,11 +7,13 @@ namespace App\Actions;
 use App\Enums\RecordHistoryEvent;
 use App\Models\Appointment;
 use App\Models\CheckIn;
+use App\Models\Location;
 use App\Models\RecordHistory;
 use App\Models\User;
 
 /**
- * Appends a row to a check-in or booking's trail.
+ * Appends a row to a check-in, booking or location's trail. A location has
+ * no locale or owning user, so its rows carry only the acting staff member.
  *
  * Redaction happens here rather than in the callers so no future caller can
  * leak a secret into the trail by accident, the same guarantee
@@ -37,7 +39,7 @@ final readonly class RecordHistoryAction
      * @param  array<string, mixed>  $context
      */
     public function handle(
-        CheckIn|Appointment $record,
+        CheckIn|Appointment|Location $record,
         RecordHistoryEvent $event,
         ?string $subject = null,
         ?string $channel = null,
@@ -53,8 +55,8 @@ final readonly class RecordHistoryAction
             'event' => $event,
             'subject' => $subject,
             'channel' => $channel,
-            'locale' => $locale ?? $record->locale,
-            'user_id' => $user instanceof User ? $user->id : $record->user_id,
+            'locale' => $locale ?? ($record instanceof Location ? null : $record->locale),
+            'user_id' => $user instanceof User ? $user->id : ($record instanceof Location ? null : $record->user_id),
             'context' => $context === [] ? null : $context,
         ]);
     }

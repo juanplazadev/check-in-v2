@@ -18,6 +18,13 @@ enum Permission: string
     case ViewUsers = 'view users';
     case ViewLocations = 'view locations';
     case ViewAllLocations = 'view all locations';
+    case ManageLocationUsers = 'manage location users';
+    case EditLocations = 'edit locations';
+    case ManageLocationStatus = 'manage location status';
+    case DeleteLocations = 'delete locations';
+    case RestoreLocations = 'restore locations';
+    case PauseCheckIns = 'pause check-ins';
+    case PauseAppointments = 'pause appointments';
     case ViewNotifications = 'view notifications';
     case SearchDashboard = 'search dashboard';
     case FilterCheckIns = 'filter check-ins';

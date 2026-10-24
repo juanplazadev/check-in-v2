@@ -34,7 +34,7 @@ $operationalPages = [
     'appointments' => [fn (): string => route('dashboard.appointments'), 'Dashboard/Appointments/Index'],
     'appointment' => [fn (): string => route('dashboard.appointments.show', ['uuid' => Appointment::factory()->create()->uuid]), 'Dashboard/Appointments/Show'],
     'locations' => [fn (): string => route('dashboard.locations'), 'Dashboard/Locations/Index'],
-    'location' => [fn (): string => route('dashboard.locations.show', ['uuid' => Location::factory()->create()->uuid]), 'Dashboard/Locations/Show'],
+    'location' => [fn (): string => route('dashboard.locations.show', ['uuid' => Location::factory()->create()->uuid]), 'Dashboard/Locations/Overview'],
 ];
 
 $adminPages = [
