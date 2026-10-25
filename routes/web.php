@@ -52,6 +52,7 @@ use App\Http\Controllers\Dashboard\LocationDetailsController as DashboardLocatio
 use App\Http\Controllers\Dashboard\LocationRestoreController as DashboardLocationRestoreController;
 use App\Http\Controllers\Dashboard\LocationStatusController as DashboardLocationStatusController;
 use App\Http\Controllers\Dashboard\LocationUserController as DashboardLocationUserController;
+use App\Http\Controllers\Dashboard\LocationWizardController as DashboardLocationWizardController;
 use App\Http\Controllers\Dashboard\NotificationController as DashboardNotificationController;
 use App\Http\Controllers\Dashboard\RolePermissionController as DashboardRolePermissionController;
 use App\Http\Controllers\Dashboard\SearchController as DashboardSearchController;
@@ -400,6 +401,23 @@ Route::middleware('setLocale')->group(function (): void {
 
             Route::middleware(PermissionMiddleware::using(Permission::ViewLocations))->group(function (): void {
                 Route::get('/locations', [DashboardLocationController::class, 'index'])->name('locations');
+
+                // The add location wizard; its draft lives in LocationWizardSession until created.
+                Route::middleware(PermissionMiddleware::using(Permission::CreateLocations))->group(function (): void {
+                    Route::get('/locations/create', [DashboardLocationWizardController::class, 'start'])->name('locations.create');
+                    Route::get('/locations/create/{step}', [DashboardLocationWizardController::class, 'show'])->name('locations.create.step');
+
+                    Route::middleware('throttle:30,1')->group(function (): void {
+                        Route::post('/locations/create/details', [DashboardLocationWizardController::class, 'details'])->name('locations.create.details');
+                        Route::post('/locations/create/address', [DashboardLocationWizardController::class, 'address'])->name('locations.create.address');
+                        Route::post('/locations/create/placement', [DashboardLocationWizardController::class, 'placement'])->name('locations.create.placement');
+                        Route::post('/locations/create/features', [DashboardLocationWizardController::class, 'features'])->name('locations.create.features');
+                        Route::post('/locations/create/hours', [DashboardLocationWizardController::class, 'hours'])->name('locations.create.hours');
+                        Route::post('/locations/create/users', [DashboardLocationWizardController::class, 'users'])->name('locations.create.users');
+                        Route::delete('/locations/create', [DashboardLocationWizardController::class, 'destroy'])->name('locations.create.cancel');
+                        Route::post('/locations', [DashboardLocationWizardController::class, 'store'])->name('locations.store');
+                    });
+                });
                 Route::get('/locations/{uuid}', [DashboardLocationController::class, 'show'])
                     ->whereUuid('uuid')
                     ->name('locations.show');

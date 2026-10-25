@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Dashboard;
 
+use App\Dashboard\WeeklyHours;
 use App\Models\Location;
 use App\Models\User;
 use App\Queries\LocationDirectory;
@@ -21,9 +22,8 @@ final class LocationHoursUpdateRequest extends FormRequest
 {
     /**
      * The end of a day open around the clock, as the time input sends it.
-     * Stored as 23:59:59, the last moment the schedule parser counts as open.
      */
-    public const string END_OF_DAY = '23:59';
+    public const string END_OF_DAY = WeeklyHours::END_OF_DAY;
 
     /**
      * The location being edited, scoped like the location's page, so one the
@@ -49,17 +49,11 @@ final class LocationHoursUpdateRequest extends FormRequest
     }
 
     /**
-     * @return array<string, array<int, mixed>>
+     * @return array<string, array<int, string>>
      */
-    public function rules(): array
+    public function rules(WeeklyHours $weeklyHours): array
     {
-        return [
-            'days' => ['required', 'array:0,1,2,3,4,5,6', 'size:7'],
-            'days.*' => ['required', 'array:is_open,open_time,close_time'],
-            'days.*.is_open' => ['required', 'boolean'],
-            'days.*.open_time' => ['nullable', 'required_if_accepted:days.*.is_open', 'date_format:H:i'],
-            'days.*.close_time' => ['nullable', 'required_if_accepted:days.*.is_open', 'date_format:H:i'],
-        ];
+        return $weeklyHours->rules('days');
     }
 
     /**
@@ -67,32 +61,18 @@ final class LocationHoursUpdateRequest extends FormRequest
      */
     public function messages(): array
     {
-        return [
-            'days.*.open_time.required_if_accepted' => 'Choose an opening time.',
-            'days.*.close_time.required_if_accepted' => 'Choose a closing time.',
-            'days.*.open_time.date_format' => 'Enter a time like 08:00.',
-            'days.*.close_time.date_format' => 'Enter a time like 17:00.',
-        ];
+        return resolve(WeeklyHours::class)->messages('days');
     }
 
     /**
-     * An open day must close after it opens; hours past midnight are not
-     * supported by the schedule tables.
-     *
      * @return array<int, callable(Validator): void>
      */
-    public function after(): array
+    public function after(WeeklyHours $weeklyHours): array
     {
         return [
-            function (Validator $validator): void {
-                if ($validator->errors()->isNotEmpty()) {
-                    return;
-                }
-
-                foreach ($validator->getData()['days'] as $day => $hours) {
-                    if (filter_var($hours['is_open'], FILTER_VALIDATE_BOOLEAN) && $hours['close_time'] <= $hours['open_time']) {
-                        $validator->errors()->add("days.{$day}.close_time", 'Must be after the opening time.');
-                    }
+            function (Validator $validator) use ($weeklyHours): void {
+                if ($validator->errors()->isEmpty()) {
+                    $weeklyHours->checkCloseAfterOpen($validator, 'days');
                 }
             },
         ];
@@ -105,20 +85,7 @@ final class LocationHoursUpdateRequest extends FormRequest
      */
     public function days(): array
     {
-        $days = [];
-
-        foreach ((array) $this->validated('days') as $day => $hours) {
-            $days[(int) $day] = filter_var($hours['is_open'], FILTER_VALIDATE_BOOLEAN)
-                ? [
-                    'open_time' => $hours['open_time'].':00',
-                    'close_time' => $hours['close_time'] === self::END_OF_DAY ? '23:59:59' : $hours['close_time'].':00',
-                ]
-                : null;
-        }
-
-        ksort($days);
-
-        return $days;
+        return resolve(WeeklyHours::class)->toSchedule((array) $this->validated('days'));
     }
 
     /**

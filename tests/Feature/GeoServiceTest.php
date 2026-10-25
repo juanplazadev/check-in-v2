@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\DTOs\CoordinatesDTO;
 use App\Models\Address;
 use App\Services\GeoService;
 use Illuminate\Http\Client\Request;
@@ -9,7 +10,8 @@ use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 
 /*
- * Geocoding addresses against the US Census Geocoder.
+ * Geocoding addresses against the US Census Geocoder, and looking up the
+ * timezone at a point with timeapi.io.
  */
 
 function censusAddress(): Address
@@ -61,4 +63,24 @@ it('throws when the geocoder fails', function (): void {
     ]);
 
     (new GeoService)->getLatLong(censusAddress());
+})->throws(RequestException::class);
+
+it('returns the timezone at the coordinates', function (): void {
+    Http::fake(['timeapi.io/api/TimeZone/coordinate*' => Http::response(['timeZone' => 'America/Chicago'])]);
+
+    expect((new GeoService)->getTimezone(new CoordinatesDTO(29.7604, -95.3698)))->toBe('America/Chicago');
+
+    Http::assertSent(fn (Request $request): bool => $request->data() === ['latitude' => 29.7604, 'longitude' => -95.3698]);
+});
+
+it('returns null when the timezone lookup has no answer', function (): void {
+    Http::fake(['timeapi.io/api/TimeZone/coordinate*' => Http::response(['timeZone' => ''])]);
+
+    expect((new GeoService)->getTimezone(new CoordinatesDTO(0.0, 0.0)))->toBeNull();
+});
+
+it('throws when the timezone lookup fails', function (): void {
+    Http::fake(['timeapi.io/api/TimeZone/coordinate*' => Http::response(status: 500)]);
+
+    (new GeoService)->getTimezone(new CoordinatesDTO(29.7604, -95.3698));
 })->throws(RequestException::class);

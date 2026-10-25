@@ -1,7 +1,4 @@
-import type { FormDataType } from '@inertiajs/core';
 import { Head } from '@inertiajs/react';
-import type { InertiaFormProps } from '@inertiajs/react';
-import type { ComponentProps } from 'react';
 import { useState } from 'react';
 
 import { update } from '@/actions/App/Http/Controllers/Dashboard/LocationDetailsController';
@@ -9,12 +6,12 @@ import { DetailRow } from '@/components/dashboard/DetailCard';
 import EditableSection from '@/components/dashboard/location/EditableSection';
 import LocationMap from '@/components/dashboard/location/LocationMap';
 import SectionHeader from '@/components/dashboard/location/SectionHeader';
+import TextField from '@/components/dashboard/location/TextField';
 import type {
     DashboardLocationSummary,
     LocationDetails,
 } from '@/components/dashboard/types';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
 import { useCan } from '@/hooks/useCan';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import LocationLayout from '@/layouts/LocationLayout';
@@ -30,38 +27,6 @@ interface LocationDetailsProps {
 type Section = 'location' | 'contact' | 'radius';
 
 const ROWS_CLASS = 'divide-y divide-gray-100 text-sm dark:divide-gray-700/60';
-
-/** A labeled text input bound to one field of a section's form. */
-function TextField<TData extends FormDataType<TData>>({
-    form,
-    name,
-    label,
-    className,
-    ...props
-}: {
-    form: InertiaFormProps<TData>;
-    name: keyof TData & string;
-    label: string;
-    className?: string;
-} & Omit<ComponentProps<typeof Input>, 'form' | 'name'>) {
-    const error = (form.errors as Record<string, string | undefined>)[name];
-
-    return (
-        <Field className={className} data-invalid={!!error || undefined}>
-            <FieldLabel htmlFor={`location_${name}`}>{label}</FieldLabel>
-            <Input
-                id={`location_${name}`}
-                value={String(form.data[name] ?? '')}
-                aria-invalid={!!error || undefined}
-                onChange={(event) =>
-                    form.setData({ ...form.data, [name]: event.target.value })
-                }
-                {...props}
-            />
-            <FieldError>{error}</FieldError>
-        </Field>
-    );
-}
 
 export default function LocationDetailsPage({
     location,

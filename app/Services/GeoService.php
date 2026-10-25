@@ -12,7 +12,8 @@ use Illuminate\Support\Facades\Http;
 
 /**
  * Geocodes addresses with the US Census Geocoder: free, keyless, and public
- * domain, so the coordinates may be stored. US addresses only.
+ * domain, so the coordinates may be stored. US addresses only. Timezones come
+ * from timeapi.io, also free and keyless.
  */
 final readonly class GeoService
 {
@@ -47,5 +48,28 @@ final readonly class GeoService
         }
 
         return new CoordinatesDTO((float) $coordinates['y'], (float) $coordinates['x']);
+    }
+
+    /**
+     * The IANA timezone at the coordinates, or null when the lookup has no
+     * answer. Only ever a suggestion the admin confirms, so a failed lookup is
+     * the caller's to shrug off.
+     *
+     * @throws ConnectionException
+     * @throws RequestException
+     */
+    public function getTimezone(CoordinatesDTO $coordinates): ?string
+    {
+        $timezone = Http::baseUrl(config('services.timezone_lookup.url'))
+            ->acceptJson()
+            ->timeout(5)
+            ->get('/TimeZone/coordinate', [
+                'latitude' => $coordinates->latitude,
+                'longitude' => $coordinates->longitude,
+            ])
+            ->throw()
+            ->json('timeZone');
+
+        return is_string($timezone) && $timezone !== '' ? $timezone : null;
     }
 }

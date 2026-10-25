@@ -280,15 +280,18 @@ export default function LocationsIndex({
                     actions={
                         <>
                             <DataTableSearch placeholder="Name, code or city…" />
-                            <button
-                                type="button"
-                                disabled
-                                title="Coming soon"
-                                className="btn gap-2 bg-gray-900 text-gray-100 hover:bg-gray-800 disabled:opacity-50 dark:bg-gray-100 dark:text-gray-800 dark:hover:bg-white"
-                            >
-                                <MapPinPlus className="size-4" aria-hidden />
-                                Add location
-                            </button>
+                            {can('create locations') && (
+                                <Link
+                                    href={dashboardRoutes.locations.create.url()}
+                                    className="btn gap-2 bg-gray-900 text-gray-100 hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-800 dark:hover:bg-white"
+                                >
+                                    <MapPinPlus
+                                        className="size-4"
+                                        aria-hidden
+                                    />
+                                    Add location
+                                </Link>
+                            )}
                         </>
                     }
                 />

@@ -1,11 +1,11 @@
 import { router, useForm } from '@inertiajs/react';
-import { Check, Search, UserPlus } from 'lucide-react';
+import { UserPlus } from 'lucide-react';
 import type { FormEvent } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import LocationUserController from '@/actions/App/Http/Controllers/Dashboard/LocationUserController';
+import StaffPicker from '@/components/dashboard/location/StaffPicker';
 import { SECONDARY_BUTTON } from '@/components/dashboard/RecordActionDialogs';
-import RoleChips from '@/components/dashboard/RoleChips';
 import type { LocationStaffMember } from '@/components/dashboard/types';
 import {
     Dialog,
@@ -15,8 +15,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { initialsOf } from '@/lib/dashboard/format';
 
 /**
  * Attaches staff to a location. The candidates (location-scoped staff not attached yet) are an
@@ -66,7 +64,6 @@ function AttachUsersBody({
     onCancel: () => void;
 }) {
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState('');
     const form = useForm<{ users: string[] }>({ users: [] });
 
     // Run from the mounted body: a parent setting open=true never fires onOpenChange.
@@ -76,17 +73,6 @@ function AttachUsersBody({
             onFinish: () => setLoading(false),
         });
     }, []);
-
-    const filtered = useMemo(() => {
-        const term = search.trim().toLowerCase();
-
-        return (candidates ?? []).filter(
-            (member) =>
-                term === '' ||
-                member.name.toLowerCase().includes(term) ||
-                member.email.toLowerCase().includes(term),
-        );
-    }, [candidates, search]);
 
     const toggle = (uuid: string) => {
         form.setData(
@@ -137,88 +123,12 @@ function AttachUsersBody({
                 </div>
             )}
 
-            <div className="relative">
-                <Search
-                    aria-hidden
-                    className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-gray-400"
-                />
-                <Input
-                    type="search"
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search by name or email"
-                    aria-label="Search users"
-                    className="pl-9"
-                    autoFocus
-                />
-            </div>
-
-            <div className="max-h-80 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700/60">
-                {loading && candidates === undefined ? (
-                    <div role="status" className="space-y-2 p-3">
-                        <span className="sr-only">Loading users…</span>
-                        <div className="h-12 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-700/40" />
-                        <div className="h-12 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-700/40" />
-                        <div className="h-12 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-700/40" />
-                    </div>
-                ) : filtered.length === 0 ? (
-                    <p className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                        {(candidates ?? []).length === 0
-                            ? 'Everyone who can be added is already here.'
-                            : 'No users match your search.'}
-                    </p>
-                ) : (
-                    <ul className="divide-y divide-gray-100 dark:divide-gray-700/60">
-                        {filtered.map((member) => {
-                            const selected = form.data.users.includes(
-                                member.uuid,
-                            );
-
-                            return (
-                                <li key={member.uuid}>
-                                    <button
-                                        type="button"
-                                        role="checkbox"
-                                        aria-checked={selected}
-                                        onClick={() => toggle(member.uuid)}
-                                        className={`flex w-full cursor-pointer items-center gap-3 px-3 py-2.5 text-left ${
-                                            selected
-                                                ? 'bg-brand-green/[0.06] dark:bg-brand-green/[0.12]'
-                                                : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
-                                        }`}
-                                    >
-                                        <span
-                                            className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-                                                selected
-                                                    ? 'bg-brand-green text-white'
-                                                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-                                            }`}
-                                        >
-                                            {selected ? (
-                                                <Check
-                                                    className="size-4"
-                                                    aria-hidden
-                                                />
-                                            ) : (
-                                                initialsOf(member.name)
-                                            )}
-                                        </span>
-                                        <span className="min-w-0 flex-1">
-                                            <span className="block truncate text-sm font-medium text-gray-800 dark:text-gray-100">
-                                                {member.name}
-                                            </span>
-                                            <span className="block truncate text-xs text-gray-500 dark:text-gray-400">
-                                                {member.email}
-                                            </span>
-                                        </span>
-                                        <RoleChips roles={member.roles} />
-                                    </button>
-                                </li>
-                            );
-                        })}
-                    </ul>
-                )}
-            </div>
+            <StaffPicker
+                candidates={loading ? candidates : (candidates ?? [])}
+                selected={form.data.users}
+                onToggle={toggle}
+                emptyMessage="Everyone who can be added is already here."
+            />
 
             <DialogFooter>
                 <button

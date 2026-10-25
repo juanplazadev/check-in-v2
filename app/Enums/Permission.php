@@ -19,6 +19,7 @@ enum Permission: string
     case ViewUsers = 'view users';
     case ViewLocations = 'view locations';
     case ViewAllLocations = 'view all locations';
+    case CreateLocations = 'create locations';
     case ManageLocationUsers = 'manage location users';
     case EditLocations = 'edit locations';
     case ManageLocationStatus = 'manage location status';

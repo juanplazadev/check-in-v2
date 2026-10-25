@@ -78,6 +78,25 @@ final readonly class LocationStaff
     }
 
     /**
+     * Location-scoped staff who could be added to a location that does not
+     * exist yet, optionally narrowed to the given uuids. Someone who also
+     * holds view all locations is left out, as in attachable().
+     *
+     * @param  list<string>|null  $uuids
+     * @return Collection<int, User>
+     */
+    public function assignable(?array $uuids = null): Collection
+    {
+        return $this->locationScoped()
+            ->when($uuids !== null, fn (Builder $query): Builder => $query->whereIn('uuid', $uuids))
+            ->with('roles')
+            ->orderBy('name')
+            ->get()
+            ->reject(fn (User $user): bool => $user->can(Permission::ViewAllLocations))
+            ->values();
+    }
+
+    /**
      * Users with a location-scoped role, for validating who may be attached.
      *
      * @return Builder<User>

@@ -36,7 +36,7 @@ import dashboardRoutes from '@/routes/dashboard';
 import type { RouteDefinition } from '@/wayfinder';
 
 /** One day as the form holds it. A closed day keeps its last times, so turning it back on restores them. */
-interface DayDraft {
+export interface DayDraft {
     is_open: boolean;
     open_time: string;
     close_time: string;
@@ -66,7 +66,7 @@ function draftFrom(hours: LocationHoursDay[]): WeekDraft {
     });
 }
 
-function hoursFrom(days: WeekDraft): LocationHoursDay[] {
+export function hoursFrom(days: DayDraft[]): LocationHoursDay[] {
     return days.map((day, dayOfWeek) => ({
         dayOfWeek,
         openTime: day.is_open ? day.open_time : null,
@@ -87,7 +87,10 @@ function sameDay(a: DayDraft, b: DayDraft): boolean {
  * A new opening time. When it lands at or after the closing time, the closing time moves with it,
  * keeping the day as long as it was (8 hours if it was not valid), so the day never turns invalid.
  */
-function withOpenTime(draft: DayDraft, openTime: string): Partial<DayDraft> {
+export function withOpenTime(
+    draft: DayDraft,
+    openTime: string,
+): Partial<DayDraft> {
     if (draft.close_time > openTime) {
         return { open_time: openTime };
     }
@@ -101,7 +104,7 @@ function withOpenTime(draft: DayDraft, openTime: string): Partial<DayDraft> {
     };
 }
 
-function dayError(day: DayDraft): string | null {
+export function dayError(day: DayDraft): string | null {
     if (!day.is_open) {
         return null;
     }

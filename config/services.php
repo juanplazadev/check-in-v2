@@ -21,6 +21,10 @@ return [
         'benchmark' => env('CENSUS_GEOCODER_BENCHMARK', 'Public_AR_Current'),
     ],
 
+    'timezone_lookup' => [
+        'url' => env('TIMEZONE_LOOKUP_URL', 'https://timeapi.io/api'),
+    ],
+
     'mailgun' => [
         'domain' => env('MAILGUN_DOMAIN'),
         'secret' => env('MAILGUN_SECRET'),

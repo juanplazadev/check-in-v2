@@ -21,6 +21,7 @@ export type Permission =
     | 'view users'
     | 'view locations'
     | 'view all locations'
+    | 'create locations'
     | 'manage location users'
     | 'edit locations'
     | 'manage location status'

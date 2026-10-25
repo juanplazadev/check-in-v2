@@ -509,3 +509,67 @@ export interface AppointmentLinkSuggestion {
     phoneMatch: boolean;
     nameMatch: boolean;
 }
+
+/** A step of the add location wizard. Mirrors App\Enums\LocationWizardStep. */
+export type LocationWizardStepValue =
+    | 'details'
+    | 'address'
+    | 'placement'
+    | 'features'
+    | 'hours'
+    | 'users'
+    | 'review';
+
+export interface LocationWizardStep {
+    value: LocationWizardStepValue;
+    label: string;
+    /** Whether the step's answers are saved in the draft. */
+    completed: boolean;
+}
+
+/** The add location wizard's saved answers, keyed by step. Mirrors LocationWizardSession::all(). */
+export interface LocationWizardDraft {
+    details?: {
+        name: string;
+        email: string;
+        phone: string;
+        phone_ext: string | null;
+    };
+    address?: {
+        street1: string;
+        street2: string | null;
+        city: string;
+        state: string;
+        zip_code: string;
+        zip_code_4: string;
+        country: string;
+        latitude: number;
+        longitude: number;
+        /** Looked up from the coordinates; null when the lookup had no answer. */
+        timezone: string | null;
+    };
+    placement?: {
+        timezone: string;
+        max_distance_allowed: number;
+    };
+    features?: {
+        is_checkins_enabled: boolean;
+        is_appointments_enabled: boolean;
+    };
+    hours?: {
+        /** Only the weeks of the features turned on. */
+        checkins?: LocationWizardHoursDay[];
+        appointments?: LocationWizardHoursDay[];
+    };
+    users?: {
+        users: string[];
+    };
+}
+
+/** One day of a week saved by the wizard's hours step, indexed by Carbon's day number (0 = Sunday). */
+export interface LocationWizardHoursDay {
+    is_open: boolean;
+    /** HH:MM; null when closed. */
+    open_time: string | null;
+    close_time: string | null;
+}

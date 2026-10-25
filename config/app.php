@@ -328,6 +328,31 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Add Location Wizard
+    |--------------------------------------------------------------------------
+    |
+    | How long (in seconds) an unfinished add location wizard is kept in the
+    | session after its last saved step, the check-in radius a new location
+    | starts with, and the week the wizard's hours step is filled in with
+    | (Carbon day numbers, 0 = Sunday). The admin can change both in the
+    | wizard and on the location's pages afterwards.
+    |
+    | Default TTL: 60 seconds * 60 (1 hour)
+    |
+    */
+
+    'location_wizard_ttl' => 60 * 60,
+
+    'location_default_max_distance' => 5,
+
+    'location_default_hours' => [
+        'days' => [1, 2, 3, 4, 5],
+        'open_time' => '07:00:00',
+        'close_time' => '17:00:00',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Public Contact Details
     |--------------------------------------------------------------------------
     |

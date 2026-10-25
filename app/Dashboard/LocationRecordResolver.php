@@ -200,6 +200,16 @@ final readonly class LocationRecordResolver
     }
 
     /**
+     * Staff the add location wizard can add to the new location.
+     *
+     * @return list<array{uuid: string, name: string, email: string, roles: list<string>}>
+     */
+    public function assignableUsers(): array
+    {
+        return $this->staffMembers($this->staff->assignable());
+    }
+
+    /**
      * @return list<array{dayOfWeek: int, openTime: string|null, closeTime: string|null}>
      */
     public function checkInHours(Location $location): array

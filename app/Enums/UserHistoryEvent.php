@@ -29,6 +29,7 @@ enum UserHistoryEvent: string
     case AppointmentRestored = 'appointment-restored';
     case AppointmentPdfEmailed = 'appointment-pdf-emailed';
     case AppointmentDeleted = 'appointment-deleted';
+    case LocationCreated = 'location-created';
     case LocationUserAttached = 'location-user-attached';
     case LocationUserDetached = 'location-user-detached';
     case LocationEdited = 'location-edited';
@@ -75,6 +76,7 @@ enum UserHistoryEvent: string
             self::AppointmentRestored => 'Restored an appointment',
             self::AppointmentPdfEmailed => 'Emailed an appointment PDF',
             self::AppointmentDeleted => 'Deleted an appointment',
+            self::LocationCreated => 'Created a location',
             self::LocationUserAttached => 'Added a user to a location',
             self::LocationUserDetached => 'Removed a user from a location',
             self::LocationEdited => 'Edited location details',
