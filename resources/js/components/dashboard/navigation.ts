@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
     CalendarClock,
+    ChartLine,
     LayoutDashboard,
     MapPin,
     RadioTower,
@@ -52,6 +53,12 @@ export const DASHBOARD_NAVIGATION: DashboardNavGroup[] = [
                 icon: LayoutDashboard,
                 permission: 'view overview',
                 exact: true,
+            },
+            {
+                label: 'Analytics',
+                href: dashboardRoutes.analytics.url(),
+                icon: ChartLine,
+                permission: 'view analytics',
             },
             {
                 label: 'Live queue',

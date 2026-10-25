@@ -45,7 +45,10 @@ $adminPages = [
 
 dataset('operational pages', $operationalPages);
 dataset('admin pages', $adminPages);
-dataset('dashboard pages', [...$operationalPages, ...$adminPages]);
+// Not every staff role may see analytics; who may is pinned in DashboardAnalyticsTest.
+$analyticsPage = ['analytics' => [fn (): string => route('dashboard.analytics'), 'Dashboard/Analytics/Index']];
+
+dataset('dashboard pages', [...$operationalPages, ...$adminPages, ...$analyticsPage]);
 
 dataset('non-admin staff', array_values(array_filter(Role::staff(), fn (Role $role): bool => $role !== Role::Admin)));
 

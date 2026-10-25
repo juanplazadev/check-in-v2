@@ -94,6 +94,22 @@ final readonly class RecordHistoryEntryResolver
         ];
     }
 
+    /**
+     * How an edited field reads, here and in the user activity table.
+     */
+    public function changedFieldLabel(string $field): string
+    {
+        if (str_starts_with($field, 'checkin.')) {
+            $formField = CheckInFormField::tryFrom(mb_substr($field, mb_strlen('checkin.')));
+
+            if ($formField instanceof CheckInFormField) {
+                return $formField->label();
+            }
+        }
+
+        return self::EDITED_FIELD_LABELS[$field] ?? $this->subject($field);
+    }
+
     private function describe(RecordHistory $entry, string $createdLabel): string
     {
         $context = $entry->context ?? [];
@@ -236,19 +252,6 @@ final readonly class RecordHistoryEntryResolver
         }
 
         return $rows;
-    }
-
-    private function changedFieldLabel(string $field): string
-    {
-        if (str_starts_with($field, 'checkin.')) {
-            $formField = CheckInFormField::tryFrom(mb_substr($field, mb_strlen('checkin.')));
-
-            if ($formField instanceof CheckInFormField) {
-                return $formField->label();
-            }
-        }
-
-        return self::EDITED_FIELD_LABELS[$field] ?? $this->subject($field);
     }
 
     private function changedValue(string $field, mixed $value): ?string

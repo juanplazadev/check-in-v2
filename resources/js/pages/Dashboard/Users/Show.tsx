@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import type { LucideIcon } from 'lucide-react';
 import {
     CalendarClock,
@@ -13,16 +13,26 @@ import type { ReactNode } from 'react';
 
 import BackLink from '@/components/dashboard/BackLink';
 import Card from '@/components/dashboard/Card';
+import { DataTableProvider } from '@/components/dashboard/data-table/context';
+import DataTable from '@/components/dashboard/data-table/DataTable';
+import { createDashboardColumnHelper } from '@/components/dashboard/data-table/features';
 import { DetailCard, DetailRow } from '@/components/dashboard/DetailCard';
 import FeaturePill from '@/components/dashboard/FeaturePill';
 import PageHeader from '@/components/dashboard/PageHeader';
 import RequirePermission from '@/components/dashboard/RequirePermission';
 import RoleChips from '@/components/dashboard/RoleChips';
-import type { DashboardUser, UserLocation } from '@/components/dashboard/types';
+import type {
+    DashboardUser,
+    UserHistory,
+    UserHistoryEntry,
+    UserHistoryRecordRef,
+    UserLocation,
+} from '@/components/dashboard/types';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import {
     formatDateTime,
     formatPhone,
+    formatRelative,
     initialsOf,
     timezoneLabel,
 } from '@/lib/dashboard/format';
@@ -31,6 +41,7 @@ import { STAFF_ROLE_LABELS } from '@/types/staff';
 
 interface UserShowProps {
     user: DashboardUser;
+    history: UserHistory;
 }
 
 /** "Miami - North Dock" reads as "Miami" with "North Dock" underneath. */
@@ -223,6 +234,117 @@ function LocationsSection({ user }: { user: DashboardUser }) {
     );
 }
 
+function recordUrl(record: UserHistoryRecordRef): string {
+    switch (record.type) {
+        case 'checkIn':
+            return dashboardRoutes.checkIns.show.url(record.uuid);
+        case 'appointment':
+            return dashboardRoutes.appointments.show.url(record.uuid);
+        case 'location':
+            return dashboardRoutes.locations.show.url(record.uuid);
+        case 'user':
+            return dashboardRoutes.users.show.url(record.uuid);
+    }
+}
+
+function RecordChip({ record }: { record: UserHistoryRecordRef }) {
+    if (!record.available) {
+        return (
+            <span
+                className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500 line-through decoration-gray-400/60 dark:bg-gray-700/60 dark:text-gray-400"
+                title="Deleted, or not visible to you"
+            >
+                {record.label}
+            </span>
+        );
+    }
+
+    return (
+        <Link
+            href={recordUrl(record)}
+            className="inline-flex items-center rounded-full bg-brand-green/12 px-2 py-0.5 text-xs font-medium text-brand-green transition hover:bg-brand-green/20"
+        >
+            {record.label}
+        </Link>
+    );
+}
+
+const historyColumn = createDashboardColumnHelper<UserHistoryEntry>();
+
+const historyColumns = historyColumn.columns([
+    historyColumn.accessor('createdAt', {
+        header: 'When',
+        cell: ({ getValue }) => (
+            <time
+                dateTime={getValue()}
+                title={formatDateTime(getValue())}
+                className="whitespace-nowrap"
+            >
+                {formatRelative(getValue())}
+            </time>
+        ),
+    }),
+    historyColumn.accessor('description', {
+        header: 'Action',
+        cell: ({ getValue }) => (
+            <span className="font-medium text-gray-800 dark:text-gray-100">
+                {getValue()}
+            </span>
+        ),
+    }),
+    historyColumn.accessor('records', {
+        header: 'Record',
+        cell: ({ getValue }) => (
+            <div className="flex flex-wrap gap-1.5">
+                {getValue().map((record) => (
+                    <RecordChip key={record.type} record={record} />
+                ))}
+            </div>
+        ),
+    }),
+    historyColumn.accessor('details', {
+        header: 'Details',
+        cell: ({ getValue }) => (
+            <span className="block max-w-md whitespace-normal text-gray-500 dark:text-gray-400">
+                {getValue()}
+            </span>
+        ),
+    }),
+]);
+
+function ActivitySection({
+    user,
+    history,
+}: {
+    user: DashboardUser;
+    history: UserHistory;
+}) {
+    const changePage = (pageIndex: number) =>
+        router.get(
+            dashboardRoutes.users.show.url(user.uuid),
+            pageIndex > 0 ? { page: pageIndex + 1 } : {},
+            { only: ['history'], preserveState: true, preserveScroll: true },
+        );
+
+    return (
+        <DataTableProvider>
+            <DataTable
+                data={history.data}
+                columns={historyColumns}
+                getRowId={(entry) => String(entry.id)}
+                title="Activity"
+                emptyMessage="No activity yet."
+                server={{
+                    pageIndex: history.current_page - 1,
+                    pageSize: history.per_page,
+                    totalRows: history.total,
+                    onPageChange: changePage,
+                }}
+            />
+        </DataTableProvider>
+    );
+}
+
 function locationAccessSummary(user: DashboardUser): string | null {
     if (user.roles.length === 0) {
         return null;
@@ -237,7 +359,7 @@ function locationAccessSummary(user: DashboardUser): string | null {
     return count === 0 ? 'None' : `${count} location${count === 1 ? '' : 's'}`;
 }
 
-export default function UserShow({ user }: UserShowProps) {
+export default function UserShow({ user, history }: UserShowProps) {
     return (
         <RequirePermission permission="view users">
             <Head title={user.name} />
@@ -296,6 +418,10 @@ export default function UserShow({ user }: UserShowProps) {
 
                 <div className="md:col-span-2">
                     <LocationsSection user={user} />
+                </div>
+
+                <div className="md:col-span-2">
+                    <ActivitySection user={user} history={history} />
                 </div>
             </div>
         </RequirePermission>

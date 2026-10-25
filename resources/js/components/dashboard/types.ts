@@ -416,6 +416,32 @@ export interface LocationHistory {
     total: number;
 }
 
+/** A record a user history entry touched. Unavailable ones (deleted, or out of the viewer's reach) are named but not linked. */
+export interface UserHistoryRecordRef {
+    type: 'checkIn' | 'appointment' | 'location' | 'user';
+    uuid: string;
+    label: string;
+    available: boolean;
+}
+
+/** Mirrors UserHistoryEntryResolver::entry(). */
+export interface UserHistoryEntry {
+    id: number;
+    event: string;
+    description: string;
+    records: UserHistoryRecordRef[];
+    details: string | null;
+    createdAt: string;
+}
+
+/** One page of a user's activity, newest first. */
+export interface UserHistory {
+    data: UserHistoryEntry[];
+    current_page: number;
+    per_page: number;
+    total: number;
+}
+
 export interface LocationUsers {
     attached: {
         data: LocationStaffMember[];

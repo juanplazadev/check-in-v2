@@ -44,4 +44,52 @@ enum UserHistoryEvent: string
     case LocationAppointmentOptionsEdited = 'location-appointment-options-edited';
     case LocationClosureAdded = 'location-closure-added';
     case LocationClosureRemoved = 'location-closure-removed';
+
+    /**
+     * How the dashboard's activity table reads the event, as something the
+     * user did.
+     */
+    public function label(): string
+    {
+        return match ($this) {
+            self::ProfileUpdated => 'Updated their profile',
+            self::PasswordUpdated => 'Changed their password',
+            self::PasswordReset => 'Reset their password',
+            self::CheckInNoteAdded => 'Added a check-in note',
+            self::CheckInCompleted => 'Completed a check-in',
+            self::CheckInLicenseViewed => "Viewed a driver's license",
+            self::CheckInReopened => 'Reopened a check-in',
+            self::CheckInCancelled => 'Canceled a check-in',
+            self::CheckInReinstated => 'Reinstated a check-in',
+            self::CheckInArchived => 'Archived a check-in',
+            self::CheckInRestored => 'Restored a check-in',
+            self::CheckInEdited => 'Edited a check-in',
+            self::CheckInDeleted => 'Deleted a check-in',
+            self::CheckInAppointmentLinked => 'Linked an appointment to a check-in',
+            self::CheckInAppointmentUnlinked => 'Unlinked an appointment from a check-in',
+            self::CheckInPdfEmailed => 'Emailed a check-in PDF',
+            self::AppointmentNoteAdded => 'Added an appointment note',
+            self::AppointmentCancelled => 'Canceled an appointment',
+            self::AppointmentReinstated => 'Reinstated an appointment',
+            self::AppointmentArchived => 'Archived an appointment',
+            self::AppointmentRestored => 'Restored an appointment',
+            self::AppointmentPdfEmailed => 'Emailed an appointment PDF',
+            self::AppointmentDeleted => 'Deleted an appointment',
+            self::LocationUserAttached => 'Added a user to a location',
+            self::LocationUserDetached => 'Removed a user from a location',
+            self::LocationEdited => 'Edited location details',
+            self::LocationCheckInsPaused => 'Paused check-ins',
+            self::LocationCheckInsResumed => 'Resumed check-ins',
+            self::LocationAppointmentsPaused => 'Paused appointments',
+            self::LocationAppointmentsResumed => 'Resumed appointments',
+            self::LocationDeleted => 'Deleted a location',
+            self::LocationRestored => 'Restored a location',
+            self::LocationCheckInHoursEdited => 'Edited check-in hours',
+            self::LocationAppointmentHoursEdited => 'Edited appointment hours',
+            self::LocationCheckInOptionsEdited => 'Edited check-in options',
+            self::LocationAppointmentOptionsEdited => 'Edited appointment options',
+            self::LocationClosureAdded => 'Added a closure',
+            self::LocationClosureRemoved => 'Removed a closure',
+        };
+    }
 }

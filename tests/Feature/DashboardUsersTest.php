@@ -2,10 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Dashboard\UserHistoryEntryResolver;
+use App\Enums\Permission;
 use App\Enums\Role;
+use App\Enums\UserHistoryEvent;
+use App\Models\Appointment;
 use App\Models\CheckIn;
 use App\Models\Location;
 use App\Models\User;
+use App\Models\UserHistory;
 use App\Queries\DashboardUsers;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
@@ -176,4 +181,139 @@ it('shares the signed-in user by uuid, never by id', function (): void {
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
             ->where('auth.user.uuid', $admin->uuid)
             ->missing('auth.user.id'));
+});
+
+it('pages the user history newest first', function (): void {
+    $this->freezeTime();
+    $user = User::factory()->create();
+    UserHistory::factory()
+        ->count(UserHistoryEntryResolver::PER_PAGE + 1)
+        ->sequence(fn ($sequence): array => ['created_at' => now()->subMinutes($sequence->index)])
+        ->create(['user_id' => $user->id]);
+    $oldest = UserHistory::query()->oldest()->first();
+    UserHistory::factory()->create();
+
+    $this->actingAs(usersAdmin())
+        ->get(route('dashboard.users.show', ['uuid' => $user->uuid]))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->has('history.data', UserHistoryEntryResolver::PER_PAGE)
+            ->where('history.data.0.createdAt', now()->toIso8601String())
+            ->where('history.data.0.description', 'Updated their profile')
+            ->where('history.total', UserHistoryEntryResolver::PER_PAGE + 1));
+
+    $this->actingAs(usersAdmin())
+        ->get(route('dashboard.users.show', ['uuid' => $user->uuid, 'page' => 2]))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->has('history.data', 1)
+            ->where('history.data.0.id', $oldest->id));
+});
+
+it('links each record a history entry touched', function (): void {
+    $location = Location::factory()->create(['name' => 'Miami - Dock']);
+    $checkIn = CheckIn::factory()->create(['location_id' => $location->id]);
+    $appointment = Appointment::factory()->create(['location_id' => $location->id]);
+    $attached = User::factory()->create(['name' => 'Sam Shipping']);
+    $user = User::factory()->withRole(Role::ShippingManager)->create();
+    UserHistory::factory()->create([
+        'user_id' => $user->id,
+        'event' => UserHistoryEvent::CheckInAppointmentLinked,
+        'changes' => ['check_in' => $checkIn->uuid, 'appointment' => $appointment->uuid],
+        'created_at' => now()->subMinute(),
+    ]);
+    UserHistory::factory()->create([
+        'user_id' => $user->id,
+        'event' => UserHistoryEvent::LocationUserAttached,
+        'changes' => ['location' => $location->uuid, 'user' => $attached->uuid],
+    ]);
+
+    $this->actingAs(usersAdmin())
+        ->get(route('dashboard.users.show', ['uuid' => $user->uuid]))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('history.data.0.records', [
+                ['type' => 'location', 'uuid' => $location->uuid, 'label' => 'Miami - Dock', 'available' => true],
+                ['type' => 'user', 'uuid' => $attached->uuid, 'label' => 'Sam Shipping', 'available' => true],
+            ])
+            ->where('history.data.1.records', [
+                ['type' => 'checkIn', 'uuid' => $checkIn->uuid, 'label' => $checkIn->reference_number, 'available' => true],
+                ['type' => 'appointment', 'uuid' => $appointment->uuid, 'label' => $appointment->reference_number, 'available' => true],
+            ]));
+});
+
+it('names a deleted check-in from its snapshot without linking it', function (): void {
+    $user = User::factory()->withRole(Role::Admin)->create();
+    $uuid = fake()->uuid();
+    UserHistory::factory()->create([
+        'user_id' => $user->id,
+        'event' => UserHistoryEvent::CheckInDeleted,
+        'changes' => ['check_in' => $uuid, 'reference_number' => 'CI-0042', 'location' => 'Miami - Dock', 'appointment' => null, 'reason' => 'Duplicate'],
+    ]);
+
+    $this->actingAs(usersAdmin())
+        ->get(route('dashboard.users.show', ['uuid' => $user->uuid]))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('history.data.0.records', [
+                ['type' => 'checkIn', 'uuid' => $uuid, 'label' => 'CI-0042', 'available' => false],
+            ])
+            ->where('history.data.0.details', 'Reason: Duplicate'));
+});
+
+it('names a soft-deleted location without linking it', function (): void {
+    $location = Location::factory()->create(['name' => 'Miami - Dock']);
+    $location->delete();
+    $user = User::factory()->withRole(Role::Admin)->create();
+    UserHistory::factory()->create([
+        'user_id' => $user->id,
+        'event' => UserHistoryEvent::LocationEdited,
+        'changes' => ['location' => $location->uuid, 'name' => ['from' => 'Miami', 'to' => 'Miami - Dock']],
+    ]);
+
+    $this->actingAs(usersAdmin())
+        ->get(route('dashboard.users.show', ['uuid' => $user->uuid]))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('history.data.0.records.0.label', 'Miami - Dock')
+            ->where('history.data.0.records.0.available', false)
+            ->where('history.data.0.details', 'Changed Name'));
+});
+
+it('hides a record at a location the viewer does not see', function (): void {
+    $dock = Location::factory()->create();
+    $checkIn = CheckIn::factory()->create(['location_id' => Location::factory()->create()->id]);
+    $viewer = User::factory()->withRole(Role::ShippingManager)->worksAt($dock)->create();
+    $viewer->givePermissionTo(Permission::ViewUsers);
+    $user = User::factory()->withRole(Role::Admin)->create();
+    UserHistory::factory()->create([
+        'user_id' => $user->id,
+        'event' => UserHistoryEvent::CheckInNoteAdded,
+        'changes' => ['check_in' => $checkIn->uuid],
+    ]);
+
+    $this->actingAs($viewer)
+        ->get(route('dashboard.users.show', ['uuid' => $user->uuid]))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('history.data.0.records', [
+                ['type' => 'checkIn', 'uuid' => $checkIn->uuid, 'label' => 'Check-in', 'available' => false],
+            ]));
+});
+
+it('describes what an action involved', function (UserHistoryEvent $event, array $changes, ?string $details): void {
+    $user = User::factory()->create();
+    UserHistory::factory()->create(['user_id' => $user->id, 'event' => $event, 'changes' => $changes]);
+
+    $this->actingAs(usersAdmin())
+        ->get(route('dashboard.users.show', ['uuid' => $user->uuid]))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('history.data.0.details', $details));
+})->with([
+    'profile fields, redacted included' => [UserHistoryEvent::ProfileUpdated, ['name' => ['from' => 'A', 'to' => 'B'], 'drivers_license_number' => ['changed' => true]], 'Changed Name, License number'],
+    'pdf recipient' => [UserHistoryEvent::CheckInPdfEmailed, ['check_in' => fake()->uuid(), 'recipient' => 'ops@example.com', 'status' => 'pending'], 'Sent to ops@example.com'],
+    'closure date and reason' => [UserHistoryEvent::LocationClosureAdded, ['location' => fake()->uuid(), 'date' => '2026-12-25', 'reason' => 'Holiday', 'appliesTo' => ['checkin']], 'For Dec 25, 2026. Reason: Holiday'],
+    'nothing to add' => [UserHistoryEvent::PasswordUpdated, [], null],
+]);
+
+it('rejects a history page that is not a positive number', function (): void {
+    $user = User::factory()->create();
+
+    $this->actingAs(usersAdmin())
+        ->get(route('dashboard.users.show', ['uuid' => $user->uuid, 'page' => 0]))
+        ->assertInvalid('page');
 });
