@@ -70,6 +70,7 @@ export type Permission =
     | 'save appointment column display'
     | 'save appointment column order'
     | 'view roles and permissions'
+    | 'edit roles and permissions'
     | 'access driver account';
 
 export type Auth = {

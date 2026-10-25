@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\Permission;
 use App\Enums\RecordHistoryEvent;
 use App\Enums\Role;
 use App\Enums\UserHistoryEvent;
@@ -10,6 +11,7 @@ use App\Models\Location;
 use App\Models\User;
 use App\Models\UserHistory;
 use Illuminate\Support\Str;
+use Spatie\Permission\Models\Role as SpatieRole;
 
 /*
  * Attaching staff to a location and detaching them, from the location's Users section.
@@ -62,6 +64,24 @@ it('refuses users who are not location-scoped staff', function (Closure $uuid): 
     'sees every location' => [fn (): string => User::factory()->withRole(Role::Sales)->create()->uuid],
     'driver' => [fn (): string => User::factory()->withRole(Role::Driver)->create()->uuid],
 ]);
+
+it('follows view all locations as admins move it between roles', function (): void {
+    SpatieRole::findByName(Role::Sales->value)->revokePermissionTo(Permission::ViewAllLocations);
+    SpatieRole::findByName(Role::Shipping->value)->givePermissionTo(Permission::ViewAllLocations);
+
+    $location = Location::factory()->create();
+    $sales = User::factory()->withRole(Role::Sales)->create();
+    $shipping = User::factory()->withRole(Role::Shipping)->create();
+
+    $this->actingAs(User::factory()->withRole(Role::Admin)->create())
+        ->post(route('dashboard.locations.users.store', ['uuid' => $location->uuid]), ['users' => [$sales->uuid]])
+        ->assertSessionHasNoErrors();
+
+    $this->post(route('dashboard.locations.users.store', ['uuid' => $location->uuid]), ['users' => [$shipping->uuid]])
+        ->assertSessionHasErrors(['users' => 'Only staff limited to their own locations can be added.']);
+
+    expect($location->users()->pluck('users.id')->all())->toBe([$sales->id]);
+});
 
 it('requires at least one user', function (): void {
     $location = Location::factory()->create();

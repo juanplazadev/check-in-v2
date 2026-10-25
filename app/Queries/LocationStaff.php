@@ -60,9 +60,7 @@ final readonly class LocationStaff
     }
 
     /**
-     * Location-scoped staff not yet attached to the location. Someone who also
-     * holds view all locations through another role is left out: attaching
-     * them would change nothing.
+     * Location-scoped staff not yet attached to the location.
      *
      * @return Collection<int, User>
      */
@@ -72,15 +70,12 @@ final readonly class LocationStaff
             ->whereDoesntHave('locations', fn (Builder $query): Builder => $query->whereKey($location->id))
             ->with('roles')
             ->orderBy('name')
-            ->get()
-            ->reject(fn (User $user): bool => $user->can(Permission::ViewAllLocations))
-            ->values();
+            ->get();
     }
 
     /**
      * Location-scoped staff who could be added to a location that does not
-     * exist yet, optionally narrowed to the given uuids. Someone who also
-     * holds view all locations is left out, as in attachable().
+     * exist yet, optionally narrowed to the given uuids.
      *
      * @param  list<string>|null  $uuids
      * @return Collection<int, User>
@@ -91,18 +86,21 @@ final readonly class LocationStaff
             ->when($uuids !== null, fn (Builder $query): Builder => $query->whereIn('uuid', $uuids))
             ->with('roles')
             ->orderBy('name')
-            ->get()
-            ->reject(fn (User $user): bool => $user->can(Permission::ViewAllLocations))
-            ->values();
+            ->get();
     }
 
     /**
-     * Users with a location-scoped role, for validating who may be attached.
+     * Staff without view all locations, by any role or directly, for
+     * validating who may be attached. Read from the live grants, since admins
+     * can move the permission between roles; attaching someone who sees
+     * every location anyway would change nothing.
      *
      * @return Builder<User>
      */
     public function locationScoped(): Builder
     {
-        return User::query()->role(array_map(fn (Role $role): string => $role->value, Role::locationScoped()));
+        return User::query()
+            ->role(array_map(fn (Role $role): string => $role->value, Role::staff()))
+            ->withoutPermission(Permission::ViewAllLocations->value);
     }
 }

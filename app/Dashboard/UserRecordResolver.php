@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Dashboard;
 
+use App\Enums\Permission;
 use App\Enums\Role;
 use App\Models\Location;
 use App\Models\User;
@@ -45,10 +46,7 @@ final readonly class UserRecordResolver
             'cellphone' => $user->cellphone,
             // Staff roles only: the page treats an empty list as a driver.
             'roles' => array_values(array_intersect($staffRoles, $roleNames)),
-            'hasAllLocations' => array_intersect(
-                array_map(fn (Role $role): string => $role->value, Role::allLocations()),
-                $roleNames,
-            ) !== [],
+            'hasAllLocations' => $user->can(Permission::ViewAllLocations),
             'locations' => $user->locations
                 ->sortBy('name')
                 ->map($this->location(...))

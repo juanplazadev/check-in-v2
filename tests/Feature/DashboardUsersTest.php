@@ -14,6 +14,7 @@ use App\Models\UserHistory;
 use App\Queries\DashboardUsers;
 use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia;
+use Spatie\Permission\Models\Role as SpatieRole;
 
 /*
  * The user data behind the admin users table and detail page. Gates are pinned
@@ -158,6 +159,16 @@ it('flags the all-locations roles', function (Role $role, bool $hasAllLocations)
     'shipping manager' => [Role::ShippingManager, false],
     'driver' => [Role::Driver, false],
 ]);
+
+it('flags all locations from the live grants, not the default roles', function (): void {
+    SpatieRole::findByName(Role::Sales->value)->revokePermissionTo(Permission::ViewAllLocations);
+    $sales = User::factory()->withRole(Role::Sales)->create();
+
+    $this->actingAs(usersAdmin())
+        ->get(route('dashboard.users.show', ['uuid' => $sales->uuid]))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('user.hasAllLocations', false));
+});
 
 it('returns not found for a user that does not exist', function (): void {
     $this->actingAs(usersAdmin())

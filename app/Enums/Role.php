@@ -31,8 +31,9 @@ enum Role: string
 
     /**
      * Staff who see only the locations they are attached to (the
-     * location_user pivot): every staff role without view all locations.
-     * For seeding and display only; access checks go through the permission.
+     * location_user pivot): every staff role whose default grants lack view
+     * all locations. For seeding only: admins can move the permission, so
+     * everything else checks it on the user.
      *
      * @return list<self>
      */
@@ -45,7 +46,8 @@ enum Role: string
     }
 
     /**
-     * Staff who see every location, whatever they are attached to.
+     * Staff who see every location, whatever they are attached to, by their
+     * default grants. For seeding only, as locationScoped().
      *
      * @return list<self>
      */
@@ -58,8 +60,44 @@ enum Role: string
     }
 
     /**
-     * The permissions this role grants. Granted by the
-     * create_default_permissions migration; change both together.
+     * Roles whose permissions an admin may change on the roles and
+     * permissions page. Admin always holds everything, so no one can lock
+     * themselves out; driver only ever opens the driver account.
+     *
+     * @return list<self>
+     */
+    public static function editable(): array
+    {
+        return array_values(array_filter(
+            self::cases(),
+            fn (self $role): bool => $role->isEditable(),
+        ));
+    }
+
+    /**
+     * What an editable role may be granted: every permission but the driver
+     * account, which is for drivers (and admins) only.
+     *
+     * @return list<Permission>
+     */
+    public static function assignablePermissions(): array
+    {
+        return array_values(array_filter(
+            Permission::cases(),
+            fn (Permission $permission): bool => $permission !== Permission::AccessDriverAccount,
+        ));
+    }
+
+    public function isEditable(): bool
+    {
+        return ! in_array($this, [self::Admin, self::Driver], true);
+    }
+
+    /**
+     * The permissions this role starts with, as granted by the
+     * create_default_permissions migration. Admins change the live grants on
+     * the roles and permissions page, so access is always checked against
+     * the database, never against this list.
      *
      * @return list<Permission>
      */

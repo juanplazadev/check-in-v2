@@ -204,7 +204,8 @@ final readonly class UserHistoryEntryResolver
 
     /**
      * A short line on what the action involved: the fields an edit changed,
-     * who a PDF went to, the date a closure covers, and the reason given.
+     * who a PDF went to, the date a closure covers, what a role gained and
+     * lost, and the reason given.
      */
     private function details(UserHistory $entry): ?string
     {
@@ -230,6 +231,16 @@ final readonly class UserHistoryEntryResolver
         if (in_array($entry->event, [UserHistoryEvent::LocationClosureAdded, UserHistoryEvent::LocationClosureRemoved], true)
             && is_string($changes['date'] ?? null)) {
             $parts[] = 'For '.Date::parse($changes['date'])->format('M j, Y');
+        }
+
+        if ($entry->event === UserHistoryEvent::RolePermissionsEdited && is_string($changes['role'] ?? null)) {
+            $parts[] = 'Role: '.Str::ucfirst(str_replace('-', ' ', $changes['role']));
+
+            foreach (['granted' => 'Granted', 'revoked' => 'Revoked'] as $key => $label) {
+                if (is_array($changes[$key] ?? null) && $changes[$key] !== []) {
+                    $parts[] = $label.' '.implode(', ', array_map(ucfirst(...), $changes[$key]));
+                }
+            }
         }
 
         if (is_string($changes['reason'] ?? null) && mb_trim($changes['reason']) !== '') {

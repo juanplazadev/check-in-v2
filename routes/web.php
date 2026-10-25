@@ -497,9 +497,14 @@ Route::middleware('setLocale')->group(function (): void {
                     ->name('locations.restore');
             });
 
-            Route::middleware(PermissionMiddleware::using(Permission::ViewRolesAndPermissions))
-                ->get('/roles', DashboardRolePermissionController::class)
-                ->name('roles');
+            Route::middleware(PermissionMiddleware::using(Permission::ViewRolesAndPermissions))->group(function (): void {
+                Route::get('/roles', [DashboardRolePermissionController::class, 'index'])->name('roles');
+
+                // Moves permissions between the editable roles; admin and driver stay fixed.
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::EditRolesAndPermissions)])
+                    ->patch('/roles', [DashboardRolePermissionController::class, 'update'])
+                    ->name('roles.update');
+            });
         });
     });
 

@@ -126,8 +126,11 @@ return [
      * When set to true, Laravel\Octane\Events\OperationTerminated event listener will be registered
      * this will refresh permissions on every TickTerminated, TaskTerminated and RequestTerminated
      * NOTE: This should not be needed in most cases, but an Octane/Vapor combination benefited from it.
+     *
+     * On here: admins edit role grants at runtime, and without the reset every other Octane worker
+     * keeps its in-memory copy of the old grants. The reload reads from the shared (redis) cache.
      */
-    'register_octane_reset_listener' => false,
+    'register_octane_reset_listener' => true,
 
     /*
      * Events will fire when a role or permission is assigned/unassigned:
