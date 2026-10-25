@@ -9,7 +9,10 @@ use App\Appointment\AppointmentScheduleResolver;
 use App\CheckIn\CheckInPause;
 use App\CheckIn\CheckInScheduleResolver;
 use App\DTOs\LocationScheduleDTO;
+use App\Enums\AppointmentBookingSetting;
+use App\Enums\AppointmentStatus;
 use App\Enums\Role;
+use App\Models\Appointment;
 use App\Models\AppointmentSchedule;
 use App\Models\AppointmentScheduleOverride;
 use App\Models\CheckInSchedule;
@@ -18,9 +21,11 @@ use App\Models\Location;
 use App\Models\RecordHistory;
 use App\Models\User;
 use App\Queries\LocationStaff;
+use App\Schedule\UsFederalHolidays;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 /**
  * Shapes a location into the contracts in resources/js/components/dashboard/types.ts:
@@ -40,19 +45,20 @@ final readonly class LocationRecordResolver
     public const array RELATIONS = ['address'];
 
     /**
-     * Past closures shown under the upcoming ones; older ones are not useful.
+     * History entries per page of the History section.
      */
-    private const int PAST_CLOSURES_LIMIT = 10;
+    public const int HISTORY_PER_PAGE = 25;
+
+    /**
+     * How far back past closures, and how far each way holidays, reach on the
+     * closures page; the calendar does not go further back than this.
+     */
+    public const int CLOSURES_MONTHS = 12;
 
     /**
      * Upcoming closures teased on the overview.
      */
     private const int OVERVIEW_CLOSURES_LIMIT = 3;
-
-    /**
-     * Newest history entries shown on the History section.
-     */
-    private const int HISTORY_LIMIT = 200;
 
     public function __construct(
         private CheckInScheduleResolver $checkInSchedule,
@@ -61,6 +67,7 @@ final readonly class LocationRecordResolver
         private AppointmentPause $appointmentPause,
         private LocationStaff $staff,
         private RecordHistoryEntryResolver $history,
+        private UsFederalHolidays $holidays,
     ) {}
 
     /**
@@ -161,27 +168,25 @@ final readonly class LocationRecordResolver
     }
 
     /**
-     * The location's staff edits and attachments, newest first.
+     * One page of the location's staff edits and attachments, newest first.
      *
-     * @return list<array<string, mixed>>
+     * @return LengthAwarePaginator<int, array{id: int, event: string, description: string, changes: list<array{field: string, label: string, from: string|null, to: string|null, redacted: bool}>|null, actor: string|null, createdAt: string}>
      */
-    public function history(Location $location): array
+    public function history(Location $location): LengthAwarePaginator
     {
-        return array_values($location->history()
+        return $location->history()
             ->with('user')
-            ->limit(self::HISTORY_LIMIT)
-            ->get()
-            ->map(fn (RecordHistory $entry): array => $this->history->entry($entry, 'Location added'))
-            ->all());
+            ->paginate(self::HISTORY_PER_PAGE)
+            ->through(fn (RecordHistory $entry): array => $this->history->entry($entry, 'Location added'));
     }
 
     /**
-     * @return array{attached: list<array<string, mixed>>, allLocations: list<array<string, mixed>>}
+     * @return array{attached: LengthAwarePaginator<int, array{uuid: string, name: string, email: string, roles: list<string>}>, allLocations: list<array<string, mixed>>}
      */
-    public function users(Location $location): array
+    public function users(Location $location, ?string $search = null): array
     {
         return [
-            'attached' => $this->staffMembers($this->staff->attached($location)),
+            'attached' => $this->staff->attached($location, $search)->through($this->staffMember(...)),
             'allLocations' => $this->staffMembers($this->staff->allLocations()),
         ];
     }
@@ -211,6 +216,39 @@ final readonly class LocationRecordResolver
     }
 
     /**
+     * Upcoming booked appointments, for the hours editor to flag the ones new
+     * hours would leave out. Dates with an appointment closure or special
+     * hours are left out, since those dates do not follow the weekly hours.
+     *
+     * @return list<array{uuid: string, referenceNumber: string, driversName: string, date: string, time: string, dayOfWeek: int}>
+     */
+    public function bookedAppointments(Location $location, CarbonInterface $now): array
+    {
+        $overrideDates = $location->appointmentScheduleOverrides()
+            ->whereDate('override_date', '>=', $now->setTimezone($location->timezone)->toDateString())
+            ->get()
+            ->map(fn (AppointmentScheduleOverride $override): string => $override->override_date->toDateString())
+            ->all();
+
+        return array_values(Appointment::query()
+            ->where('location_id', $location->id)
+            ->where('status', AppointmentStatus::Scheduled)
+            ->where('scheduled_for', '>=', $now)
+            ->orderBy('scheduled_for')
+            ->get(['uuid', 'reference_number', 'drivers_name', 'scheduled_for'])
+            ->map(fn (Appointment $appointment): array => [
+                'uuid' => $appointment->uuid,
+                'referenceNumber' => $appointment->reference_number,
+                'driversName' => $appointment->drivers_name,
+                'date' => $appointment->scheduled_for->setTimezone($location->timezone)->toDateString(),
+                'time' => $appointment->scheduled_for->setTimezone($location->timezone)->format('H:i'),
+                'dayOfWeek' => $appointment->scheduled_for->setTimezone($location->timezone)->dayOfWeek,
+            ])
+            ->reject(fn (array $appointment): bool => in_array($appointment['date'], $overrideDates, true))
+            ->all());
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function checkInOptions(Location $location): array
@@ -235,32 +273,64 @@ final readonly class LocationRecordResolver
                 'bufferBeforeCloseMinutes' => $location->appointmentBufferBeforeCloseMinutes(),
             ],
             'notificationEmails' => $location->appointmentEmailAddresses(),
+            // What the booking rules may be set to; the update request enforces the same.
+            'limits' => [
+                'maxDaysAhead' => (int) config('app.appointment_booking.max_days_ahead'),
+                'slotIntervalMinutes' => array_map(intval(...), config('app.appointment_booking.slot_interval_minutes.allowed')),
+                'maxLeadTimeMinutes' => (int) config('app.appointment_booking.lead_time_minutes.max'),
+                'maxBufferBeforeCloseMinutes' => (int) config('app.appointment_booking.buffer_before_close_minutes.max'),
+                'minuteStep' => AppointmentBookingSetting::MINUTE_STEP,
+            ],
         ];
     }
 
     /**
      * Both override tables merged by date, split around today in the
-     * location's timezone: every upcoming closure, soonest first, and the most
-     * recent past ones, latest first.
+     * location's timezone: every upcoming closure, soonest first, and the past
+     * year's, latest first. Also US federal holidays a year each way, and,
+     * for those who may add closures, how many appointments are booked on
+     * each upcoming date, so the add dialog can warn about them.
      *
-     * @return array{upcoming: list<array<string, mixed>>, past: list<array<string, mixed>>}
+     * @return array{today: string, upcoming: list<array<string, mixed>>, past: list<array<string, mixed>>, holidays: list<array{date: string, name: string}>, bookedAppointments: array<string, int>}
      */
-    public function closures(Location $location, CarbonInterface $now): array
+    public function closures(Location $location, CarbonInterface $now, bool $withBookings): array
     {
-        $today = $now->setTimezone($location->timezone)->toDateString();
+        $localToday = $now->setTimezone($location->timezone)->startOfDay();
+        $today = $localToday->toDateString();
+        $since = $localToday->subMonthsNoOverflow(self::CLOSURES_MONTHS)->toDateString();
 
         $closures = $this->mergeClosures(
-            $location->checkinScheduleOverrides()->get(),
-            $location->appointmentScheduleOverrides()->get(),
+            $location->checkinScheduleOverrides()->whereDate('override_date', '>=', $since)->get(),
+            $location->appointmentScheduleOverrides()->whereDate('override_date', '>=', $since)->get(),
         );
 
-        $upcoming = array_values(array_filter($closures, fn (array $closure): bool => $closure['date'] >= $today));
-        $past = array_reverse(array_values(array_filter($closures, fn (array $closure): bool => $closure['date'] < $today)));
-
         return [
-            'upcoming' => $upcoming,
-            'past' => array_slice($past, 0, self::PAST_CLOSURES_LIMIT),
+            'today' => $today,
+            'upcoming' => array_values(array_filter($closures, fn (array $closure): bool => $closure['date'] >= $today)),
+            'past' => array_reverse(array_values(array_filter($closures, fn (array $closure): bool => $closure['date'] < $today))),
+            'holidays' => $this->holidays->between(
+                $localToday->subMonthsNoOverflow(self::CLOSURES_MONTHS),
+                $localToday->addMonthsNoOverflow(self::CLOSURES_MONTHS),
+            ),
+            'bookedAppointments' => $withBookings ? $this->bookedAppointmentsByDate($location, $now) : [],
         ];
+    }
+
+    /**
+     * Upcoming booked appointments counted by their date in the location's
+     * timezone.
+     *
+     * @return array<string, int>
+     */
+    private function bookedAppointmentsByDate(Location $location, CarbonInterface $now): array
+    {
+        return Appointment::query()
+            ->where('location_id', $location->id)
+            ->where('status', AppointmentStatus::Scheduled)
+            ->where('scheduled_for', '>=', $now)
+            ->pluck('scheduled_for')
+            ->countBy(fn (CarbonInterface $scheduledFor): string => $scheduledFor->setTimezone($location->timezone)->toDateString())
+            ->all();
     }
 
     /**

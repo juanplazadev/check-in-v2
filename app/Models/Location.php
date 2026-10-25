@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\CheckInFormField;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Database\Factories\LocationFactory;
@@ -212,17 +213,14 @@ final class Location extends Model
      */
     public function checkInFormFields(): array
     {
-        return [
-            'showTruckColor' => (bool) data_get($this->config, 'checkin.show_truck_color', false),
-            'showEmptyWeightLbs' => (bool) data_get($this->config, 'checkin.show_empty_weight_lbs', false),
-            'showTruckPlateState' => (bool) data_get($this->config, 'checkin.show_truck_plate_state', false),
-            'showTruckPlateCountry' => (bool) data_get($this->config, 'checkin.show_truck_plate_country', false),
-            'showTrailerPlateState' => (bool) data_get($this->config, 'checkin.show_trailer_plate_state', false),
-            'showTrailerPlateCountry' => (bool) data_get($this->config, 'checkin.show_trailer_plate_country', false),
-            'showDriversLicenseState' => (bool) data_get($this->config, 'checkin.show_drivers_license_state', false),
-            'showDriversLicenseCountry' => (bool) data_get($this->config, 'checkin.show_drivers_license_country', false),
-            'showDriversLicenseExpirationDate' => (bool) data_get($this->config, 'checkin.show_drivers_license_expiration_date', false),
-        ];
+        $fields = [];
+
+        foreach (CheckInFormField::cases() as $field) {
+            $fields[$field->flag()] = (bool) data_get($this->config, $field->configKey(), false);
+        }
+
+        /** @var array{showTruckColor: bool, showEmptyWeightLbs: bool, showTruckPlateState: bool, showTruckPlateCountry: bool, showTrailerPlateState: bool, showTrailerPlateCountry: bool, showDriversLicenseState: bool, showDriversLicenseCountry: bool, showDriversLicenseExpirationDate: bool} $fields */
+        return $fields;
     }
 
     protected function casts(): array

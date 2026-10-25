@@ -32,10 +32,10 @@ dataset('role permissions', [
     'shipping manager' => [Role::ShippingManager, [
         ...$shipping,
         'reopen check-ins', 'unsync check-ins from erp', 'edit check-ins', 'reinstate check-ins', 'reinstate appointments',
-        'link check-in appointments', 'pause check-ins',
+        'link check-in appointments', 'pause check-ins', 'edit location hours', 'view analytics',
     ]],
     'shipping' => [Role::Shipping, $shipping],
-    'sales' => [Role::Sales, [...$staffBasics, 'view all locations']],
+    'sales' => [Role::Sales, [...$staffBasics, 'view all locations', 'view analytics']],
     'driver' => [Role::Driver, ['access driver account']],
 ]);
 
@@ -46,7 +46,7 @@ it('grants each role exactly its permissions', function (Role $role, array $expe
         ->toBe(collect($expected)->sort()->values()->all());
 })->with('role permissions');
 
-it('only lets admins view users or roles and permissions, manage location users, edit locations, change location status, pause appointments, delete check-ins or appointments, and export the master spreadsheets', function (Role $role): void {
+it('only lets admins view users or roles and permissions, manage location users, edit locations, change location status, edit check-in or appointment options, pause appointments, delete check-ins or appointments, and export the master spreadsheets', function (Role $role): void {
     $user = User::factory()->withRole($role)->create();
 
     expect($user->can(Permission::ViewUsers))->toBe($role === Role::Admin)
@@ -60,5 +60,7 @@ it('only lets admins view users or roles and permissions, manage location users,
         ->and($user->can(Permission::ManageLocationStatus))->toBe($role === Role::Admin)
         ->and($user->can(Permission::PauseAppointments))->toBe($role === Role::Admin)
         ->and($user->can(Permission::DeleteLocations))->toBe($role === Role::Admin)
-        ->and($user->can(Permission::RestoreLocations))->toBe($role === Role::Admin);
+        ->and($user->can(Permission::RestoreLocations))->toBe($role === Role::Admin)
+        ->and($user->can(Permission::EditCheckInOptions))->toBe($role === Role::Admin)
+        ->and($user->can(Permission::EditAppointmentOptions))->toBe($role === Role::Admin);
 })->with(Role::cases());

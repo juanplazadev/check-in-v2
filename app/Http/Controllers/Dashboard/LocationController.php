@@ -8,11 +8,14 @@ use App\Dashboard\LocationRecordResolver;
 use App\Dashboard\LocationTimezones;
 use App\Enums\Permission;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Dashboard\LocationHistoryRequest;
+use App\Http\Requests\Dashboard\LocationUsersRequest;
 use App\Models\Location;
 use App\Models\User;
 use App\Queries\LocationDirectory;
 use Closure;
 use Illuminate\Container\Attributes\CurrentUser;
+use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -57,17 +60,39 @@ final class LocationController extends Controller
         ]);
     }
 
-    public function history(#[CurrentUser] User $user, string $uuid): Response
+    /**
+     * A page past the last one shows the empty state: entries are never
+     * removed, so no page is left behind to redirect from.
+     */
+    public function history(#[CurrentUser] User $user, string $uuid, LocationHistoryRequest $request): Response
     {
         return $this->section($user, $uuid, 'History', fn (Location $location): array => [
             'history' => $this->resolver->history($location),
         ]);
     }
 
-    public function users(#[CurrentUser] User $user, string $uuid): Response
+    /**
+     * A page past the last one, as left behind by removing the only user on
+     * the last page, redirects to the new last page, keeping the search.
+     */
+    public function users(#[CurrentUser] User $user, string $uuid, LocationUsersRequest $request): Response|RedirectResponse
     {
-        return $this->section($user, $uuid, 'Users', fn (Location $location): array => [
-            'users' => $this->resolver->users($location),
+        $location = $this->query->find($user, $uuid);
+        $search = $request->search();
+        $users = $this->resolver->users($location, $search);
+        $attached = $users['attached'];
+
+        if ($attached->isEmpty() && $attached->currentPage() > 1) {
+            return to_route('dashboard.locations.users', [
+                'uuid' => $uuid,
+                ...($search !== null ? ['search' => $search] : []),
+                ...($attached->lastPage() > 1 ? ['page' => $attached->lastPage()] : []),
+            ]);
+        }
+
+        return $this->render($location, 'Users', [
+            'users' => $users,
+            'search' => $search,
             // Loaded only when the add dialog opens, and only for those who may attach.
             'attachableUsers' => Inertia::optional(fn (): array => $user->can(Permission::ManageLocationUsers)
                 ? $this->resolver->attachableUsers($location)
@@ -79,6 +104,8 @@ final class LocationController extends Controller
     {
         return $this->section($user, $uuid, 'CheckInHours', fn (Location $location): array => [
             'hours' => $this->resolver->checkInHours($location),
+            // For "Copy from appointment hours" in the editor.
+            'otherHours' => $this->resolver->appointmentHours($location),
         ]);
     }
 
@@ -93,6 +120,12 @@ final class LocationController extends Controller
     {
         return $this->section($user, $uuid, 'AppointmentHours', fn (Location $location): array => [
             'hours' => $this->resolver->appointmentHours($location),
+            // For "Copy from check-in hours" in the editor.
+            'otherHours' => $this->resolver->checkInHours($location),
+            // Only the editor warns about bookings the new hours leave out.
+            'bookedAppointments' => $user->can(Permission::EditLocationHours)
+                ? $this->resolver->bookedAppointments($location, now())
+                : [],
         ]);
     }
 
@@ -106,7 +139,8 @@ final class LocationController extends Controller
     public function closures(#[CurrentUser] User $user, string $uuid): Response
     {
         return $this->section($user, $uuid, 'Closures', fn (Location $location): array => [
-            'closures' => $this->resolver->closures($location, now()),
+            // Only those who may add closures are warned about bookings.
+            'closures' => $this->resolver->closures($location, now(), $user->can(Permission::EditLocationHours)),
         ]);
     }
 
@@ -117,9 +151,17 @@ final class LocationController extends Controller
     {
         $location = $this->query->find($user, $uuid);
 
+        return $this->render($location, $component, $props($location));
+    }
+
+    /**
+     * @param  array<string, mixed>  $props
+     */
+    private function render(Location $location, string $component, array $props): Response
+    {
         return inertia('Dashboard/Locations/'.$component, [
             'location' => $this->resolver->summary($location),
-            ...$props($location),
+            ...$props,
         ]);
     }
 }

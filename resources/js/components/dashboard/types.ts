@@ -75,7 +75,13 @@ export type RecordHistoryEvent =
     | 'appointments-paused'
     | 'appointments-resumed'
     | 'location-deleted'
-    | 'location-restored';
+    | 'location-restored'
+    | 'check-in-hours-edited'
+    | 'appointment-hours-edited'
+    | 'check-in-options-edited'
+    | 'appointment-options-edited'
+    | 'closure-added'
+    | 'closure-removed';
 
 /** An internal staff note on a check-in, newest first on the detail page. */
 export interface CheckInNote {
@@ -104,7 +110,7 @@ export interface RecordHistoryEntry {
     id: number;
     event: RecordHistoryEvent;
     description: string;
-    /** The fields a 'details-edited' entry changed; null for every other event. */
+    /** The fields a 'details-edited' entry, or the days an hours-edited entry, changed; null for every other event. */
     changes: RecordHistoryChange[] | null;
     actor: string | null;
     createdAt: string;
@@ -324,11 +330,25 @@ export interface LocationClosure {
     appliesTo: ('checkIns' | 'appointments')[];
 }
 
-/** A public holiday drawn on the closures calendar. Will mirror the holidays API once it exists. */
+/** A US federal holiday drawn on the closures calendar. Mirrors UsFederalHolidays::between(). */
 export interface CalendarHoliday {
     /** Y-m-d. */
     date: string;
     name: string;
+}
+
+/** Mirrors LocationRecordResolver::closures(). */
+export interface LocationClosures {
+    /** Y-m-d, today in the location's timezone. */
+    today: string;
+    /** Soonest first. */
+    upcoming: LocationClosure[];
+    /** The past year's, latest first. */
+    past: LocationClosure[];
+    /** A year each way from today. */
+    holidays: CalendarHoliday[];
+    /** Booked appointments per upcoming Y-m-d; empty for those who may not add closures. */
+    bookedAppointments: Record<string, number>;
 }
 
 /** Today's status for check-ins or appointments. Mirrors LocationRecordResolver::today(). */
@@ -387,9 +407,22 @@ export interface LocationDetails {
     createdAt: string;
 }
 
-/** Mirrors LocationRecordResolver::users(). */
+/** Mirrors LocationRecordResolver::users(). Attached is one page of a Laravel paginator. */
+/** One page of a location's history, newest first. */
+export interface LocationHistory {
+    data: RecordHistoryEntry[];
+    current_page: number;
+    per_page: number;
+    total: number;
+}
+
 export interface LocationUsers {
-    attached: LocationStaffMember[];
+    attached: {
+        data: LocationStaffMember[];
+        current_page: number;
+        per_page: number;
+        total: number;
+    };
     /** Staff who see every location through view all locations; the pivot has no say over them. */
     allLocations: LocationStaffMember[];
 }
@@ -399,6 +432,18 @@ export interface LocationHoursDay {
     dayOfWeek: number;
     openTime: string | null;
     closeTime: string | null;
+}
+
+/** Mirrors LocationRecordResolver::bookedAppointments(): an upcoming booking, in the location's time. */
+export interface LocationBookedAppointment {
+    uuid: string;
+    referenceNumber: string;
+    driversName: string;
+    /** Y-m-d. */
+    date: string;
+    /** HH:MM. */
+    time: string;
+    dayOfWeek: number;
 }
 
 /** Mirrors LocationRecordResolver::checkInOptions(). */
@@ -417,6 +462,15 @@ export interface LocationAppointmentOptions {
         bufferBeforeCloseMinutes: number;
     };
     notificationEmails: string[];
+    /** What the booking rules may be set to, from config('app.appointment_booking'). */
+    limits: {
+        maxDaysAhead: number;
+        slotIntervalMinutes: number[];
+        maxLeadTimeMinutes: number;
+        maxBufferBeforeCloseMinutes: number;
+        /** Lead time and buffer move in steps of this many minutes. */
+        minuteStep: number;
+    };
 }
 
 /** A booking the link dialog suggests, from App\Dashboard\AppointmentLinkCandidates. */

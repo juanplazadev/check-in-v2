@@ -16,6 +16,11 @@ return [
     |
     */
 
+    'census_geocoder' => [
+        'url' => env('CENSUS_GEOCODER_URL', 'https://geocoding.geo.census.gov/geocoder'),
+        'benchmark' => env('CENSUS_GEOCODER_BENCHMARK', 'Public_AR_Current'),
+    ],
+
     'mailgun' => [
         'domain' => env('MAILGUN_DOMAIN'),
         'secret' => env('MAILGUN_SECRET'),

@@ -15,6 +15,7 @@ enum Permission: string
     case ViewLiveQueue = 'view live queue';
     case ViewCheckIns = 'view check-ins';
     case ViewAppointments = 'view appointments';
+    case ViewAnalytics = 'view analytics';
     case ViewUsers = 'view users';
     case ViewLocations = 'view locations';
     case ViewAllLocations = 'view all locations';
@@ -25,6 +26,9 @@ enum Permission: string
     case RestoreLocations = 'restore locations';
     case PauseCheckIns = 'pause check-ins';
     case PauseAppointments = 'pause appointments';
+    case EditLocationHours = 'edit location hours';
+    case EditCheckInOptions = 'edit check-in options';
+    case EditAppointmentOptions = 'edit appointment options';
     case ViewNotifications = 'view notifications';
     case SearchDashboard = 'search dashboard';
     case FilterCheckIns = 'filter check-ins';

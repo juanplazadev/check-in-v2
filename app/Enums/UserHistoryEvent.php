@@ -38,4 +38,10 @@ enum UserHistoryEvent: string
     case LocationAppointmentsResumed = 'location-appointments-resumed';
     case LocationDeleted = 'location-deleted';
     case LocationRestored = 'location-restored';
+    case LocationCheckInHoursEdited = 'location-check-in-hours-edited';
+    case LocationAppointmentHoursEdited = 'location-appointment-hours-edited';
+    case LocationCheckInOptionsEdited = 'location-check-in-options-edited';
+    case LocationAppointmentOptionsEdited = 'location-appointment-options-edited';
+    case LocationClosureAdded = 'location-closure-added';
+    case LocationClosureRemoved = 'location-closure-removed';
 }

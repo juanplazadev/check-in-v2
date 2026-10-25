@@ -40,4 +40,10 @@ enum RecordHistoryEvent: string
     case AppointmentsResumed = 'appointments-resumed';
     case LocationDeleted = 'location-deleted';
     case LocationRestored = 'location-restored';
+    case CheckInHoursEdited = 'check-in-hours-edited';
+    case AppointmentHoursEdited = 'appointment-hours-edited';
+    case CheckInOptionsEdited = 'check-in-options-edited';
+    case AppointmentOptionsEdited = 'appointment-options-edited';
+    case ClosureAdded = 'closure-added';
+    case ClosureRemoved = 'closure-removed';
 }

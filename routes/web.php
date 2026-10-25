@@ -10,6 +10,7 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\CheckInController;
 use App\Http\Controllers\CheckInDistanceController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\Dashboard\AnalyticsController as DashboardAnalyticsController;
 use App\Http\Controllers\Dashboard\AppointmentArchiveController as DashboardAppointmentArchiveController;
 use App\Http\Controllers\Dashboard\AppointmentCancelController as DashboardAppointmentCancelController;
 use App\Http\Controllers\Dashboard\AppointmentColumnController as DashboardAppointmentColumnController;
@@ -38,8 +39,13 @@ use App\Http\Controllers\Dashboard\CheckInReopenController as DashboardCheckInRe
 use App\Http\Controllers\Dashboard\CheckInRestoreController as DashboardCheckInRestoreController;
 use App\Http\Controllers\Dashboard\CheckInUpdateController as DashboardCheckInUpdateController;
 use App\Http\Controllers\Dashboard\LiveQueueController;
+use App\Http\Controllers\Dashboard\LocationAppointmentHoursController as DashboardLocationAppointmentHoursController;
+use App\Http\Controllers\Dashboard\LocationAppointmentOptionsController as DashboardLocationAppointmentOptionsController;
 use App\Http\Controllers\Dashboard\LocationAppointmentPauseController as DashboardLocationAppointmentPauseController;
+use App\Http\Controllers\Dashboard\LocationCheckInHoursController as DashboardLocationCheckInHoursController;
+use App\Http\Controllers\Dashboard\LocationCheckInOptionsController as DashboardLocationCheckInOptionsController;
 use App\Http\Controllers\Dashboard\LocationCheckInPauseController as DashboardLocationCheckInPauseController;
+use App\Http\Controllers\Dashboard\LocationClosureController as DashboardLocationClosureController;
 use App\Http\Controllers\Dashboard\LocationController as DashboardLocationController;
 use App\Http\Controllers\Dashboard\LocationDeleteController as DashboardLocationDeleteController;
 use App\Http\Controllers\Dashboard\LocationDetailsController as DashboardLocationDetailsController;
@@ -197,6 +203,10 @@ Route::middleware('setLocale')->group(function (): void {
             Route::middleware(PermissionMiddleware::using(Permission::ViewLiveQueue))
                 ->get('/queue', LiveQueueController::class)
                 ->name('queue');
+
+            Route::middleware(PermissionMiddleware::using(Permission::ViewAnalytics))
+                ->get('/analytics', DashboardAnalyticsController::class)
+                ->name('analytics');
 
             Route::middleware(['throttle:60,1', PermissionMiddleware::using(Permission::SearchDashboard)])
                 ->get('/search', DashboardSearchController::class)
@@ -430,6 +440,28 @@ Route::middleware('setLocale')->group(function (): void {
                         Route::post('/appointments/pause', [DashboardLocationAppointmentPauseController::class, 'store'])->name('locations.appointmentPause.store');
                         Route::delete('/appointments/pause', [DashboardLocationAppointmentPauseController::class, 'destroy'])->name('locations.appointmentPause.destroy');
                     });
+
+                    // The weekly hours drivers and guests see. Booked appointments are kept either way.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::EditLocationHours)])->group(function (): void {
+                        Route::put('/check-ins/hours', [DashboardLocationCheckInHoursController::class, 'update'])->name('locations.checkInHours.update');
+                        Route::put('/appointments/hours', [DashboardLocationAppointmentHoursController::class, 'update'])->name('locations.appointmentHours.update');
+
+                        // Dates that override those hours; past ones stay as history.
+                        Route::post('/closures', [DashboardLocationClosureController::class, 'store'])->name('locations.closures.store');
+                        Route::delete('/closures/{date}', [DashboardLocationClosureController::class, 'destroy'])
+                            ->where('date', '\d{4}-\d{2}-\d{2}')
+                            ->name('locations.closures.destroy');
+                    });
+
+                    // Which optional fields the check-in form shows, and who is emailed about each check-in.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::EditCheckInOptions)])
+                        ->patch('/check-ins/options', [DashboardLocationCheckInOptionsController::class, 'update'])
+                        ->name('locations.checkInOptions.update');
+
+                    // How far ahead and how close to closing drivers can book, and who is emailed about each booking.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::EditAppointmentOptions)])
+                        ->patch('/appointments/options', [DashboardLocationAppointmentOptionsController::class, 'update'])
+                        ->name('locations.appointmentOptions.update');
 
                     // Attaching decides which locations a location-scoped user sees.
                     Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ManageLocationUsers)])->group(function (): void {

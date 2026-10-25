@@ -25,6 +25,12 @@ const DOT_CLASSES: Partial<Record<RecordHistoryEntry['event'], string>> = {
     'appointments-resumed': 'bg-emerald-500',
     'location-deleted': 'bg-red-500',
     'location-restored': 'bg-emerald-500',
+    'check-in-hours-edited': 'bg-violet-500',
+    'appointment-hours-edited': 'bg-violet-500',
+    'check-in-options-edited': 'bg-violet-500',
+    'appointment-options-edited': 'bg-violet-500',
+    'closure-added': 'bg-rose-500',
+    'closure-removed': 'bg-gray-500',
 };
 
 function ChangeValue({ value }: { value: string | null }) {

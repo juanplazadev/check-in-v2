@@ -115,9 +115,11 @@ enum Role: string
                 Permission::ReinstateCheckIns,
                 Permission::ReinstateAppointments,
                 Permission::PauseCheckIns,
+                Permission::EditLocationHours,
+                Permission::ViewAnalytics,
             ],
             self::Shipping => $shipping,
-            self::Sales => [...$staffBasics, Permission::ViewAllLocations],
+            self::Sales => [...$staffBasics, Permission::ViewAllLocations, Permission::ViewAnalytics],
             self::Driver => [Permission::AccessDriverAccount],
         };
     }
