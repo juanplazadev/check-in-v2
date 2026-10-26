@@ -354,6 +354,7 @@ function makeAppointment(): AppointmentRecord {
         driver: {
             name: driverName(),
             cellphone: cellphone(),
+            email: null,
             hasAccount: random() > 0.5,
         },
         scheduledFor: iso(scheduledFor),
@@ -367,6 +368,7 @@ function makeAppointment(): AppointmentRecord {
                 ? { uuid: uuid(), referenceNumber: reference('C') }
                 : null,
         createdAt: iso(createdAt),
+        archivedAt: null,
         history,
     };
 }

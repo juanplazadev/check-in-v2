@@ -23,6 +23,7 @@ return new class extends Migration
             $table->string('locale', 2)->default('en');
             $table->string('status')->default('scheduled');
             $table->timestampTz('cancelled_at')->nullable();
+            $table->foreignId('cancelled_by')->nullable()->constrained('users')->nullOnDelete();
             $table->text('cancelled_reason')->nullable();
             $table->timestampTz('claimed_at')->nullable();
             $table->string('claimed_via')->nullable();

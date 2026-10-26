@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\CheckInFormField;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Database\Factories\LocationFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -31,19 +33,26 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read string $email
  * @property-read bool $is_active
  * @property-read bool $is_checkins_enabled
+ * @property-read CarbonImmutable|null $checkins_paused_at
+ * @property-read CarbonImmutable|null $checkins_paused_until
+ * @property-read string|null $checkins_paused_reason
  * @property-read bool $is_appointments_enabled
+ * @property-read CarbonImmutable|null $appointments_paused_at
+ * @property-read CarbonImmutable|null $appointments_paused_until
+ * @property-read string|null $appointments_paused_reason
  * @property-read array<string, string>|null $config
  * @property-read CarbonImmutable $created_at
  * @property-read CarbonImmutable $updated_at
  * @property-read CarbonImmutable|null $deleted_at
  * @property-read Address $address
  * @property-read Collection<int, User> $users
+ * @property-read Collection<int, RecordHistory> $history
  * @property-read Collection<int, CheckInSchedule> $checkinSchedule
  * @property-read Collection<int, CheckInScheduleOverride> $checkinScheduleOverrides
  * @property-read Collection<int, AppointmentSchedule> $appointmentSchedule
  * @property-read Collection<int, AppointmentScheduleOverride> $appointmentScheduleOverrides
  */
-#[Fillable(['uuid', 'address_id', 'max_distance_allowed', 'name', 'abbreviation', 'timezone', 'phone', 'phone_ext', 'email', 'is_active', 'is_checkins_enabled', 'is_appointments_enabled', 'config'])]
+#[Fillable(['uuid', 'address_id', 'max_distance_allowed', 'name', 'abbreviation', 'timezone', 'phone', 'phone_ext', 'email', 'is_active', 'is_checkins_enabled', 'checkins_paused_at', 'checkins_paused_until', 'checkins_paused_reason', 'is_appointments_enabled', 'appointments_paused_at', 'appointments_paused_until', 'appointments_paused_reason', 'config'])]
 #[Hidden(['id'])]
 #[RouteKey('uuid')]
 final class Location extends Model
@@ -104,11 +113,44 @@ final class Location extends Model
     }
 
     /**
+     * Staff edits and attachments on this location, newest first. Shares
+     * record_history with check-ins and appointments; see {@see CheckIn::history()}.
+     *
+     * @return MorphMany<RecordHistory, $this>
+     */
+    public function history(): MorphMany
+    {
+        return $this->morphMany(RecordHistory::class, 'recordable')->latest()->latest('id');
+    }
+
+    /**
      * @return MorphMany<PurchaseOrder, $this>
      */
     public function purchaseOrders(): MorphMany
     {
         return $this->morphMany(PurchaseOrder::class, 'purchasable');
+    }
+
+    /**
+     * Whether staff have paused new check-ins at this moment. A pause with no
+     * end lasts until someone resumes it; a timed one simply stops matching
+     * once it ends, so nothing has to clear it.
+     */
+    public function isCheckInPaused(CarbonInterface $at): bool
+    {
+        return $this->checkins_paused_at !== null
+            && ($this->checkins_paused_until === null || $at->lt($this->checkins_paused_until));
+    }
+
+    /**
+     * Whether staff have paused new bookings at this moment. While paused no
+     * slot can be booked, on any day; existing appointments are kept. Ends
+     * the same way as {@see isCheckInPaused()}.
+     */
+    public function isAppointmentPaused(CarbonInterface $at): bool
+    {
+        return $this->appointments_paused_at !== null
+            && ($this->appointments_paused_until === null || $at->lt($this->appointments_paused_until));
     }
 
     public function appointmentMaxBookingDaysAhead(): int
@@ -171,17 +213,14 @@ final class Location extends Model
      */
     public function checkInFormFields(): array
     {
-        return [
-            'showTruckColor' => (bool) data_get($this->config, 'checkin.show_truck_color', false),
-            'showEmptyWeightLbs' => (bool) data_get($this->config, 'checkin.show_empty_weight_lbs', false),
-            'showTruckPlateState' => (bool) data_get($this->config, 'checkin.show_truck_plate_state', false),
-            'showTruckPlateCountry' => (bool) data_get($this->config, 'checkin.show_truck_plate_country', false),
-            'showTrailerPlateState' => (bool) data_get($this->config, 'checkin.show_trailer_plate_state', false),
-            'showTrailerPlateCountry' => (bool) data_get($this->config, 'checkin.show_trailer_plate_country', false),
-            'showDriversLicenseState' => (bool) data_get($this->config, 'checkin.show_drivers_license_state', false),
-            'showDriversLicenseCountry' => (bool) data_get($this->config, 'checkin.show_drivers_license_country', false),
-            'showDriversLicenseExpirationDate' => (bool) data_get($this->config, 'checkin.show_drivers_license_expiration_date', false),
-        ];
+        $fields = [];
+
+        foreach (CheckInFormField::cases() as $field) {
+            $fields[$field->flag()] = (bool) data_get($this->config, $field->configKey(), false);
+        }
+
+        /** @var array{showTruckColor: bool, showEmptyWeightLbs: bool, showTruckPlateState: bool, showTruckPlateCountry: bool, showTrailerPlateState: bool, showTrailerPlateCountry: bool, showDriversLicenseState: bool, showDriversLicenseCountry: bool, showDriversLicenseExpirationDate: bool} $fields */
+        return $fields;
     }
 
     protected function casts(): array
@@ -190,7 +229,11 @@ final class Location extends Model
             'uuid' => 'string',
             'is_active' => 'boolean',
             'is_checkins_enabled' => 'boolean',
+            'checkins_paused_at' => 'datetime',
+            'checkins_paused_until' => 'datetime',
             'is_appointments_enabled' => 'boolean',
+            'appointments_paused_at' => 'datetime',
+            'appointments_paused_until' => 'datetime',
             'config' => 'array',
         ];
     }

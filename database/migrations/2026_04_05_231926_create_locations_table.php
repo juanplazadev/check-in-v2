@@ -23,7 +23,13 @@ return new class extends Migration
             $table->string('email');
             $table->boolean('is_active');
             $table->boolean('is_checkins_enabled');
+            $table->timestampTz('checkins_paused_at')->nullable();
+            $table->timestampTz('checkins_paused_until')->nullable();
+            $table->string('checkins_paused_reason')->nullable();
             $table->boolean('is_appointments_enabled');
+            $table->timestampTz('appointments_paused_at')->nullable();
+            $table->timestampTz('appointments_paused_until')->nullable();
+            $table->string('appointments_paused_reason')->nullable();
             $table->json('config')->nullable();
 
             $table->timestampsTz();

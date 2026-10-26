@@ -20,7 +20,8 @@ return [
 
     // The release version of your application
     // Example with dynamic git hash: trim(exec('git --git-dir ' . base_path('.git') . ' log --pretty="%h" -n1 HEAD'))
-    'release' => env('SENTRY_RELEASE'),
+    // Falls back to the commit baked into the image, which the deploy workflow registers as the Sentry release
+    'release' => env('SENTRY_RELEASE', in_array(env('GIT_COMMIT'), [null, '', 'unknown'], true) ? null : env('GIT_COMMIT')),
 
     // When left empty or `null` the Laravel environment will be used (usually discovered from `APP_ENV` in your `.env`)
     'environment' => env('SENTRY_ENVIRONMENT'),

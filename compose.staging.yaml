@@ -36,6 +36,22 @@ services:
     # export actually running holds a deploy up this long.
     stop_grace_period: 620s
 
+  # Live dashboard websockets. Backend network only: browsers reach it through
+  # the public host at /app/*, which the VPS Caddy hands to checkin:80 and
+  # Octane's Caddy forwards here (REVERB_PROXY_UPSTREAM=reverb:8080 in .env).
+  # Horizon publishes straight to reverb:8080 (REVERB_HOST=reverb).
+  reverb:
+    <<: *app
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    # The image's healthcheck probes Octane on :80, which this container never
+    # runs. Reverb answers /up on its own port.
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/up"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   scheduler:
     <<: *app
     command: php artisan schedule:work

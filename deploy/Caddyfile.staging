@@ -11,6 +11,10 @@
 # .env) scopes the Horizon route group to the Tailscale hostname, so its routes are
 # not registered on this host at all. The handle below just stops scanner traffic
 # before it reaches PHP.
+#
+# Live dashboard websockets (/app/*) need nothing here: reverse_proxy passes the
+# upgrade through to checkin:80, and Octane's Caddy forwards /app/* to the reverb
+# container (REVERB_PROXY_UPSTREAM in the server-side .env).
 
 staging.example.com {
 	handle /horizon* {

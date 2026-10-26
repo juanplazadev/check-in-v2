@@ -101,6 +101,15 @@ return [
             'expire' => 60,
             'throttle' => 60,
         ],
+
+        // Invitations for staff accounts an admin creates. Their own table, so a
+        // reset link never gains the week-long expiry an invite needs.
+        'invites' => [
+            'provider' => 'users',
+            'table' => 'user_invitation_tokens',
+            'expire' => 10080,
+            'throttle' => 60,
+        ],
     ],
 
     /*

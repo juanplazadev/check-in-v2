@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Auth\HomeRedirect;
 use App\Http\Middleware\AuthTimebox;
+use App\Http\Middleware\EnsurePasswordIsChanged;
 use App\Http\Middleware\EnsureRegistrationAllowed;
 use App\Http\Middleware\EnsureUserHasAppointmentGatePass;
 use App\Http\Middleware\EnsureUserHasCheckInGatePass;
@@ -41,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+            EnsurePasswordIsChanged::class,
         ]);
 
         $middleware->alias([

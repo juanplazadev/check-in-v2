@@ -14,6 +14,7 @@ final readonly class CheckInAvailabilityResolver
 {
     public function __construct(
         private CheckInScheduleResolver $scheduleResolver,
+        private CheckInPause $pause,
         private DistanceCalculator $distance,
     ) {}
 
@@ -41,7 +42,7 @@ final readonly class CheckInAvailabilityResolver
         }
 
         $localNow = now()->setTimezone($location->timezone);
-        $schedule = $this->scheduleResolver->resolveSchedule($location, $localNow);
+        $schedule = $this->pause->apply($location, $this->scheduleResolver->resolveSchedule($location, $localNow), $localNow);
 
         return new LocationAvailabilityDTO(
             allowed: $schedule->isOpen,

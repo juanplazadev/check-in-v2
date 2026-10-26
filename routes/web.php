@@ -10,9 +10,18 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\CheckInController;
 use App\Http\Controllers\CheckInDistanceController;
 use App\Http\Controllers\ContactController;
+use App\Http\Controllers\Dashboard\AnalyticsController as DashboardAnalyticsController;
+use App\Http\Controllers\Dashboard\AppointmentArchiveController as DashboardAppointmentArchiveController;
+use App\Http\Controllers\Dashboard\AppointmentCancelController as DashboardAppointmentCancelController;
 use App\Http\Controllers\Dashboard\AppointmentColumnController as DashboardAppointmentColumnController;
 use App\Http\Controllers\Dashboard\AppointmentController as DashboardAppointmentController;
+use App\Http\Controllers\Dashboard\AppointmentDeleteController as DashboardAppointmentDeleteController;
 use App\Http\Controllers\Dashboard\AppointmentExportController as DashboardAppointmentExportController;
+use App\Http\Controllers\Dashboard\AppointmentNoteController as DashboardAppointmentNoteController;
+use App\Http\Controllers\Dashboard\AppointmentPdfController as DashboardAppointmentPdfController;
+use App\Http\Controllers\Dashboard\AppointmentPdfEmailController as DashboardAppointmentPdfEmailController;
+use App\Http\Controllers\Dashboard\AppointmentReinstateController as DashboardAppointmentReinstateController;
+use App\Http\Controllers\Dashboard\AppointmentRestoreController as DashboardAppointmentRestoreController;
 use App\Http\Controllers\Dashboard\CheckInAppointmentController as DashboardCheckInAppointmentController;
 use App\Http\Controllers\Dashboard\CheckInArchiveController as DashboardCheckInArchiveController;
 use App\Http\Controllers\Dashboard\CheckInCancelController as DashboardCheckInCancelController;
@@ -24,12 +33,28 @@ use App\Http\Controllers\Dashboard\CheckInExportController as DashboardCheckInEx
 use App\Http\Controllers\Dashboard\CheckInLicenseController as DashboardCheckInLicenseController;
 use App\Http\Controllers\Dashboard\CheckInNoteController as DashboardCheckInNoteController;
 use App\Http\Controllers\Dashboard\CheckInPdfController as DashboardCheckInPdfController;
+use App\Http\Controllers\Dashboard\CheckInPdfEmailController as DashboardCheckInPdfEmailController;
 use App\Http\Controllers\Dashboard\CheckInReinstateController as DashboardCheckInReinstateController;
 use App\Http\Controllers\Dashboard\CheckInReopenController as DashboardCheckInReopenController;
 use App\Http\Controllers\Dashboard\CheckInRestoreController as DashboardCheckInRestoreController;
 use App\Http\Controllers\Dashboard\CheckInUpdateController as DashboardCheckInUpdateController;
+use App\Http\Controllers\Dashboard\DeploymentController as DashboardDeploymentController;
+use App\Http\Controllers\Dashboard\ErrorController as DashboardErrorController;
 use App\Http\Controllers\Dashboard\LiveQueueController;
+use App\Http\Controllers\Dashboard\LocationAppointmentHoursController as DashboardLocationAppointmentHoursController;
+use App\Http\Controllers\Dashboard\LocationAppointmentOptionsController as DashboardLocationAppointmentOptionsController;
+use App\Http\Controllers\Dashboard\LocationAppointmentPauseController as DashboardLocationAppointmentPauseController;
+use App\Http\Controllers\Dashboard\LocationCheckInHoursController as DashboardLocationCheckInHoursController;
+use App\Http\Controllers\Dashboard\LocationCheckInOptionsController as DashboardLocationCheckInOptionsController;
+use App\Http\Controllers\Dashboard\LocationCheckInPauseController as DashboardLocationCheckInPauseController;
+use App\Http\Controllers\Dashboard\LocationClosureController as DashboardLocationClosureController;
 use App\Http\Controllers\Dashboard\LocationController as DashboardLocationController;
+use App\Http\Controllers\Dashboard\LocationDeleteController as DashboardLocationDeleteController;
+use App\Http\Controllers\Dashboard\LocationDetailsController as DashboardLocationDetailsController;
+use App\Http\Controllers\Dashboard\LocationRestoreController as DashboardLocationRestoreController;
+use App\Http\Controllers\Dashboard\LocationStatusController as DashboardLocationStatusController;
+use App\Http\Controllers\Dashboard\LocationUserController as DashboardLocationUserController;
+use App\Http\Controllers\Dashboard\LocationWizardController as DashboardLocationWizardController;
 use App\Http\Controllers\Dashboard\NotificationController as DashboardNotificationController;
 use App\Http\Controllers\Dashboard\RolePermissionController as DashboardRolePermissionController;
 use App\Http\Controllers\Dashboard\SearchController as DashboardSearchController;
@@ -182,6 +207,10 @@ Route::middleware('setLocale')->group(function (): void {
                 ->get('/queue', LiveQueueController::class)
                 ->name('queue');
 
+            Route::middleware(PermissionMiddleware::using(Permission::ViewAnalytics))
+                ->get('/analytics', DashboardAnalyticsController::class)
+                ->name('analytics');
+
             Route::middleware(['throttle:60,1', PermissionMiddleware::using(Permission::SearchDashboard)])
                 ->get('/search', DashboardSearchController::class)
                 ->name('search');
@@ -204,6 +233,12 @@ Route::middleware('setLocale')->group(function (): void {
                     ->get('/check-ins/{uuid}/pdf', DashboardCheckInPdfController::class)
                     ->whereUuid('uuid')
                     ->name('checkIns.pdf');
+
+                // Sent only to the driver's address on file; logged on both history trails.
+                Route::middleware(['throttle:10,1', PermissionMiddleware::using(Permission::EmailCheckInPdf)])
+                    ->post('/check-ins/{uuid}/pdf/email', DashboardCheckInPdfEmailController::class)
+                    ->whereUuid('uuid')
+                    ->name('checkIns.pdf.email');
 
                 Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::WriteCheckInNotes)])
                     ->post('/check-ins/{uuid}/notes', DashboardCheckInNoteController::class)
@@ -310,6 +345,50 @@ Route::middleware('setLocale')->group(function (): void {
                     ->post('/appointments/exports', [DashboardAppointmentExportController::class, 'store'])
                     ->name('appointments.exports.store');
 
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::WriteAppointmentNotes)])
+                    ->post('/appointments/{uuid}/notes', DashboardAppointmentNoteController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.notes.store');
+
+                // Printing needs the same bytes as viewing, so either permission opens the file.
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using([Permission::ViewAppointmentPdf, Permission::PrintAppointmentPdf])])
+                    ->get('/appointments/{uuid}/pdf', DashboardAppointmentPdfController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.pdf');
+
+                // Sent only to the driver's account address; logged on both history trails.
+                Route::middleware(['throttle:10,1', PermissionMiddleware::using(Permission::EmailAppointmentPdf)])
+                    ->post('/appointments/{uuid}/pdf/email', DashboardAppointmentPdfEmailController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.pdf.email');
+
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::CancelAppointments)])
+                    ->post('/appointments/{uuid}/cancel', DashboardAppointmentCancelController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.cancel');
+
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ReinstateAppointments)])
+                    ->post('/appointments/{uuid}/reinstate', DashboardAppointmentReinstateController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.reinstate');
+
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ArchiveAppointments)])
+                    ->post('/appointments/{uuid}/archive', DashboardAppointmentArchiveController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.archive');
+
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::RestoreAppointments)])
+                    ->post('/appointments/{uuid}/restore', DashboardAppointmentRestoreController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.restore');
+
+                // Permanent, in any status. The reason is required by
+                // AppointmentDeleteRequest.
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::DeleteAppointments)])
+                    ->delete('/appointments/{uuid}', DashboardAppointmentDeleteController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.destroy');
+
                 Route::get('/appointments/{uuid}', [DashboardAppointmentController::class, 'show'])
                     ->whereUuid('uuid')
                     ->name('appointments.show');
@@ -317,6 +396,9 @@ Route::middleware('setLocale')->group(function (): void {
 
             Route::middleware(PermissionMiddleware::using(Permission::ViewUsers))->group(function (): void {
                 Route::get('/users', [DashboardUserController::class, 'index'])->name('users');
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::CreateUsers)])
+                    ->post('/users', [DashboardUserController::class, 'store'])
+                    ->name('users.store');
                 Route::get('/users/{uuid}', [DashboardUserController::class, 'show'])
                     ->whereUuid('uuid')
                     ->name('users.show');
@@ -324,14 +406,122 @@ Route::middleware('setLocale')->group(function (): void {
 
             Route::middleware(PermissionMiddleware::using(Permission::ViewLocations))->group(function (): void {
                 Route::get('/locations', [DashboardLocationController::class, 'index'])->name('locations');
+
+                // The add location wizard; its draft lives in LocationWizardSession until created.
+                Route::middleware(PermissionMiddleware::using(Permission::CreateLocations))->group(function (): void {
+                    Route::get('/locations/create', [DashboardLocationWizardController::class, 'start'])->name('locations.create');
+                    Route::get('/locations/create/{step}', [DashboardLocationWizardController::class, 'show'])->name('locations.create.step');
+
+                    Route::middleware('throttle:30,1')->group(function (): void {
+                        Route::post('/locations/create/details', [DashboardLocationWizardController::class, 'details'])->name('locations.create.details');
+                        Route::post('/locations/create/address', [DashboardLocationWizardController::class, 'address'])->name('locations.create.address');
+                        Route::post('/locations/create/placement', [DashboardLocationWizardController::class, 'placement'])->name('locations.create.placement');
+                        Route::post('/locations/create/features', [DashboardLocationWizardController::class, 'features'])->name('locations.create.features');
+                        Route::post('/locations/create/hours', [DashboardLocationWizardController::class, 'hours'])->name('locations.create.hours');
+                        Route::post('/locations/create/users', [DashboardLocationWizardController::class, 'users'])->name('locations.create.users');
+                        Route::delete('/locations/create', [DashboardLocationWizardController::class, 'destroy'])->name('locations.create.cancel');
+                        Route::post('/locations', [DashboardLocationWizardController::class, 'store'])->name('locations.store');
+                    });
+                });
                 Route::get('/locations/{uuid}', [DashboardLocationController::class, 'show'])
                     ->whereUuid('uuid')
                     ->name('locations.show');
+
+                // One page per section of a location, sharing LocationLayout.
+                Route::prefix('/locations/{uuid}')->whereUuid('uuid')->group(function (): void {
+                    Route::get('/details', [DashboardLocationController::class, 'details'])->name('locations.details');
+                    Route::get('/users', [DashboardLocationController::class, 'users'])->name('locations.users');
+                    Route::get('/check-ins/hours', [DashboardLocationController::class, 'checkInHours'])->name('locations.checkInHours');
+                    Route::get('/check-ins/options', [DashboardLocationController::class, 'checkInOptions'])->name('locations.checkInOptions');
+                    Route::get('/appointments/hours', [DashboardLocationController::class, 'appointmentHours'])->name('locations.appointmentHours');
+                    Route::get('/appointments/options', [DashboardLocationController::class, 'appointmentOptions'])->name('locations.appointmentOptions');
+                    Route::get('/closures', [DashboardLocationController::class, 'closures'])->name('locations.closures');
+                    Route::get('/history', [DashboardLocationController::class, 'history'])->name('locations.history');
+
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::EditLocations)])
+                        ->patch('/details', [DashboardLocationDetailsController::class, 'update'])
+                        ->name('locations.details.update');
+
+                    // Taking a location, or one of its features, out of service for drivers and guests.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ManageLocationStatus)])
+                        ->patch('/status', [DashboardLocationStatusController::class, 'update'])
+                        ->name('locations.status.update');
+
+                    // A soft delete: past check-ins and appointments keep the location.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::DeleteLocations)])
+                        ->delete('', DashboardLocationDeleteController::class)
+                        ->name('locations.destroy');
+
+                    // An emergency stop on new check-ins; appointments carry on.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::PauseCheckIns)])->group(function (): void {
+                        Route::post('/check-ins/pause', [DashboardLocationCheckInPauseController::class, 'store'])->name('locations.checkInPause.store');
+                        Route::delete('/check-ins/pause', [DashboardLocationCheckInPauseController::class, 'destroy'])->name('locations.checkInPause.destroy');
+                    });
+
+                    // Stops new bookings on every day; booked appointments and check-ins carry on.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::PauseAppointments)])->group(function (): void {
+                        Route::post('/appointments/pause', [DashboardLocationAppointmentPauseController::class, 'store'])->name('locations.appointmentPause.store');
+                        Route::delete('/appointments/pause', [DashboardLocationAppointmentPauseController::class, 'destroy'])->name('locations.appointmentPause.destroy');
+                    });
+
+                    // The weekly hours drivers and guests see. Booked appointments are kept either way.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::EditLocationHours)])->group(function (): void {
+                        Route::put('/check-ins/hours', [DashboardLocationCheckInHoursController::class, 'update'])->name('locations.checkInHours.update');
+                        Route::put('/appointments/hours', [DashboardLocationAppointmentHoursController::class, 'update'])->name('locations.appointmentHours.update');
+
+                        // Dates that override those hours; past ones stay as history.
+                        Route::post('/closures', [DashboardLocationClosureController::class, 'store'])->name('locations.closures.store');
+                        Route::delete('/closures/{date}', [DashboardLocationClosureController::class, 'destroy'])
+                            ->where('date', '\d{4}-\d{2}-\d{2}')
+                            ->name('locations.closures.destroy');
+                    });
+
+                    // Which optional fields the check-in form shows, and who is emailed about each check-in.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::EditCheckInOptions)])
+                        ->patch('/check-ins/options', [DashboardLocationCheckInOptionsController::class, 'update'])
+                        ->name('locations.checkInOptions.update');
+
+                    // How far ahead and how close to closing drivers can book, and who is emailed about each booking.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::EditAppointmentOptions)])
+                        ->patch('/appointments/options', [DashboardLocationAppointmentOptionsController::class, 'update'])
+                        ->name('locations.appointmentOptions.update');
+
+                    // Attaching decides which locations a location-scoped user sees.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ManageLocationUsers)])->group(function (): void {
+                        Route::post('/users', [DashboardLocationUserController::class, 'store'])->name('locations.users.store');
+                        Route::delete('/users/{userUuid}', [DashboardLocationUserController::class, 'destroy'])
+                            ->whereUuid('userUuid')
+                            ->name('locations.users.destroy');
+                    });
+                });
+
+                // Outside the section group: a deleted location has no page to look up.
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::RestoreLocations)])
+                    ->post('/locations/{uuid}/restore', DashboardLocationRestoreController::class)
+                    ->whereUuid('uuid')
+                    ->name('locations.restore');
             });
 
-            Route::middleware(PermissionMiddleware::using(Permission::ViewRolesAndPermissions))
-                ->get('/roles', DashboardRolePermissionController::class)
-                ->name('roles');
+            Route::middleware(PermissionMiddleware::using(Permission::ViewRolesAndPermissions))->group(function (): void {
+                Route::get('/roles', [DashboardRolePermissionController::class, 'index'])->name('roles');
+
+                // Moves permissions between the editable roles; admin and driver stay fixed.
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::EditRolesAndPermissions)])
+                    ->patch('/roles', [DashboardRolePermissionController::class, 'update'])
+                    ->name('roles.update');
+            });
+
+            // Read from the Sentry API (see SentryService), cached briefly; admins only.
+            Route::middleware(['throttle:60,1', PermissionMiddleware::using(Permission::ViewErrors)])->group(function (): void {
+                Route::get('/errors', [DashboardErrorController::class, 'index'])->name('errors');
+                Route::get('/errors/{issueId}', [DashboardErrorController::class, 'show'])
+                    ->whereNumber('issueId')
+                    ->name('errors.show');
+            });
+
+            Route::middleware(['throttle:60,1', PermissionMiddleware::using(Permission::ViewDeployments)])
+                ->get('/deployments', DashboardDeploymentController::class)
+                ->name('deployments');
         });
     });
 

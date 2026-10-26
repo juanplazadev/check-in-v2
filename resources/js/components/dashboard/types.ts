@@ -64,8 +64,24 @@ export type RecordHistoryEvent =
     | 'archived'
     | 'restored'
     | 'check-in-deleted'
+    | 'appointment-deleted'
     | 'appointment-linked'
-    | 'appointment-unlinked';
+    | 'appointment-unlinked'
+    | 'pdf-emailed'
+    | 'location-user-attached'
+    | 'location-user-detached'
+    | 'check-ins-paused'
+    | 'check-ins-resumed'
+    | 'appointments-paused'
+    | 'appointments-resumed'
+    | 'location-deleted'
+    | 'location-restored'
+    | 'check-in-hours-edited'
+    | 'appointment-hours-edited'
+    | 'check-in-options-edited'
+    | 'appointment-options-edited'
+    | 'closure-added'
+    | 'closure-removed';
 
 /** An internal staff note on a check-in, newest first on the detail page. */
 export interface CheckInNote {
@@ -94,7 +110,7 @@ export interface RecordHistoryEntry {
     id: number;
     event: RecordHistoryEvent;
     description: string;
-    /** The fields a 'details-edited' entry changed; null for every other event. */
+    /** The fields a 'details-edited' entry, or the days an hours-edited entry, changed; null for every other event. */
     changes: RecordHistoryChange[] | null;
     actor: string | null;
     createdAt: string;
@@ -125,6 +141,22 @@ export interface CheckInDeletionImpact {
     hasShortLink: boolean;
     pendingClaims: number;
     appointmentReference: string | null;
+    driverHasAccount: boolean;
+    archived: boolean;
+}
+
+/**
+ * What permanently deleting an appointment removes, from App\Dashboard\AppointmentDeletionImpact.
+ * Only sent on a partial reload, when the delete dialog opens.
+ */
+export interface AppointmentDeletionImpact {
+    historyEntries: number;
+    notes: number;
+    purchaseOrders: number;
+    staffNotifications: number;
+    hasShortLink: boolean;
+    pendingClaims: number;
+    checkInReference: string | null;
     driverHasAccount: boolean;
     archived: boolean;
 }
@@ -196,6 +228,8 @@ export interface AppointmentRecord {
     driver: {
         name: string;
         cellphone: string;
+        /** The driver's account email; appointments store none of their own. */
+        email: string | null;
         hasAccount: boolean;
     };
     scheduledFor: string;
@@ -204,6 +238,8 @@ export interface AppointmentRecord {
     /** The check-in this booking turned into, once the driver arrived. */
     checkIn: { uuid: string; referenceNumber: string } | null;
     createdAt: string;
+    /** When staff archived it, or null while it is live. */
+    archivedAt: string | null;
     history: RecordHistoryEntry[];
 }
 
@@ -257,6 +293,16 @@ export interface DashboardLocationSummary {
     staffCount: number;
 }
 
+/** A soft-deleted location on the restore list. Mirrors LocationRecordResolver::deleted(). */
+export interface DashboardDeletedLocation {
+    uuid: string;
+    name: string;
+    abbreviation: string;
+    city: string;
+    state: string;
+    deletedAt: string | null;
+}
+
 export interface LocationStaffMember {
     uuid: string;
     name: string;
@@ -264,8 +310,89 @@ export interface LocationStaffMember {
     roles: StaffRole[];
 }
 
-/** Mirrors App\Dashboard\LocationRecordResolver::record(). */
-export interface DashboardLocation extends DashboardLocationSummary {
+/** Where a location sits, for its map. Mirrors LocationRecordResolver::map(). */
+export interface LocationMapPoint {
+    latitude: number | null;
+    longitude: number | null;
+    /** Miles from the dock a driver may check in. */
+    maxDistanceAllowed: number;
+}
+
+/** A date whose hours differ from the weekly schedule. Mirrors LocationRecordResolver::mergeClosures(). */
+export interface LocationClosure {
+    /** Y-m-d, in the location's timezone. */
+    date: string;
+    isClosed: boolean;
+    /** HH:MM; null when closed all day. */
+    openTime: string | null;
+    closeTime: string | null;
+    reason: string;
+    appliesTo: ('checkIns' | 'appointments')[];
+}
+
+/** A US federal holiday drawn on the closures calendar. Mirrors UsFederalHolidays::between(). */
+export interface CalendarHoliday {
+    /** Y-m-d. */
+    date: string;
+    name: string;
+}
+
+/** Mirrors LocationRecordResolver::closures(). */
+export interface LocationClosures {
+    /** Y-m-d, today in the location's timezone. */
+    today: string;
+    /** Soonest first. */
+    upcoming: LocationClosure[];
+    /** The past year's, latest first. */
+    past: LocationClosure[];
+    /** A year each way from today. */
+    holidays: CalendarHoliday[];
+    /** Booked appointments per upcoming Y-m-d; empty for those who may not add closures. */
+    bookedAppointments: Record<string, number>;
+}
+
+/** Today's status for check-ins or appointments. Mirrors LocationRecordResolver::today(). */
+export interface LocationToday {
+    isOpen: boolean;
+    openTime: string | null;
+    closeTime: string | null;
+    hasOverride: boolean;
+    reason: string | null;
+}
+
+/** Mirrors App\Enums\CheckInPauseDuration. */
+export type CheckInPauseDuration =
+    '30m' | '1h' | '2h' | 'rest-of-today' | 'until-resumed';
+
+/** Staff have stopped new check-ins. Until is HH:MM in the location's time, or null until resumed. */
+export interface LocationCheckInPause {
+    until: string | null;
+    reason: string | null;
+}
+
+/** Mirrors App\Enums\AppointmentPauseDuration. */
+export type AppointmentPauseDuration =
+    'rest-of-today' | '1d' | '3d' | '1w' | 'until-resumed';
+
+/**
+ * Staff have stopped new bookings. Until is an ISO datetime in the location's time, since a pause
+ * can run for days, or null until resumed.
+ */
+export interface LocationAppointmentPause {
+    until: string | null;
+    reason: string | null;
+}
+
+/** Mirrors LocationRecordResolver::overview(). */
+export interface LocationOverview {
+    checkIns: LocationToday & { pause: LocationCheckInPause | null };
+    appointments: LocationToday & { pause: LocationAppointmentPause | null };
+    upcomingClosures: LocationClosure[];
+    map: LocationMapPoint;
+}
+
+/** Mirrors LocationRecordResolver::details(). */
+export interface LocationDetails {
     email: string;
     address: {
         street1: string;
@@ -273,18 +400,103 @@ export interface DashboardLocation extends DashboardLocationSummary {
         city: string;
         state: string;
         zipCode: string;
+        zipCode4: string;
         country: string;
     };
-    /** Miles from the dock a driver may check in. */
+    map: LocationMapPoint;
+    createdAt: string;
+}
+
+/** Mirrors LocationRecordResolver::users(). Attached is one page of a Laravel paginator. */
+/** One page of a location's history, newest first. */
+export interface LocationHistory {
+    data: RecordHistoryEntry[];
+    current_page: number;
+    per_page: number;
+    total: number;
+}
+
+/** A record a user history entry touched. Unavailable ones (deleted, or out of the viewer's reach) are named but not linked. */
+export interface UserHistoryRecordRef {
+    type: 'checkIn' | 'appointment' | 'location' | 'user';
+    uuid: string;
+    label: string;
+    available: boolean;
+}
+
+/** Mirrors UserHistoryEntryResolver::entry(). */
+export interface UserHistoryEntry {
+    id: number;
+    event: string;
+    description: string;
+    records: UserHistoryRecordRef[];
+    details: string | null;
+    createdAt: string;
+}
+
+/** One page of a user's activity, newest first. */
+export interface UserHistory {
+    data: UserHistoryEntry[];
+    current_page: number;
+    per_page: number;
+    total: number;
+}
+
+export interface LocationUsers {
+    attached: {
+        data: LocationStaffMember[];
+        current_page: number;
+        per_page: number;
+        total: number;
+    };
+    /** Staff who see every location through view all locations; the pivot has no say over them. */
+    allLocations: LocationStaffMember[];
+}
+
+/** One weekday's hours, Monday first. dayOfWeek is Carbon's (0 = Sunday). Null times mean closed. */
+export interface LocationHoursDay {
+    dayOfWeek: number;
+    openTime: string | null;
+    closeTime: string | null;
+}
+
+/** Mirrors LocationRecordResolver::bookedAppointments(): an upcoming booking, in the location's time. */
+export interface LocationBookedAppointment {
+    uuid: string;
+    referenceNumber: string;
+    driversName: string;
+    /** Y-m-d. */
+    date: string;
+    /** HH:MM. */
+    time: string;
+    dayOfWeek: number;
+}
+
+/** Mirrors LocationRecordResolver::checkInOptions(). */
+export interface LocationCheckInOptions {
+    formFields: CheckInFormFields;
+    notificationEmails: string[];
     maxDistanceAllowed: number;
-    appointmentBooking: {
+}
+
+/** Mirrors LocationRecordResolver::appointmentOptions(). */
+export interface LocationAppointmentOptions {
+    booking: {
         maxDaysAhead: number;
         slotIntervalMinutes: number;
         minLeadTimeMinutes: number;
         bufferBeforeCloseMinutes: number;
     };
-    createdAt: string;
-    staff: LocationStaffMember[];
+    notificationEmails: string[];
+    /** What the booking rules may be set to, from config('app.appointment_booking'). */
+    limits: {
+        maxDaysAhead: number;
+        slotIntervalMinutes: number[];
+        maxLeadTimeMinutes: number;
+        maxBufferBeforeCloseMinutes: number;
+        /** Lead time and buffer move in steps of this many minutes. */
+        minuteStep: number;
+    };
 }
 
 /** A booking the link dialog suggests, from App\Dashboard\AppointmentLinkCandidates. */
@@ -296,4 +508,68 @@ export interface AppointmentLinkSuggestion {
     cellphoneLastFour: string;
     phoneMatch: boolean;
     nameMatch: boolean;
+}
+
+/** A step of the add location wizard. Mirrors App\Enums\LocationWizardStep. */
+export type LocationWizardStepValue =
+    | 'details'
+    | 'address'
+    | 'placement'
+    | 'features'
+    | 'hours'
+    | 'users'
+    | 'review';
+
+export interface LocationWizardStep {
+    value: LocationWizardStepValue;
+    label: string;
+    /** Whether the step's answers are saved in the draft. */
+    completed: boolean;
+}
+
+/** The add location wizard's saved answers, keyed by step. Mirrors LocationWizardSession::all(). */
+export interface LocationWizardDraft {
+    details?: {
+        name: string;
+        email: string;
+        phone: string;
+        phone_ext: string | null;
+    };
+    address?: {
+        street1: string;
+        street2: string | null;
+        city: string;
+        state: string;
+        zip_code: string;
+        zip_code_4: string;
+        country: string;
+        latitude: number;
+        longitude: number;
+        /** Looked up from the coordinates; null when the lookup had no answer. */
+        timezone: string | null;
+    };
+    placement?: {
+        timezone: string;
+        max_distance_allowed: number;
+    };
+    features?: {
+        is_checkins_enabled: boolean;
+        is_appointments_enabled: boolean;
+    };
+    hours?: {
+        /** Only the weeks of the features turned on. */
+        checkins?: LocationWizardHoursDay[];
+        appointments?: LocationWizardHoursDay[];
+    };
+    users?: {
+        users: string[];
+    };
+}
+
+/** One day of a week saved by the wizard's hours step, indexed by Carbon's day number (0 = Sunday). */
+export interface LocationWizardHoursDay {
+    is_open: boolean;
+    /** HH:MM; null when closed. */
+    open_time: string | null;
+    close_time: string | null;
 }

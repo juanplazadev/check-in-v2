@@ -59,6 +59,33 @@ return [
         'taglineSub' => 'Confirming your email keeps your check-in history tied to you, and lets us reach you about your appointments.',
     ],
 
+    'choosePassword' => [
+        'emailLabel' => 'Email',
+        'passwordLabel' => 'New password',
+        'passwordPlaceholder' => 'Enter a new password',
+        'passwordConfirmationLabel' => 'Confirm password',
+        'passwordConfirmationPlaceholder' => 'Re-enter your new password',
+        'tagline' => 'Fresh from our fields to your dock.',
+        'invitation' => [
+            'eyebrow' => 'Welcome aboard',
+            'title' => 'Choose your password',
+            'subtitle' => 'Your account is ready. Set a password to sign in.',
+            'button' => 'Set password and sign in',
+            'backToLogin' => 'Already set up? Sign in',
+            'taglineSub' => 'One password and you are on the dashboard.',
+            'invalid' => 'This invitation link is invalid or has expired. Ask your admin to send a new one.',
+        ],
+        'required' => [
+            'eyebrow' => 'One more step',
+            'title' => 'Choose a new password',
+            'subtitle' => 'You signed in with a temporary password. Replace it with one only you know.',
+            'button' => 'Save password',
+            'signOut' => 'Sign out',
+            'taglineSub' => 'Your own password keeps your account yours.',
+            'samePassword' => 'Choose a password different from your temporary one.',
+        ],
+    ],
+
     'resetPassword' => [
         'eyebrow' => 'Password reset',
         'title' => 'Set a new password',
@@ -536,6 +563,7 @@ return [
 
     'appointmentBooking' => [
         'closedForAppointmentsOnDate' => ':name is not available for appointments on :date. Please choose another day.',
+        'pausedWithReason' => ':name is not taking new appointments right now (:reason). Please try again later.',
         'closedForAppointmentsOnDateWithReason' => '::name is not available for appointments on :date (:reason). Please choose another day.',
         'outsideSpecialHours' => ':name is not open at :time on :date. Special hours that day are :open - :close. Please choose another date or time.',
         'outsideRegularHours' => ':name is not open at :time on :date. Business hours that day are :open - :close. Please choose another date or time.',
@@ -737,6 +765,20 @@ return [
         'expiry' => 'This link expires in :minutes minutes. If it does, you can request a new one from your account.',
         'fallbackLabel' => 'If the button above does not work, copy and paste this link into your browser:',
         'security' => 'If you did not create an account, no action is needed and you can safely ignore this email.',
+        'footer' => 'This is an automated message from :app. Please do not reply.',
+    ],
+
+    'userInvitationEmail' => [
+        'subject' => 'You have been invited to :app',
+        'preheader' => 'Set your password to start using the dashboard.',
+        'eyebrow' => 'Invitation',
+        'title' => 'Your account is ready',
+        'greeting' => 'Hi :name,',
+        'intro' => ':inviter created an account for you on :app. Click the button below to choose your password and sign in.',
+        'button' => 'Choose my password',
+        'expiry' => 'This link expires in :days days. If it does, ask your admin to send a new one.',
+        'fallbackLabel' => 'If the button above does not work, copy and paste this link into your browser:',
+        'security' => 'If you were not expecting this invitation, you can safely ignore this email.',
         'footer' => 'This is an automated message from :app. Please do not reply.',
     ],
 

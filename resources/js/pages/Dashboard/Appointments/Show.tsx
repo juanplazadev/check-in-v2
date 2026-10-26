@@ -1,25 +1,33 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head } from '@inertiajs/react';
+import { useState } from 'react';
 
+import AppointmentNoteController from '@/actions/App/Http/Controllers/Dashboard/AppointmentNoteController';
+import AppointmentBookingCard from '@/components/dashboard/appointment/AppointmentBookingCard';
+import AppointmentDriverCard from '@/components/dashboard/appointment/AppointmentDriverCard';
+import AppointmentHero from '@/components/dashboard/appointment/AppointmentHero';
+import AppointmentSideRail from '@/components/dashboard/appointment/AppointmentSideRail';
+import AttachCheckInDialog from '@/components/dashboard/appointment/AttachCheckInDialog';
 import BackLink from '@/components/dashboard/BackLink';
-import { DetailCard, DetailRow } from '@/components/dashboard/DetailCard';
-import HistoryTimeline from '@/components/dashboard/HistoryTimeline';
-import PageHeader from '@/components/dashboard/PageHeader';
-import type { AppointmentRecord } from '@/components/dashboard/types';
-import StatusBadge from '@/components/StatusBadge';
+import NotesCard from '@/components/dashboard/NotesCard';
+import type {
+    AppointmentRecord,
+    CheckInNote,
+} from '@/components/dashboard/types';
 import DashboardLayout from '@/layouts/DashboardLayout';
-import {
-    formatDateTime,
-    formatLabel,
-    formatPhone,
-} from '@/lib/dashboard/format';
 import dashboardRoutes from '@/routes/dashboard';
 
 export default function AppointmentShow({
     appointment,
+    notes,
 }: {
     appointment: AppointmentRecord;
+    /** Internal staff notes, newest first. */
+    notes: CheckInNote[];
 }) {
     const backHref = dashboardRoutes.appointments.url();
+    // Owned here so both the hero's button and the side rail's link open the same dialog.
+    const [attachOpen, setAttachOpen] = useState(false);
+    const openAttach = () => setAttachOpen(true);
 
     return (
         <>
@@ -27,79 +35,34 @@ export default function AppointmentShow({
 
             <BackLink href={backHref} label="Appointments" />
 
-            <PageHeader
-                title={appointment.referenceNumber}
-                subtitle={`${formatDateTime(appointment.scheduledFor)} at ${appointment.location.name}`}
-                actions={
-                    <StatusBadge
-                        status={appointment.status}
-                        label={formatLabel(appointment.status)}
-                    />
-                }
+            <AppointmentHero
+                appointment={appointment}
+                noteCount={notes.length}
+                onAttach={openAttach}
             />
 
             <div className="grid grid-cols-12 gap-6">
-                <div className="col-span-full grid grid-cols-1 gap-6 md:grid-cols-2 xl:col-span-8">
-                    <DetailCard title="Driver">
-                        <DetailRow label="Name">
-                            {appointment.driver.name}
-                        </DetailRow>
-                        <DetailRow label="Cellphone">
-                            {formatPhone(appointment.driver.cellphone)}
-                        </DetailRow>
-                        <DetailRow label="Account">
-                            {appointment.driver.hasAccount
-                                ? 'Registered'
-                                : 'Guest'}
-                        </DetailRow>
-                    </DetailCard>
-
-                    <DetailCard title="Booking">
-                        <DetailRow label="Scheduled for">
-                            {formatDateTime(appointment.scheduledFor)}
-                        </DetailRow>
-                        <DetailRow label="Booked">
-                            {formatDateTime(appointment.createdAt)}
-                        </DetailRow>
-                        <DetailRow label="Purchase orders">
-                            <span className="flex flex-wrap gap-1 sm:justify-end">
-                                {appointment.purchaseOrders.map(
-                                    (purchaseOrder) => (
-                                        <span
-                                            key={purchaseOrder}
-                                            className="rounded-sm bg-gray-100 px-1.5 py-0.5 font-mono text-xs dark:bg-gray-700"
-                                        >
-                                            {purchaseOrder}
-                                        </span>
-                                    ),
-                                )}
-                            </span>
-                        </DetailRow>
-                        {appointment.cancelledReason && (
-                            <DetailRow label="Cancellation reason">
-                                {appointment.cancelledReason}
-                            </DetailRow>
-                        )}
-                        {appointment.checkIn && (
-                            <DetailRow label="Check-in">
-                                <Link
-                                    href={dashboardRoutes.checkIns.show.url(
-                                        appointment.checkIn.uuid,
-                                    )}
-                                    className="text-brand-green hover:text-green-700"
-                                >
-                                    {appointment.checkIn.referenceNumber}
-                                </Link>
-                            </DetailRow>
-                        )}
-                    </DetailCard>
+                <div className="col-span-full space-y-6 xl:col-span-8">
+                    <AppointmentDriverCard appointment={appointment} />
+                    <AppointmentBookingCard appointment={appointment} />
+                    <NotesCard
+                        key={appointment.uuid}
+                        action={AppointmentNoteController(appointment.uuid)}
+                        notes={notes}
+                    />
                 </div>
 
-                <HistoryTimeline
-                    entries={appointment.history}
-                    className="col-span-full self-start xl:col-span-4"
+                <AppointmentSideRail
+                    appointment={appointment}
+                    onAttach={openAttach}
                 />
             </div>
+
+            <AttachCheckInDialog
+                open={attachOpen}
+                onOpenChange={setAttachOpen}
+                appointment={appointment}
+            />
         </>
     );
 }

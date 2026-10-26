@@ -13,9 +13,11 @@ use Database\Factories\AppointmentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\RouteKey;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -32,6 +34,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read string $locale
  * @property-read AppointmentStatus $status
  * @property-read CarbonImmutable|null $cancelled_at
+ * @property-read int|null $cancelled_by
  * @property-read string|null $cancelled_reason
  * @property-read CarbonImmutable|null $claimed_at
  * @property-read string|null $claimed_via
@@ -42,8 +45,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read Location $location
  * @property-read User|null $user
  * @property-read CheckIn|null $checkIn
+ * @property-read Collection<int, AppointmentNote> $notes
  */
-#[Fillable(['uuid', 'reference_number', 'location_id', 'user_id', 'scheduled_for', 'drivers_name', 'drivers_cellphone', 'locale', 'status', 'cancelled_at', 'cancelled_reason', 'claimed_at', 'claimed_via', 'reminder_sent_at'])]
+#[Fillable(['uuid', 'reference_number', 'location_id', 'user_id', 'scheduled_for', 'drivers_name', 'drivers_cellphone', 'locale', 'status', 'cancelled_at', 'cancelled_by', 'cancelled_reason', 'claimed_at', 'claimed_via', 'reminder_sent_at'])]
 #[Hidden(['id'])]
 #[RouteKey('uuid')]
 final class Appointment extends Model
@@ -57,11 +61,14 @@ final class Appointment extends Model
     use VisibleOnDashboard;
 
     /**
+     * Includes a soft-deleted location, so past records keep showing where
+     * they happened.
+     *
      * @return BelongsTo<Location, $this>
      */
     public function location(): BelongsTo
     {
-        return $this->belongsTo(Location::class);
+        return $this->belongsTo(Location::class)->withTrashed();
     }
 
     /**
@@ -99,6 +106,17 @@ final class Appointment extends Model
     public function history(): MorphMany
     {
         return $this->morphMany(RecordHistory::class, 'recordable')->oldest();
+    }
+
+    /**
+     * Internal staff notes, newest first at the relation so the notes card is
+     * one eager load with no sorting at the call site.
+     *
+     * @return HasMany<AppointmentNote, $this>
+     */
+    public function notes(): HasMany
+    {
+        return $this->hasMany(AppointmentNote::class)->latest()->latest('id');
     }
 
     protected function casts(): array

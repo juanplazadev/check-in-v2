@@ -4,16 +4,20 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Dashboard;
 
+use App\Dashboard\AppointmentDeletionImpact;
 use App\Dashboard\AppointmentRecordResolver;
+use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\AppointmentIndexRequest;
 use App\Models\Appointment;
+use App\Models\AppointmentNote;
 use App\Models\User;
 use App\Queries\DashboardAppointmentColumns;
 use App\Queries\DashboardAppointments;
 use App\Queries\DashboardLocations;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Inertia\Inertia;
 use Inertia\Response;
 
 final class AppointmentController extends Controller
@@ -61,17 +65,26 @@ final class AppointmentController extends Controller
      * so its existence is not confirmed. Archived appointments still open,
      * since the archived tab links to them.
      */
-    public function show(#[CurrentUser] User $user, string $uuid, AppointmentRecordResolver $resolver): Response
+    public function show(#[CurrentUser] User $user, string $uuid, AppointmentRecordResolver $resolver, AppointmentDeletionImpact $impact): Response
     {
         $appointment = Appointment::query()
             ->withTrashed()
             ->visibleTo($user)
-            ->with([...AppointmentRecordResolver::RELATIONS, 'history.user'])
+            ->with([...AppointmentRecordResolver::RELATIONS, 'history.user', 'notes.user'])
             ->where('uuid', $uuid)
             ->firstOrFail();
 
         return inertia('Dashboard/Appointments/Show', [
             'appointment' => $resolver->record($appointment),
+            'notes' => $appointment->notes->map(fn (AppointmentNote $note): array => [
+                'id' => $note->id,
+                'author' => $note->user?->name,
+                'body' => $note->body,
+                'createdAt' => $note->created_at->toIso8601String(),
+            ])->all(),
+            'deletionImpact' => $user->can(Permission::DeleteAppointments)
+                ? Inertia::optional(fn (): array => $impact->summary($appointment))
+                : null,
         ]);
     }
 }

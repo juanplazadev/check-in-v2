@@ -18,7 +18,7 @@ final readonly class AppointmentRecordResolver
      *
      * @var list<string>
      */
-    public const array RELATIONS = ['location', 'purchaseOrders', 'checkIn'];
+    public const array RELATIONS = ['location', 'purchaseOrders', 'checkIn', 'user'];
 
     public function __construct(private RecordHistoryEntryResolver $history) {}
 
@@ -44,6 +44,7 @@ final readonly class AppointmentRecordResolver
             'driver' => [
                 'name' => $appointment->drivers_name,
                 'cellphone' => $appointment->drivers_cellphone,
+                'email' => $appointment->user?->email,
                 'hasAccount' => $appointment->user_id !== null,
             ],
             'scheduledFor' => $appointment->scheduled_for->toIso8601String(),
@@ -54,6 +55,7 @@ final readonly class AppointmentRecordResolver
                 'referenceNumber' => $appointment->checkIn->reference_number,
             ],
             'createdAt' => $appointment->created_at->toIso8601String(),
+            'archivedAt' => $appointment->deleted_at?->toIso8601String(),
             'history' => $appointment->relationLoaded('history')
                 ? $appointment->history->map(fn (RecordHistory $entry): array => $this->history->entry($entry, 'Appointment booked'))->all()
                 : [],

@@ -15,6 +15,17 @@ final readonly class AppointmentAvailabilityResolver
 
     public function isAvailableForAppointment(Location $location, CarbonInterface $appointmentDateTime): LocationAvailabilityDTO
     {
+        // A pause stops every new booking, whatever day it is for.
+        if ($location->isAppointmentPaused(now())) {
+            return new LocationAvailabilityDTO(
+                allowed: false,
+                reason: __('messages.appointmentBooking.pausedWithReason', [
+                    'name' => $location->name,
+                    'reason' => $location->appointments_paused_reason,
+                ]),
+            );
+        }
+
         $schedule = $this->resolveSchedule($location, $appointmentDateTime);
 
         return new LocationAvailabilityDTO(

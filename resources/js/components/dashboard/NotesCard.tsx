@@ -2,21 +2,23 @@ import { useForm } from '@inertiajs/react';
 import { StickyNote } from 'lucide-react';
 import type { FormEvent } from 'react';
 
-import CheckInNoteController from '@/actions/App/Http/Controllers/Dashboard/CheckInNoteController';
 import Card from '@/components/dashboard/Card';
 import type { CheckInNote } from '@/components/dashboard/types';
 import { Textarea } from '@/components/ui/textarea';
 import { formatTimeAgo, initialsOf } from '@/lib/dashboard/format';
+import type { RouteDefinition } from '@/wayfinder';
 
 /**
- * Internal staff notes on a check-in, newest first. Notes are add-only; each one also lands on
- * the check-in's history timeline, which the redirect back refreshes along with this list.
+ * Internal staff notes on a record (a check-in or an appointment), newest first. Notes are
+ * add-only; each one also lands on the record's history timeline, which the redirect back
+ * refreshes along with this list.
  */
 export default function NotesCard({
-    checkInUuid,
+    action,
     notes,
 }: {
-    checkInUuid: string;
+    /** Where a new note is posted. */
+    action: RouteDefinition<'post'>;
     notes: CheckInNote[];
 }) {
     const form = useForm({ body: '' });
@@ -28,7 +30,7 @@ export default function NotesCard({
             return;
         }
 
-        form.submit(CheckInNoteController(checkInUuid), {
+        form.submit(action, {
             preserveScroll: true,
             onSuccess: () => form.reset(),
         });

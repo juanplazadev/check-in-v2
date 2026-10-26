@@ -35,6 +35,7 @@ use Spatie\Permission\Traits\HasRoles;
  * @property-read string $email
  * @property-read CarbonImmutable|null $email_verified_at
  * @property-read string $password
+ * @property-read CarbonImmutable|null $password_change_required_at
  * @property-read string|null $cellphone
  * @property-read string|null $drivers_license_number
  * @property-read string|null $drivers_license_state
@@ -91,6 +92,7 @@ final class User extends Authenticatable implements MustVerifyEmail
         // model that never round-tripped through the database would otherwise
         // throw on the missing attribute rather than answer "not verified".
         'email_verified_at' => null,
+        'password_change_required_at' => null,
         'cellphone' => null,
         'drivers_license_number' => null,
         'drivers_license_state' => null,
@@ -227,6 +229,15 @@ final class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Whether an admin created the account with a temporary password the user
+     * has not replaced yet.
+     */
+    public function mustChangePassword(): bool
+    {
+        return $this->password_change_required_at !== null;
+    }
+
+    /**
      * Send the (queued) email verification notification in the driver's
      * current locale, captured now so the worker renders the right language.
      */
@@ -256,6 +267,7 @@ final class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'password_change_required_at' => 'datetime',
             'drivers_license_number' => Encrypted::class,
             'drivers_license_expiration_date' => 'date:Y-m-d',
             'theme' => Theme::class,

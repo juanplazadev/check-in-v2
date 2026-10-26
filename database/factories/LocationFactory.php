@@ -6,6 +6,7 @@ namespace Database\Factories;
 
 use App\Models\Address;
 use App\Models\Location;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 
@@ -65,6 +66,30 @@ final class LocationFactory extends Factory
         return $this->state(fn (array $attributes): array => [
             'is_checkins_enabled' => false,
             'is_appointments_enabled' => true,
+        ]);
+    }
+
+    /**
+     * New check-ins paused by staff, until the given moment or until resumed.
+     */
+    public function checkinsPaused(string $reason = 'Yard is full', ?CarbonInterface $until = null): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'checkins_paused_at' => now(),
+            'checkins_paused_until' => $until,
+            'checkins_paused_reason' => $reason,
+        ]);
+    }
+
+    /**
+     * New bookings paused by staff, until the given moment or until resumed.
+     */
+    public function appointmentsPaused(string $reason = 'Calendar is full', ?CarbonInterface $until = null): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'appointments_paused_at' => now(),
+            'appointments_paused_until' => $until,
+            'appointments_paused_reason' => $reason,
         ]);
     }
 

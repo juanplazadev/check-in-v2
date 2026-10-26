@@ -20,6 +20,7 @@ final readonly class AppointmentScheduleResolver
     public function __construct(
         private AppointmentLocations $locationSchedules,
         private LocationScheduleParser $locationScheduleParser,
+        private AppointmentPause $pause,
         private AddressManager $address,
     ) {}
 
@@ -37,7 +38,7 @@ final readonly class AppointmentScheduleResolver
     public function buildDTO(Location $location, CarbonInterface $now): AppointmentLocationDTO
     {
         $localNow = $now->setTimezone($location->timezone);
-        $schedule = $this->resolveSchedule($location, $localNow);
+        $schedule = $this->pause->apply($location, $this->resolveSchedule($location, $localNow), $localNow);
         $interval = $location->appointmentSlotIntervalMinutes();
 
         return new AppointmentLocationDTO(
@@ -127,6 +128,11 @@ final readonly class AppointmentScheduleResolver
         int $leadTimeMinutes,
         int $bufferBeforeCloseMinutes,
     ): array {
+        // A pause stops every new booking, on any day, until it ends.
+        if ($location->isAppointmentPaused($localNow)) {
+            return [];
+        }
+
         $windows = [];
 
         for ($offset = 0; $offset <= $maxDaysAhead; $offset++) {

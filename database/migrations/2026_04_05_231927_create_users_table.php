@@ -21,6 +21,9 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            // Set when an admin creates the account with a temporary password;
+            // EnsurePasswordIsChanged holds the user on the change page until cleared.
+            $table->timestamp('password_change_required_at')->nullable();
             $table->string('cellphone', 12)->nullable();
             $table->text('drivers_license_number')->nullable();
             $table->string('drivers_license_state')->nullable();

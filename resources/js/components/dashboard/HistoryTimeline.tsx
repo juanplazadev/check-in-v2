@@ -17,6 +17,20 @@ const DOT_CLASSES: Partial<Record<RecordHistoryEntry['event'], string>> = {
     restored: 'bg-emerald-500',
     'appointment-linked': 'bg-blue-500',
     'appointment-unlinked': 'bg-gray-500',
+    'location-user-attached': 'bg-blue-500',
+    'location-user-detached': 'bg-gray-500',
+    'check-ins-paused': 'bg-amber-500',
+    'check-ins-resumed': 'bg-emerald-500',
+    'appointments-paused': 'bg-amber-500',
+    'appointments-resumed': 'bg-emerald-500',
+    'location-deleted': 'bg-red-500',
+    'location-restored': 'bg-emerald-500',
+    'check-in-hours-edited': 'bg-violet-500',
+    'appointment-hours-edited': 'bg-violet-500',
+    'check-in-options-edited': 'bg-violet-500',
+    'appointment-options-edited': 'bg-violet-500',
+    'closure-added': 'bg-rose-500',
+    'closure-removed': 'bg-gray-500',
 };
 
 function ChangeValue({ value }: { value: string | null }) {
@@ -60,7 +74,56 @@ function ChangeList({ changes }: { changes: RecordHistoryChange[] }) {
     );
 }
 
-/** A record's RecordHistory, oldest first, as a vertical timeline. */
+/** History entries, in the order given, as a vertical timeline without a card around it. */
+export function HistoryEntries({
+    entries,
+    className = '',
+}: {
+    entries: RecordHistoryEntry[];
+    className?: string;
+}) {
+    if (entries.length === 0) {
+        return (
+            <div
+                className={`flex flex-col items-center gap-2 px-5 py-8 text-center ${className}`}
+            >
+                <History className="size-6 text-gray-300 dark:text-gray-600" />
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                    No history yet.
+                </p>
+            </div>
+        );
+    }
+
+    return (
+        <ol className={className}>
+            {entries.map((entry) => (
+                <li key={entry.id} className="relative pb-5 pl-6 last:pb-0">
+                    <span
+                        className="absolute top-3 bottom-0 left-[3px] w-px bg-gray-200 dark:bg-gray-700 [li:last-child>&]:hidden"
+                        aria-hidden="true"
+                    />
+                    <span
+                        className={`absolute top-1.5 left-0 size-2 rounded-full ${DOT_CLASSES[entry.event] ?? 'bg-brand-green'}`}
+                        aria-hidden="true"
+                    />
+                    <div className="text-sm font-medium text-gray-800 dark:text-gray-100">
+                        {entry.description}
+                    </div>
+                    {entry.changes !== null && entry.changes.length > 0 && (
+                        <ChangeList changes={entry.changes} />
+                    )}
+                    <div className="text-xs text-gray-400 dark:text-gray-500">
+                        {formatDateTime(entry.createdAt)}
+                        {entry.actor && ` · ${entry.actor}`}
+                    </div>
+                </li>
+            ))}
+        </ol>
+    );
+}
+
+/** A record's RecordHistory, oldest first, as a vertical timeline in a card. */
 export default function HistoryTimeline({
     entries,
     className = '',
@@ -70,43 +133,10 @@ export default function HistoryTimeline({
 }) {
     return (
         <Card title="History" className={className}>
-            {entries.length === 0 ? (
-                <div className="flex flex-col items-center gap-2 px-5 py-8 text-center">
-                    <History className="size-6 text-gray-300 dark:text-gray-600" />
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                        No history yet.
-                    </p>
-                </div>
-            ) : (
-                <ol className="px-5 py-4">
-                    {entries.map((entry) => (
-                        <li
-                            key={entry.id}
-                            className="relative pb-5 pl-6 last:pb-0"
-                        >
-                            <span
-                                className="absolute top-3 bottom-0 left-[3px] w-px bg-gray-200 dark:bg-gray-700 [li:last-child>&]:hidden"
-                                aria-hidden="true"
-                            />
-                            <span
-                                className={`absolute top-1.5 left-0 size-2 rounded-full ${DOT_CLASSES[entry.event] ?? 'bg-brand-green'}`}
-                                aria-hidden="true"
-                            />
-                            <div className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                                {entry.description}
-                            </div>
-                            {entry.changes !== null &&
-                                entry.changes.length > 0 && (
-                                    <ChangeList changes={entry.changes} />
-                                )}
-                            <div className="text-xs text-gray-400 dark:text-gray-500">
-                                {formatDateTime(entry.createdAt)}
-                                {entry.actor && ` · ${entry.actor}`}
-                            </div>
-                        </li>
-                    ))}
-                </ol>
-            )}
+            <HistoryEntries
+                entries={entries}
+                className={entries.length === 0 ? '' : 'px-5 py-4'}
+            />
         </Card>
     );
 }

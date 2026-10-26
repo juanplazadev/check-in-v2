@@ -40,6 +40,16 @@ ENV APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
 # cannot change them afterwards. Must be present before `npm run build`.
 ARG VITE_APP_NAME="Martori Farms"
 ENV VITE_APP_NAME=${VITE_APP_NAME}
+# Echo's browser connection (configureEcho reads these). The host is the public
+# app host: Octane's Caddy proxies /app/* to the reverb container.
+ARG VITE_REVERB_APP_KEY=""
+ARG VITE_REVERB_HOST=""
+ARG VITE_REVERB_PORT=443
+ARG VITE_REVERB_SCHEME=https
+ENV VITE_REVERB_APP_KEY=${VITE_REVERB_APP_KEY} \
+    VITE_REVERB_HOST=${VITE_REVERB_HOST} \
+    VITE_REVERB_PORT=${VITE_REVERB_PORT} \
+    VITE_REVERB_SCHEME=${VITE_REVERB_SCHEME}
 # This stage only compiles assets. puppeteer is a runtime dependency, so its
 # postinstall would otherwise pull ~650MB of Chrome that never leaves the stage
 # -- and fail outright, since the base image has no unzip.

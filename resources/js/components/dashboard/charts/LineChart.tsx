@@ -31,18 +31,29 @@ Chart.register(
 
 export interface LineSeries {
     label: string;
-    /** `[YYYY-MM-DD, value]` pairs, oldest first. */
+    /** `[YYYY-MM-DD, value]` pairs (or local ISO date-times), oldest first. */
     points: [string, number][];
     color?: string;
     /** Fill the area under the line with a fading gradient. */
     fill?: boolean;
 }
 
+export type TimeUnit = 'hour' | 'day' | 'month';
+
+/** Axis and tooltip formats (date-fns) for each bucket width. */
+const TIME_FORMATS: Record<TimeUnit, { axis: string; tooltip: string }> = {
+    hour: { axis: 'h a', tooltip: 'MMM d, h a' },
+    day: { axis: 'MMM d', tooltip: 'MMM d' },
+    month: { axis: 'MMM yy', tooltip: 'MMMM yyyy' },
+};
+
 interface LineChartProps {
     series: LineSeries[];
     height: number;
     /** Sparkline mode: no axes or grid, as in Mosaic's DashboardCard01-03. */
     compact?: boolean;
+    /** The width of one point on the time axis. */
+    unit?: TimeUnit;
 }
 
 /** Time-series line chart, ported from Mosaic's LineChart01 (compact) and LineChart02 (axes). */
@@ -50,6 +61,7 @@ export default function LineChart({
     series,
     height,
     compact = false,
+    unit = 'day',
 }: LineChartProps) {
     const canvas = useRef<HTMLCanvasElement>(null);
     const chart = useRef<Chart<'line', { x: string; y: number }[]> | null>(
@@ -109,9 +121,9 @@ export default function LineChart({
                     x: {
                         type: 'time',
                         time: {
-                            unit: 'day',
-                            tooltipFormat: 'MMM d',
-                            displayFormats: { day: 'MMM d' },
+                            unit,
+                            tooltipFormat: TIME_FORMATS[unit].tooltip,
+                            displayFormats: { [unit]: TIME_FORMATS[unit].axis },
                         },
                         display: !compact,
                         border: { display: false },
@@ -148,7 +160,7 @@ export default function LineChart({
         };
         // The theme is applied in place below rather than by rebuilding the chart.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [series, compact]);
+    }, [series, compact, unit]);
 
     useEffect(() => {
         if (chart.current) {

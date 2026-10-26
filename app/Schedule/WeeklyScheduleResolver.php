@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Schedule;
 
 use App\Address\AddressManager;
+use App\Appointment\AppointmentPause;
 use App\Appointment\AppointmentScheduleResolver;
+use App\CheckIn\CheckInPause;
 use App\CheckIn\CheckInScheduleResolver;
 use App\DTOs\LocationScheduleDTO;
 use App\DTOs\LocationWeekDTO;
@@ -24,6 +26,8 @@ final readonly class WeeklyScheduleResolver
     public function __construct(
         private ScheduleLocations $locations,
         private CheckInScheduleResolver $checkInResolver,
+        private CheckInPause $checkInPause,
+        private AppointmentPause $appointmentPause,
         private AppointmentScheduleResolver $appointmentResolver,
         private AddressManager $address,
     ) {}
@@ -75,8 +79,8 @@ final readonly class WeeklyScheduleResolver
             timezoneAbbr: $localNow->format('T'),
             checkInEnabled: $location->is_checkins_enabled,
             appointmentEnabled: $location->is_appointments_enabled,
-            isOpenNowCheckIn: $location->is_checkins_enabled && $this->checkInResolver->resolveSchedule($location, $now)->isOpen,
-            isOpenNowAppointment: $location->is_appointments_enabled && $this->appointmentResolver->resolveSchedule($location, $now)->isOpen,
+            isOpenNowCheckIn: $location->is_checkins_enabled && $this->checkInPause->apply($location, $this->checkInResolver->resolveSchedule($location, $now), $now)->isOpen,
+            isOpenNowAppointment: $location->is_appointments_enabled && $this->appointmentPause->apply($location, $this->appointmentResolver->resolveSchedule($location, $now), $now)->isOpen,
             checkInWeek: $checkInWeek,
             appointmentWeek: $appointmentWeek,
         );

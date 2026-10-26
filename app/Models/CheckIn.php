@@ -107,11 +107,14 @@ final class CheckIn extends Model
     use VisibleOnDashboard;
 
     /**
+     * Includes a soft-deleted location, so past records keep showing where
+     * they happened.
+     *
      * @return BelongsTo<Location, $this>
      */
     public function location(): BelongsTo
     {
-        return $this->belongsTo(Location::class);
+        return $this->belongsTo(Location::class)->withTrashed();
     }
 
     /**
