@@ -58,7 +58,7 @@ the site's local time rather than the server's. This is the rebuild.
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 
 ```bash
-# Install Composer (macOS)
+# Install Composer (macOS). Windows: you'll figure it out
 brew install composer
 ```
 
