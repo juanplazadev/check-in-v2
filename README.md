@@ -14,6 +14,7 @@ the site's local time rather than the server's. This is the rebuild.
 
 - **Appointments** - per-location weekly schedules with per-date overrides, resolved in the location's own timezone
 - **Check-in** - drivers check in against a booked slot, distance-gated so it happens on site rather than from the highway
+- **Live dashboard** - staff watch check-ins and the arrival queue update in real time, broadcast over Laravel Reverb on per-user channels scoped to the locations they can see
 - **Notifications** - confirmations and reminders for guests and users, queued through Horizon and delivered over a custom notification channel with a swappable SMS sender
 - **Access control** - per-location employee scoping via `spatie/laravel-permission` teams, so a site manager sees their site
 - **Accounts** - passkeys (Fortify WebAuthn), email verification, password confirmation on sensitive actions, and per-user locale, theme, and default location
@@ -33,6 +34,7 @@ the site's local time rather than the server's. This is the rebuild.
 | Frontend | React · TypeScript · Inertia.js · Tailwind CSS |
 | Cache / Queue | Redis                                         |
 | Queue Dashboard | Laravel Horizon                             |
+| Realtime | Laravel Reverb (WebSockets) · Laravel Echo     |
 | Mail | Mailpit (local) · Mailgun HTTP API (staging)   |
 
 ## Laravel Packages & Tooling
@@ -45,6 +47,7 @@ the site's local time rather than the server's. This is the rebuild.
 | Larastan | Static analysis (PHPStan for Laravel)                                                                                |
 | Rector | Automated code refactoring (Driftingly/Laravel Rector)                                                               |
 | Horizon | Redis queue monitoring & worker management dashboard                                                                 |
+| Reverb | First-party WebSocket server for broadcasting - powers the live staff dashboard (consumed in React via Laravel Echo) |
 | Fortify | Headless authentication backend - login, registration, email verification & password reset (custom Inertia/React UI) |
 | Spatie Permission | Roles & permissions with team support - per-location employee scoping (spatie/laravel-permission)                    |
 | Laravel Phone | Phone number validation (Propaganistas wrapper around Google's libphonenumber)                                       |
@@ -74,17 +77,22 @@ cp .env.example .env
 # 4. Generate application key
 ./vendor/bin/sail artisan key:generate
 
-# 5. Start Docker containers
+# 5. Set the Reverb app credentials in .env (any values work locally)
+#    REVERB_APP_ID=123456
+#    REVERB_APP_KEY=$(openssl rand -hex 10)
+#    REVERB_APP_SECRET=$(openssl rand -hex 10)
+
+# 6. Start Docker containers
 ./vendor/bin/sail up -d
 
-# 6. Install and build frontend dependencies
+# 7. Install and build frontend dependencies
 ./vendor/bin/sail npm install
 ./vendor/bin/sail npm run dev   # or: npm run build
 
-# 7. Run database migrations
+# 8. Run database migrations
 ./vendor/bin/sail artisan migrate
 
-# 8. Run database seeders
+# 9. Run database seeders
 ./vendor/bin/sail artisan db:seed
 ```
 
@@ -120,6 +128,33 @@ Worker supervisors, queues, and balancing strategies are configured in `config/h
 #### Horizon on staging
 
 Not reachable from the public internet: `HORIZON_DOMAIN` in the server-side `.env` scopes Horizon's routes to the tailnet hostname, so they are never registered on the public FQDN. The `handle /horizon*` block in `deploy/Caddyfile.staging` is optional defense in depth.
+
+### Broadcasting (Reverb)
+
+The live staff dashboard receives updates over WebSockets from [Laravel Reverb](https://laravel.com/docs/reverb). Reverb starts with the rest of the stack as the `reverb` Sail service (`php artisan reverb:start` on port 8080). It publishes no host port.
+
+```bash
+./vendor/bin/sail logs -f reverb   # follow the Reverb server log
+```
+
+Laravel and the browser reach Reverb by different paths, so they use different settings:
+
+| Path | Settings |
+|---|---|
+| Server (Horizon publishes queued broadcasts) | `REVERB_HOST=reverb`, `REVERB_PORT=8080`, `REVERB_SCHEME=http` |
+| Browser (Echo) | `VITE_REVERB_HOST=martori.localhost`, `VITE_REVERB_PORT=443`, `VITE_REVERB_SCHEME=https` |
+
+The app is served over https, so the browser always opens a `wss://` socket on the same host. Octane's Caddy proxies `/app/*` to `REVERB_PROXY_UPSTREAM=reverb:8080` (wired through `octane.caddy.env` in `config/octane.php`), so Reverb never handles TLS itself.
+
+- Broadcasts are queued, so Horizon must be running for any update to arrive.
+- After changing these variables, run `./vendor/bin/sail restart checkin` (Caddy reads its env only when Octane starts), then restart Vite to pick up the `VITE_*` values.
+- `REVERB_HOST=localhost` makes publishes from the horizon container disappear without an error. Keep it set to `reverb`.
+
+#### Reverb on staging
+
+Runs as the `reverb` service in `compose.staging.yaml`, with no public port. The browser path is VPS Caddy -> `checkin:80` -> Octane Caddy `/app/*` -> `reverb:8080`, so the server-side `.env` needs `REVERB_HOST=reverb` and `REVERB_PROXY_UPSTREAM=reverb:8080`.
+
+`.env` is not copied into the image, so the `VITE_REVERB_*` values are baked into the JS bundle at build time from GitHub repository variables (`VITE_REVERB_APP_KEY`, `VITE_REVERB_HOST`, and optionally `VITE_REVERB_PORT` / `VITE_REVERB_SCHEME`) in `.github/workflows/deploy.yml`. `VITE_REVERB_APP_KEY` must equal `REVERB_APP_KEY` on the server. If a variable is missing, the build only warns, and the bundle never connects.
 
 ### Code Style (Pint)
 
