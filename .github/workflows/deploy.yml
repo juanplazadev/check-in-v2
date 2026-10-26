@@ -50,7 +50,22 @@ jobs:
           fi
           df -h / || true
       - name: Build image
-        run: docker build --target prod --build-arg VITE_APP_NAME="${{ vars.VITE_APP_NAME || 'Martori Farms' }}" --build-arg GIT_COMMIT="${{ github.sha }}" -t ghcr.io/${{ github.repository }}:${{ github.sha }} -t ghcr.io/${{ github.repository }}:latest .
+        # VITE_REVERB_* are baked into the JS bundle. VITE_REVERB_APP_KEY must
+        # equal REVERB_APP_KEY in the server .env; VITE_REVERB_HOST is the public
+        # staging host (a repo variable, so the FQDN stays out of the repo).
+        run: |
+          if [ -z "${{ vars.VITE_REVERB_APP_KEY }}" ] || [ -z "${{ vars.VITE_REVERB_HOST }}" ]; then
+            echo "::warning::VITE_REVERB_APP_KEY or VITE_REVERB_HOST repo variable is unset - the live dashboard will not connect."
+          fi
+          docker build --target prod \
+            --build-arg VITE_APP_NAME="${{ vars.VITE_APP_NAME || 'Martori Farms' }}" \
+            --build-arg VITE_REVERB_APP_KEY="${{ vars.VITE_REVERB_APP_KEY }}" \
+            --build-arg VITE_REVERB_HOST="${{ vars.VITE_REVERB_HOST }}" \
+            --build-arg VITE_REVERB_PORT="${{ vars.VITE_REVERB_PORT || '443' }}" \
+            --build-arg VITE_REVERB_SCHEME="${{ vars.VITE_REVERB_SCHEME || 'https' }}" \
+            --build-arg GIT_COMMIT="${{ github.sha }}" \
+            -t ghcr.io/${{ github.repository }}:${{ github.sha }} \
+            -t ghcr.io/${{ github.repository }}:latest .
       - name: Push image
         run: docker push ghcr.io/${{ github.repository }}:${{ github.sha }} && docker push ghcr.io/${{ github.repository }}:latest
       - name: Deploy
