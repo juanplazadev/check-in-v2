@@ -25,6 +25,21 @@ return [
         'url' => env('TIMEZONE_LOOKUP_URL', 'https://timeapi.io/api'),
     ],
 
+    /*
+     * The Sentry REST API behind the admin errors and deployments pages. The
+     * token is an internal integration's with org:read, project:read,
+     * project:releases and event:read. The API exposes no plan quota, so the
+     * monthly error quota and the day it resets are set here.
+     */
+    'sentry_api' => [
+        'url' => env('SENTRY_API_URL', 'https://sentry.io'),
+        'token' => env('SENTRY_AUTH_TOKEN'),
+        'org' => env('SENTRY_ORG'),
+        'project' => env('SENTRY_PROJECT'),
+        'error_quota' => (int) env('SENTRY_ERROR_QUOTA', 5000),
+        'billing_day' => (int) env('SENTRY_BILLING_DAY', 1),
+    ],
+
     'mailgun' => [
         'domain' => env('MAILGUN_DOMAIN'),
         'secret' => env('MAILGUN_SECRET'),

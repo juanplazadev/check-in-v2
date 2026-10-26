@@ -18,7 +18,6 @@ import DataTable from '@/components/dashboard/data-table/DataTable';
 import { createDashboardColumnHelper } from '@/components/dashboard/data-table/features';
 import { DetailCard, DetailRow } from '@/components/dashboard/DetailCard';
 import FeaturePill from '@/components/dashboard/FeaturePill';
-import PageHeader from '@/components/dashboard/PageHeader';
 import RequirePermission from '@/components/dashboard/RequirePermission';
 import RoleChips from '@/components/dashboard/RoleChips';
 import type {
@@ -371,7 +370,12 @@ export default function UserShow({ user, history }: UserShowProps) {
                     {initialsOf(user.name)}
                 </span>
                 <div className="min-w-0">
-                    <PageHeader title={user.name} subtitle={user.email} />
+                    <h1 className="truncate text-2xl font-bold text-gray-800 md:text-3xl dark:text-gray-100">
+                        {user.name}
+                    </h1>
+                    <p className="mt-1 truncate text-sm text-gray-500 dark:text-gray-400">
+                        {user.email}
+                    </p>
                 </div>
             </div>
 

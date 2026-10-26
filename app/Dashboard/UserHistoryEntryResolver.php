@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dashboard;
 
 use App\Enums\Permission;
+use App\Enums\UserAccessMethod;
 use App\Enums\UserHistoryEvent;
 use App\Models\Appointment;
 use App\Models\CheckIn;
@@ -231,6 +232,13 @@ final readonly class UserHistoryEntryResolver
         if (in_array($entry->event, [UserHistoryEvent::LocationClosureAdded, UserHistoryEvent::LocationClosureRemoved], true)
             && is_string($changes['date'] ?? null)) {
             $parts[] = 'For '.Date::parse($changes['date'])->format('M j, Y');
+        }
+
+        if ($entry->event === UserHistoryEvent::UserCreated && is_string($changes['role'] ?? null)) {
+            $parts[] = 'Role: '.Str::ucfirst(str_replace('-', ' ', $changes['role']));
+            $parts[] = ($changes['access'] ?? null) === UserAccessMethod::TemporaryPassword->value
+                ? 'Given a temporary password'
+                : 'Invited by email';
         }
 
         if ($entry->event === UserHistoryEvent::RolePermissionsEdited && is_string($changes['role'] ?? null)) {

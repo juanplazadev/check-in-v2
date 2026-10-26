@@ -14,7 +14,7 @@ use function Pest\Laravel\get;
 
 /*
  * These pin the dashboard's route-to-page wiring and the gates in front of it: auth, verified, a
- * staff permission for every page, and view users or view roles and permissions (admins only) for the admin pages. Check-in data has its own tests in
+ * staff permission for every page, and view users, view roles and permissions, view errors or view deployments (admins only) for the admin pages. Check-in data has its own tests in
  * DashboardCheckInsTest, the appointment detail in DashboardAppointmentsTest, users in
  * DashboardUsersTest, locations in DashboardLocationsTest; the other pages still render mock data. Location scoping is pinned in DashboardLocationScopeTest.
  */
@@ -41,6 +41,9 @@ $adminPages = [
     'users' => [fn (): string => route('dashboard.users'), 'Dashboard/Users/Index'],
     'user' => [fn (): string => route('dashboard.users.show', ['uuid' => User::factory()->create()->uuid]), 'Dashboard/Users/Show'],
     'roles' => [fn (): string => route('dashboard.roles'), 'Dashboard/Roles/Index'],
+    'errors' => [fn (): string => route('dashboard.errors'), 'Dashboard/Errors/Index'],
+    'error' => [fn (): string => route('dashboard.errors.show', ['issueId' => 123]), 'Dashboard/Errors/Show'],
+    'deployments' => [fn (): string => route('dashboard.deployments'), 'Dashboard/Deployments/Index'],
 ];
 
 dataset('operational pages', $operationalPages);
@@ -111,4 +114,5 @@ it('rejects malformed record identifiers', function (string $path): void {
     'appointment' => '/dashboard/appointments/not-a-uuid',
     'user' => '/dashboard/users/not-a-number',
     'location' => '/dashboard/locations/not-a-uuid',
+    'error' => '/dashboard/errors/not-a-number',
 ]);

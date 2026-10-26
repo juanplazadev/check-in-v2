@@ -1,6 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { BadgeCheck } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { BadgeCheck, UserPlus } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 import {
     DataTableProvider,
@@ -15,6 +15,12 @@ import PageHeader from '@/components/dashboard/PageHeader';
 import RequirePermission from '@/components/dashboard/RequirePermission';
 import RoleChips from '@/components/dashboard/RoleChips';
 import type { DashboardUser } from '@/components/dashboard/types';
+import AddUserDialog from '@/components/dashboard/users/AddUserDialog';
+import type {
+    NewUserLocation,
+    NewUserRole,
+} from '@/components/dashboard/users/types';
+import { useCan } from '@/hooks/useCan';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import { formatDate, formatRelative, initialsOf } from '@/lib/dashboard/format';
 import dashboardRoutes from '@/routes/dashboard';
@@ -38,6 +44,9 @@ interface UsersIndexProps {
     };
     typeCounts: Record<'all' | UserType, number>;
     filters: UserFilters;
+    /** The add user dialog's options; optional props, loaded when it opens. */
+    newUserRoles?: NewUserRole[];
+    newUserLocations?: NewUserLocation[];
 }
 
 /** Props a filter or page change reloads. */
@@ -172,7 +181,11 @@ export default function UsersIndex({
     users,
     typeCounts,
     filters,
+    newUserRoles,
+    newUserLocations,
 }: UsersIndexProps) {
+    const can = useCan();
+    const [adding, setAdding] = useState(false);
     const tabs = [
         { label: 'All', value: null, count: typeCounts.all },
         { label: 'Staff', value: 'staff', count: typeCounts.staff },
@@ -217,6 +230,16 @@ export default function UsersIndex({
                                 title="Roles"
                                 options={roleOptions}
                             />
+                            {can('create users') && (
+                                <button
+                                    type="button"
+                                    onClick={() => setAdding(true)}
+                                    className="btn gap-2 bg-gray-900 text-gray-100 hover:bg-gray-800 dark:bg-gray-100 dark:text-gray-800 dark:hover:bg-white"
+                                >
+                                    <UserPlus className="size-4" aria-hidden />
+                                    Add user
+                                </button>
+                            )}
                         </>
                     }
                 />
@@ -239,6 +262,15 @@ export default function UsersIndex({
                         onPageChange: changePage,
                     }}
                 />
+
+                {can('create users') && (
+                    <AddUserDialog
+                        open={adding}
+                        onOpenChange={setAdding}
+                        roles={newUserRoles}
+                        locations={newUserLocations}
+                    />
+                )}
             </DataTableProvider>
         </RequirePermission>
     );

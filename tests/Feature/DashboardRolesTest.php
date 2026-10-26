@@ -55,7 +55,9 @@ it('lists every permission and what each role holds, as stored in the database',
                 'group' => 'dashboard',
             ])
             ->where('assignable', fn (Collection $assignable): bool => ! $assignable->contains(Permission::AccessDriverAccount->value)
-                && $assignable->count() === count(Permission::cases()) - 1)
+                && ! $assignable->contains(Permission::ViewErrors->value)
+                && ! $assignable->contains(Permission::ViewDeployments->value)
+                && $assignable->count() === count(Permission::cases()) - 3)
             ->where('roles', function (Collection $roles) use ($expectedShipping): bool {
                 $byName = $roles->keyBy('name');
 
@@ -147,6 +149,8 @@ it('refuses a permission the role cannot hold', function (string $permission): v
     expect(UserHistory::query()->count())->toBe(0);
 })->with([
     'driver account' => [Permission::AccessDriverAccount->value],
+    'errors' => [Permission::ViewErrors->value],
+    'deployments' => [Permission::ViewDeployments->value],
     'unknown' => ['launch rockets'],
 ]);
 

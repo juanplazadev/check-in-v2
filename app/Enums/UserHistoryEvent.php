@@ -46,6 +46,8 @@ enum UserHistoryEvent: string
     case LocationClosureAdded = 'location-closure-added';
     case LocationClosureRemoved = 'location-closure-removed';
     case RolePermissionsEdited = 'role-permissions-edited';
+    case UserCreated = 'user-created';
+    case InvitationAccepted = 'invitation-accepted';
 
     /**
      * How the dashboard's activity table reads the event, as something the
@@ -94,6 +96,8 @@ enum UserHistoryEvent: string
             self::LocationClosureAdded => 'Added a closure',
             self::LocationClosureRemoved => 'Removed a closure',
             self::RolePermissionsEdited => 'Edited role permissions',
+            self::UserCreated => 'Added a user',
+            self::InvitationAccepted => 'Accepted their invitation',
         };
     }
 }

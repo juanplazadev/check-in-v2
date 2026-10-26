@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Auth\HomeRedirect;
 use App\Auth\RegistrationGate;
+use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\RequiredPasswordChangeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -42,6 +44,13 @@ Route::middleware(['guest', 'setLocale'])->group(function (): void {
         'token' => $token,
         'email' => request('email'),
     ]))->name('password.reset');
+
+    // Landing page for the invitation an admin sends a new staff member, who
+    // chooses their first password here. The token is on the invites broker.
+    Route::get('/invitation/{token}', [InvitationController::class, 'show'])->name('invitation.show');
+    Route::post('/invitation', [InvitationController::class, 'store'])
+        ->middleware('throttle:6,1')
+        ->name('invitation.accept');
 });
 
 /*
@@ -68,4 +77,15 @@ Route::middleware(['auth', 'setLocale'])->group(function (): void {
     */
     Route::get('/user/confirm-password', fn () => inertia('Auth/ConfirmPassword'))
         ->name('password.confirm');
+
+    /*
+    | Where EnsurePasswordIsChanged holds a user an admin created with a
+    | temporary password. Not behind "verified": admin-created accounts are
+    | verified already, and this page must stay reachable regardless.
+    */
+    Route::get('/password/change', [RequiredPasswordChangeController::class, 'show'])
+        ->name('password.change');
+    Route::put('/password/change', [RequiredPasswordChangeController::class, 'update'])
+        ->middleware('throttle:6,1')
+        ->name('password.change.update');
 });

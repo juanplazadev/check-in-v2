@@ -59,6 +59,33 @@ return [
         'taglineSub' => 'Confirmer votre e-mail garde votre historique lié à vous et nous permet de vous joindre au sujet de vos rendez-vous.',
     ],
 
+    'choosePassword' => [
+        'emailLabel' => 'E-mail',
+        'passwordLabel' => 'Nouveau mot de passe',
+        'passwordPlaceholder' => 'Saisissez un nouveau mot de passe',
+        'passwordConfirmationLabel' => 'Confirmer le mot de passe',
+        'passwordConfirmationPlaceholder' => 'Saisissez à nouveau votre mot de passe',
+        'tagline' => 'Frais de nos champs à votre quai.',
+        'invitation' => [
+            'eyebrow' => 'Bienvenue',
+            'title' => 'Choisissez votre mot de passe',
+            'subtitle' => 'Votre compte est prêt. Définissez un mot de passe pour vous connecter.',
+            'button' => 'Enregistrer et se connecter',
+            'backToLogin' => 'Déjà configuré ? Connectez-vous',
+            'taglineSub' => 'Un mot de passe et vous êtes sur le tableau de bord.',
+            'invalid' => 'Ce lien d\'invitation est invalide ou a expiré. Demandez à votre administrateur de vous en envoyer un nouveau.',
+        ],
+        'required' => [
+            'eyebrow' => 'Une dernière étape',
+            'title' => 'Choisissez un nouveau mot de passe',
+            'subtitle' => 'Vous vous êtes connecté avec un mot de passe temporaire. Remplacez-le par un mot de passe que vous seul connaissez.',
+            'button' => 'Enregistrer le mot de passe',
+            'signOut' => 'Se déconnecter',
+            'taglineSub' => 'Votre propre mot de passe protège votre compte.',
+            'samePassword' => 'Choisissez un mot de passe différent du mot de passe temporaire.',
+        ],
+    ],
+
     'resetPassword' => [
         'eyebrow' => 'Réinitialisation du mot de passe',
         'title' => 'Définir un nouveau mot de passe',
@@ -714,6 +741,20 @@ return [
         'fallbackLabel' => 'Si le bouton ci-dessus ne fonctionne pas, copiez et collez ce lien dans votre navigateur :',
         'security' => "Si vous n'avez pas créé de compte, aucune action n'est requise et vous pouvez ignorer cet e-mail en toute sécurité.",
         'footer' => 'Ceci est un message automatique de :app. Merci de ne pas y répondre.',
+    ],
+
+    'userInvitationEmail' => [
+        'subject' => 'Vous êtes invité sur :app',
+        'preheader' => 'Définissez votre mot de passe pour commencer à utiliser le tableau de bord.',
+        'eyebrow' => 'Invitation',
+        'title' => 'Votre compte est prêt',
+        'greeting' => 'Bonjour :name,',
+        'intro' => ':inviter vous a créé un compte sur :app. Cliquez sur le bouton ci-dessous pour choisir votre mot de passe et vous connecter.',
+        'button' => 'Choisir mon mot de passe',
+        'expiry' => 'Ce lien expire dans :days jours. S\'il expire, demandez à votre administrateur de vous en envoyer un nouveau.',
+        'fallbackLabel' => 'Si le bouton ne fonctionne pas, copiez et collez ce lien dans votre navigateur :',
+        'security' => 'Si vous n\'attendiez pas cette invitation, vous pouvez ignorer cet e-mail.',
+        'footer' => 'Ceci est un message automatique de :app. Merci de ne pas répondre.',
     ],
 
     'resetPasswordEmail' => [

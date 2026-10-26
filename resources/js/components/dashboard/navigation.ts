@@ -1,10 +1,12 @@
 import type { LucideIcon } from 'lucide-react';
 import {
+    Bug,
     CalendarClock,
     ChartLine,
     LayoutDashboard,
     MapPin,
     RadioTower,
+    Rocket,
     ShieldCheck,
     Truck,
     Users,
@@ -102,6 +104,23 @@ export const DASHBOARD_NAVIGATION: DashboardNavGroup[] = [
                 href: dashboardRoutes.roles.url(),
                 icon: ShieldCheck,
                 permission: 'view roles and permissions',
+            },
+        ],
+    },
+    {
+        label: 'System',
+        items: [
+            {
+                label: 'Errors',
+                href: dashboardRoutes.errors.url(),
+                icon: Bug,
+                permission: 'view errors',
+            },
+            {
+                label: 'Deployments',
+                href: dashboardRoutes.deployments.url(),
+                icon: Rocket,
+                permission: 'view deployments',
             },
         ],
     },

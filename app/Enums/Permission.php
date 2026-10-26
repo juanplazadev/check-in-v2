@@ -17,6 +17,7 @@ enum Permission: string
     case ViewAppointments = 'view appointments';
     case ViewAnalytics = 'view analytics';
     case ViewUsers = 'view users';
+    case CreateUsers = 'create users';
     case ViewLocations = 'view locations';
     case ViewAllLocations = 'view all locations';
     case CreateLocations = 'create locations';
@@ -69,6 +70,8 @@ enum Permission: string
     case SaveAppointmentColumnOrder = 'save appointment column order';
     case ViewRolesAndPermissions = 'view roles and permissions';
     case EditRolesAndPermissions = 'edit roles and permissions';
+    case ViewErrors = 'view errors';
+    case ViewDeployments = 'view deployments';
     case AccessDriverAccount = 'access driver account';
 
     /**
@@ -147,8 +150,11 @@ enum Permission: string
             self::DeleteLocations,
             self::RestoreLocations => PermissionGroup::Locations,
             self::ViewUsers,
+            self::CreateUsers,
             self::ViewRolesAndPermissions,
-            self::EditRolesAndPermissions => PermissionGroup::Administration,
+            self::EditRolesAndPermissions,
+            self::ViewErrors,
+            self::ViewDeployments => PermissionGroup::Administration,
             self::AccessDriverAccount => PermissionGroup::Driver,
         };
     }
@@ -215,8 +221,11 @@ enum Permission: string
             self::DeleteLocations => 'Delete a location.',
             self::RestoreLocations => 'Bring back a deleted location.',
             self::ViewUsers => 'Open the users table and each user.',
+            self::CreateUsers => 'Add staff accounts from the users page.',
             self::ViewRolesAndPermissions => 'Open this page.',
             self::EditRolesAndPermissions => 'Change which permissions each role grants.',
+            self::ViewErrors => 'See application errors reported to Sentry.',
+            self::ViewDeployments => 'See deployments, releases and their changelogs.',
             self::AccessDriverAccount => 'Use the driver account pages.',
         };
     }

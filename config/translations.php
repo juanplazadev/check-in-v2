@@ -14,6 +14,8 @@ return [
     'password.reset' => ['resetPassword'],
     'verification.notice' => ['verifyEmailPage'],
     'password.confirm' => ['confirmPassword'],
+    'invitation.show' => ['choosePassword'],
+    'password.change' => ['choosePassword'],
     'account' => ['publicNavigation', 'account', 'accountNav'],
     'account.profile' => ['publicNavigation', 'accountProfile', 'accountNav'],
     'account.settings' => ['publicNavigation', 'accountSettings', 'accountNav'],

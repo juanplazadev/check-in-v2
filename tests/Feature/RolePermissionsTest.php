@@ -46,10 +46,11 @@ it('grants each role exactly its permissions', function (Role $role, array $expe
         ->toBe(collect($expected)->sort()->values()->all());
 })->with('role permissions');
 
-it('only lets admins view users, view or edit roles and permissions, manage location users, create or edit locations, change location status, edit check-in or appointment options, pause appointments, delete check-ins or appointments, and export the master spreadsheets', function (Role $role): void {
+it('only lets admins view or create users, view or edit roles and permissions, manage location users, create or edit locations, change location status, edit check-in or appointment options, pause appointments, delete check-ins or appointments, and export the master spreadsheets', function (Role $role): void {
     $user = User::factory()->withRole($role)->create();
 
     expect($user->can(Permission::ViewUsers))->toBe($role === Role::Admin)
+        ->and($user->can(Permission::CreateUsers))->toBe($role === Role::Admin)
         ->and($user->can(Permission::DeleteCheckIns))->toBe($role === Role::Admin)
         ->and($user->can(Permission::DeleteAppointments))->toBe($role === Role::Admin)
         ->and($user->can(Permission::ExportCheckInsMaster))->toBe($role === Role::Admin)

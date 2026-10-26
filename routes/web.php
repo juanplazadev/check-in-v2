@@ -38,6 +38,8 @@ use App\Http\Controllers\Dashboard\CheckInReinstateController as DashboardCheckI
 use App\Http\Controllers\Dashboard\CheckInReopenController as DashboardCheckInReopenController;
 use App\Http\Controllers\Dashboard\CheckInRestoreController as DashboardCheckInRestoreController;
 use App\Http\Controllers\Dashboard\CheckInUpdateController as DashboardCheckInUpdateController;
+use App\Http\Controllers\Dashboard\DeploymentController as DashboardDeploymentController;
+use App\Http\Controllers\Dashboard\ErrorController as DashboardErrorController;
 use App\Http\Controllers\Dashboard\LiveQueueController;
 use App\Http\Controllers\Dashboard\LocationAppointmentHoursController as DashboardLocationAppointmentHoursController;
 use App\Http\Controllers\Dashboard\LocationAppointmentOptionsController as DashboardLocationAppointmentOptionsController;
@@ -394,6 +396,9 @@ Route::middleware('setLocale')->group(function (): void {
 
             Route::middleware(PermissionMiddleware::using(Permission::ViewUsers))->group(function (): void {
                 Route::get('/users', [DashboardUserController::class, 'index'])->name('users');
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::CreateUsers)])
+                    ->post('/users', [DashboardUserController::class, 'store'])
+                    ->name('users.store');
                 Route::get('/users/{uuid}', [DashboardUserController::class, 'show'])
                     ->whereUuid('uuid')
                     ->name('users.show');
@@ -505,6 +510,18 @@ Route::middleware('setLocale')->group(function (): void {
                     ->patch('/roles', [DashboardRolePermissionController::class, 'update'])
                     ->name('roles.update');
             });
+
+            // Read from the Sentry API (see SentryService), cached briefly; admins only.
+            Route::middleware(['throttle:60,1', PermissionMiddleware::using(Permission::ViewErrors)])->group(function (): void {
+                Route::get('/errors', [DashboardErrorController::class, 'index'])->name('errors');
+                Route::get('/errors/{issueId}', [DashboardErrorController::class, 'show'])
+                    ->whereNumber('issueId')
+                    ->name('errors.show');
+            });
+
+            Route::middleware(['throttle:60,1', PermissionMiddleware::using(Permission::ViewDeployments)])
+                ->get('/deployments', DashboardDeploymentController::class)
+                ->name('deployments');
         });
     });
 

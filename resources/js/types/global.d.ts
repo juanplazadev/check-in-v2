@@ -12,6 +12,13 @@ declare module '@inertiajs/core' {
         /** Set with Inertia::flash() on the server; shown by FlashToaster in the dashboard layout. */
         flashDataType: {
             toast?: { type: 'success' | 'error'; message: string };
+            /** The account the add user dialog just created; its success state reads it. */
+            createdUser?: {
+                uuid: string;
+                name: string;
+                email: string;
+                access: 'invite' | 'temporary-password';
+            };
         };
     }
 }

@@ -19,6 +19,7 @@ export type Permission =
     | 'view appointments'
     | 'view analytics'
     | 'view users'
+    | 'create users'
     | 'view locations'
     | 'view all locations'
     | 'create locations'
@@ -71,6 +72,8 @@ export type Permission =
     | 'save appointment column order'
     | 'view roles and permissions'
     | 'edit roles and permissions'
+    | 'view errors'
+    | 'view deployments'
     | 'access driver account';
 
 export type Auth = {

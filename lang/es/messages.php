@@ -59,6 +59,33 @@ return [
         'taglineSub' => 'Confirmar tu correo mantiene tu historial de registros ligado a ti y nos permite contactarte sobre tus citas.',
     ],
 
+    'choosePassword' => [
+        'emailLabel' => 'Correo electrónico',
+        'passwordLabel' => 'Nueva contraseña',
+        'passwordPlaceholder' => 'Ingresa una nueva contraseña',
+        'passwordConfirmationLabel' => 'Confirmar contraseña',
+        'passwordConfirmationPlaceholder' => 'Vuelve a ingresar tu nueva contraseña',
+        'tagline' => 'Frescura de nuestros campos a su muelle.',
+        'invitation' => [
+            'eyebrow' => 'Bienvenido',
+            'title' => 'Elige tu contraseña',
+            'subtitle' => 'Tu cuenta está lista. Crea una contraseña para iniciar sesión.',
+            'button' => 'Guardar contraseña e iniciar sesión',
+            'backToLogin' => '¿Ya la configuraste? Inicia sesión',
+            'taglineSub' => 'Una contraseña y estarás en el panel.',
+            'invalid' => 'Este enlace de invitación no es válido o ha caducado. Pide a tu administrador que te envíe uno nuevo.',
+        ],
+        'required' => [
+            'eyebrow' => 'Un paso más',
+            'title' => 'Elige una nueva contraseña',
+            'subtitle' => 'Iniciaste sesión con una contraseña temporal. Cámbiala por una que solo tú conozcas.',
+            'button' => 'Guardar contraseña',
+            'signOut' => 'Cerrar sesión',
+            'taglineSub' => 'Tu propia contraseña mantiene tu cuenta segura.',
+            'samePassword' => 'Elige una contraseña diferente a la temporal.',
+        ],
+    ],
+
     'resetPassword' => [
         'eyebrow' => 'Restablecer contraseña',
         'title' => 'Crea una nueva contraseña',
@@ -713,6 +740,20 @@ return [
         'expiry' => 'Este enlace vence en :minutes minutos. Si vence, puedes solicitar uno nuevo desde tu cuenta.',
         'fallbackLabel' => 'Si el botón de arriba no funciona, copia y pega este enlace en tu navegador:',
         'security' => 'Si no creaste una cuenta, no es necesario hacer nada y puedes ignorar este correo con seguridad.',
+        'footer' => 'Este es un mensaje automático de :app. Por favor, no respondas.',
+    ],
+
+    'userInvitationEmail' => [
+        'subject' => 'Te invitaron a :app',
+        'preheader' => 'Crea tu contraseña para empezar a usar el panel.',
+        'eyebrow' => 'Invitación',
+        'title' => 'Tu cuenta está lista',
+        'greeting' => 'Hola :name,',
+        'intro' => ':inviter creó una cuenta para ti en :app. Haz clic en el botón para elegir tu contraseña e iniciar sesión.',
+        'button' => 'Elegir mi contraseña',
+        'expiry' => 'Este enlace caduca en :days días. Si caduca, pide a tu administrador que te envíe uno nuevo.',
+        'fallbackLabel' => 'Si el botón no funciona, copia y pega este enlace en tu navegador:',
+        'security' => 'Si no esperabas esta invitación, puedes ignorar este correo.',
         'footer' => 'Este es un mensaje automático de :app. Por favor, no respondas.',
     ],
 

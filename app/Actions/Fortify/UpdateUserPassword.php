@@ -40,7 +40,7 @@ final readonly class UpdateUserPassword implements UpdatesUserPasswords
         $password = Hash::make($input['password']);
 
         DB::transaction(function () use ($user, $password): void {
-            $user->forceFill(['password' => $password])->save();
+            $user->forceFill(['password' => $password, 'password_change_required_at' => null])->save();
 
             $this->history->handle($user, UserHistoryEvent::PasswordUpdated);
         });
