@@ -86,7 +86,9 @@ jobs:
         # Feeds the admin deployments page: one release per commit SHA (the
         # same value the app tags its events with), its commits read from the
         # local git history so no Sentry GitHub integration is needed, and a
-        # deploy to staging. Never fails the deploy.
+        # deploy to staging. Each deploy is named after its workflow run:
+        # unnamed deploys of the same release collapse into one in Sentry, so
+        # manual reruns of a commit would not count. Never fails the deploy.
         if: ${{ vars.SENTRY_ORG != '' && vars.SENTRY_PROJECT != '' }}
         continue-on-error: true
         env:
@@ -94,6 +96,7 @@ jobs:
           SENTRY_ORG: ${{ vars.SENTRY_ORG }}
           SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
           VERSION: ${{ github.sha }}
+          DEPLOY_NAME: run ${{ github.run_number }}.${{ github.run_attempt }}
         run: |
           sentry() {
             # Run as the runner's user so git accepts the checkout's ownership.
@@ -104,4 +107,4 @@ jobs:
           sentry releases new "$VERSION"
           sentry releases set-commits "$VERSION" --local --ignore-missing
           sentry releases finalize "$VERSION"
-          sentry releases deploys "$VERSION" new -e staging
+          sentry releases deploys "$VERSION" new -e staging --name "$DEPLOY_NAME"
