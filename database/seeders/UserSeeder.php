@@ -31,9 +31,9 @@ final class UserSeeder extends Seeder
      */
     public function run(): void
     {
-        if (App::isProduction()) {
+        /*if (App::isProduction()) {
             return;
-        }
+        }*/
 
         $password = config('app.seed_admin_password');
 
