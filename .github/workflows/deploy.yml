@@ -15,7 +15,8 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          # Full history so the Sentry release step can list this deploy's commits.
+          # Full history so the Sentry release step can read HEAD, the origin
+          # remote and the previous release's commit.
           fetch-depth: 0
       - name: Log in to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -84,9 +85,10 @@ jobs:
           docker compose -f compose.staging.yaml exec -T checkin php artisan octane:reload
       - name: Register Sentry release and deploy
         # Feeds the admin deployments page: one release per commit SHA (the
-        # same value the app tags its events with), its commits read from the
-        # local git history so no Sentry GitHub integration is needed, and a
-        # deploy to staging. Each deploy is named after its workflow run:
+        # same value the app tags its events with), its commits pulled by the
+        # Sentry GitHub integration (--auto matches the origin remote to the
+        # repo configured in Sentry, so commits link to GitHub), and a deploy
+        # to staging. Each deploy is named after its workflow run:
         # unnamed deploys of the same release collapse into one in Sentry, so
         # manual reruns of a commit would not count. Never fails the deploy.
         if: ${{ vars.SENTRY_ORG != '' && vars.SENTRY_PROJECT != '' }}
@@ -105,6 +107,6 @@ jobs:
               getsentry/sentry-cli:2.39.1 "$@"
           }
           sentry releases new "$VERSION"
-          sentry releases set-commits "$VERSION" --local --ignore-missing
+          sentry releases set-commits "$VERSION" --auto --ignore-missing
           sentry releases finalize "$VERSION"
           sentry releases deploys "$VERSION" new -e staging --name "$DEPLOY_NAME"
