@@ -74,6 +74,9 @@ export type Permission =
     | 'edit roles and permissions'
     | 'view errors'
     | 'view deployments'
+    | 'view jobs'
+    | 'manage jobs'
+    | 'view messages'
     | 'access driver account';
 
 export type Auth = {

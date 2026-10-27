@@ -4,6 +4,13 @@
  * props once the backend lands, and the shapes in components/dashboard/types.ts are the contract.
  */
 import type {
+    MessageEvent,
+    MessageProvider,
+    MessageRecord,
+    MessageStatus,
+    MessageType,
+} from '@/components/dashboard/messages/types';
+import type {
     AppointmentRecord,
     AppointmentStatus,
     CheckInErpStatus,
@@ -426,3 +433,301 @@ export function checkInsPerDay(days: number): [string, number][] {
 export function isSameMockDay(timestamp: string): boolean {
     return timestamp.slice(0, 10) === MOCK_NOW.toISOString().slice(0, 10);
 }
+
+/** Emails before this went out through Mailgun; Microsoft 365 since (the switch Martori asked for). */
+const MICROSOFT_SINCE = MOCK_NOW.getTime() - 5 * DAY;
+const SECOND = 1000;
+const MINUTE = 60 * SECOND;
+
+const MESSAGE_SENDERS: Record<MessageProvider, string> = {
+    mailgun: 'Martori Farms Shipping <no-reply@mg.martorifarms.com>',
+    microsoft: 'Martori Farms Shipping <shipping@martorifarms.com>',
+    sms: '+15205550142',
+};
+
+const BOUNCE_REASONS = [
+    '550 5.1.1 The email account that you tried to reach does not exist.',
+    '552 5.2.2 The recipient mailbox is full.',
+    '550 5.7.1 Message rejected as spam by the recipient server.',
+];
+
+const FAILURE_REASONS: Record<MessageProvider, string[]> = {
+    mailgun: ['421 4.4.5 Too many connections. Retries exhausted.'],
+    microsoft: [
+        'ErrorSendAsDenied: The account the app signs in as may not send as shipping@martorifarms.com.',
+        'MailboxNotEnabledForRESTAPI: The sending mailbox is inactive or on-premises.',
+    ],
+    sms: [
+        '30003 Unreachable destination handset.',
+        '30006 Landline or unreachable carrier.',
+    ],
+};
+
+const MESSAGE_STATUS_WEIGHTS: Record<
+    MessageProvider,
+    Partial<Record<MessageStatus, number>>
+> = {
+    mailgun: {
+        delivered: 45,
+        opened: 32,
+        bounced: 6,
+        failed: 2,
+        sent: 3,
+        queued: 1,
+    },
+    microsoft: { accepted: 92, failed: 4, queued: 2 },
+    sms: { delivered: 82, failed: 7, sent: 6, queued: 2 },
+};
+
+interface MessageSource {
+    type: MessageType;
+    driver: { name: string; email: string | null; cellphone: string };
+    related: MessageRecord['related'];
+    locationName: string;
+}
+
+function messageSource(): MessageSource {
+    if (random() < 0.6) {
+        const checkIn = pick(MOCK_CHECK_INS);
+
+        return {
+            type: weighted({
+                'check-in-received': 70,
+                'check-in-copy': 20,
+                document: 10,
+            }),
+            driver: checkIn.driver,
+            related: {
+                kind: 'check-in',
+                uuid: checkIn.uuid,
+                referenceNumber: checkIn.referenceNumber,
+            },
+            locationName: checkIn.location.name,
+        };
+    }
+
+    const appointment = pick(MOCK_APPOINTMENTS);
+
+    return {
+        type: weighted({
+            'appointment-booked': 50,
+            'appointment-reminder': 35,
+            'appointment-cancelation': 15,
+        }),
+        driver: appointment.driver,
+        related: {
+            kind: 'appointment',
+            uuid: appointment.uuid,
+            referenceNumber: appointment.referenceNumber,
+        },
+        locationName: appointment.location.name,
+    };
+}
+
+function messageCopy(source: MessageSource): { subject: string; lead: string } {
+    const reference = source.related?.referenceNumber ?? '';
+
+    switch (source.type) {
+        case 'check-in-received':
+            return {
+                subject: `Checked in: ${reference}`,
+                lead: `You're checked in at ${source.locationName}. We'll text you when a door is ready.`,
+            };
+        case 'check-in-copy':
+            return {
+                subject: `Your check-in ${reference}`,
+                lead: 'Here is a copy of your check-in for your records.',
+            };
+        case 'document':
+            return {
+                subject: `Shipping documents for ${reference}`,
+                lead: 'Your shipping documents are attached as a PDF.',
+            };
+        case 'appointment-booked':
+            return {
+                subject: `Appointment booked: ${reference}`,
+                lead: `Your appointment at ${source.locationName} is booked.`,
+            };
+        case 'appointment-reminder':
+            return {
+                subject: `Reminder: appointment ${reference} tomorrow`,
+                lead: `A reminder that your appointment at ${source.locationName} is tomorrow.`,
+            };
+        case 'appointment-cancelation':
+            return {
+                subject: `Appointment canceled: ${reference}`,
+                lead: `Your appointment at ${source.locationName} was canceled. Book again any time.`,
+            };
+    }
+}
+
+function emailHtml(
+    name: string,
+    subject: string,
+    lead: string,
+    reference: string,
+): string {
+    return `<!doctype html><html><body style="margin:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2937">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:24px 12px"><tr><td align="center">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#ffffff;border-radius:16px;overflow:hidden">
+<tr><td style="background:#37b44a;padding:20px 24px;color:#ffffff;font-weight:700;font-size:16px">Martori Farms</td></tr>
+<tr><td style="padding:24px">
+<h1 style="margin:0 0 12px;font-size:18px">${subject}</h1>
+<p style="margin:0 0 16px;font-size:14px;line-height:1.6">Hi ${name.split(' ')[0]},</p>
+<p style="margin:0 0 20px;font-size:14px;line-height:1.6">${lead}</p>
+<div style="background:#f9fafb;border-radius:12px;padding:12px 16px;font-size:13px"><span style="color:#6b7280">Reference</span><br><strong style="font-family:ui-monospace,monospace;font-size:15px">${reference}</strong></div>
+</td></tr>
+<tr><td style="padding:16px 24px;border-top:1px solid #f3f4f6;font-size:11px;color:#9ca3af">Sent by the Martori Farms check-in system. Replies are not monitored.</td></tr>
+</table></td></tr></table></body></html>`;
+}
+
+function providerMessageId(
+    provider: MessageProvider,
+    sentAt: number,
+): string | null {
+    const hex = uuid().replaceAll('-', '');
+
+    switch (provider) {
+        case 'mailgun':
+            return `${iso(sentAt).replace(/\D/g, '').slice(0, 14)}.${hex.slice(0, 16)}@mg.martorifarms.com`;
+        case 'microsoft':
+            // Graph sendMail answers 202 with no body, so there is no id to keep.
+            return null;
+        case 'sms':
+            return `SM${hex}`;
+    }
+}
+
+function messageEvents(
+    provider: MessageProvider,
+    status: MessageStatus,
+    sentAt: number,
+    reason: string | null,
+): MessageEvent[] {
+    const event = (
+        type: MessageStatus,
+        at: number,
+        fromWebhook: boolean,
+        eventReason: string | null = null,
+    ): MessageEvent => ({
+        uuid: uuid(),
+        type,
+        occurredAt: iso(at),
+        reason: eventReason,
+        fromWebhook,
+    });
+    const events = [event('queued', sentAt - between(1, 4) * SECOND, false)];
+
+    if (status === 'queued') {
+        return events;
+    }
+
+    if (provider === 'microsoft') {
+        events.push(
+            status === 'failed'
+                ? event('failed', sentAt, false, reason)
+                : event('accepted', sentAt, false),
+        );
+
+        return events;
+    }
+
+    if (status === 'failed' && provider === 'mailgun') {
+        events.push(event('failed', sentAt, true, reason));
+
+        return events;
+    }
+
+    events.push(event('sent', sentAt, false));
+    const receivedAt = sentAt + between(2, 45) * SECOND;
+
+    if (status === 'delivered' || status === 'opened') {
+        events.push(event('delivered', receivedAt, true));
+    }
+
+    if (status === 'opened') {
+        events.push(
+            event('opened', receivedAt + between(1, 240) * MINUTE, true),
+        );
+    }
+
+    if (status === 'bounced' || status === 'failed') {
+        events.push(event(status, receivedAt, true, reason));
+    }
+
+    return events;
+}
+
+function makeMessage(): MessageRecord {
+    const source = messageSource();
+    const channel =
+        source.driver.email === null || random() < 0.22 ? 'sms' : 'email';
+    let sentAt = MOCK_NOW.getTime() - between(1, 14 * 24 * 60) * MINUTE;
+    const provider: MessageProvider =
+        channel === 'sms'
+            ? 'sms'
+            : sentAt >= MICROSOFT_SINCE
+              ? 'microsoft'
+              : 'mailgun';
+    let status = weighted(
+        MESSAGE_STATUS_WEIGHTS[provider] as Record<MessageStatus, number>,
+    );
+
+    // Only recent messages can still be waiting.
+    if (status === 'queued' || status === 'sent') {
+        sentAt = MOCK_NOW.getTime() - between(1, 50) * MINUTE;
+    }
+
+    if (status === 'sent' && provider === 'microsoft') {
+        status = 'accepted';
+    }
+
+    const reason =
+        status === 'bounced'
+            ? pick(BOUNCE_REASONS)
+            : status === 'failed'
+              ? pick(FAILURE_REASONS[provider])
+              : null;
+    const { subject, lead } = messageCopy(source);
+    const reference = source.related?.referenceNumber ?? '';
+    const greeting = `Hi ${source.driver.name.split(' ')[0]},`;
+    const smsBody = `Martori Farms: ${lead} Ref ${reference}. Reply STOP to opt out.`;
+
+    return {
+        uuid: uuid(),
+        channel,
+        provider,
+        type: source.type,
+        status,
+        recipient:
+            channel === 'sms'
+                ? source.driver.cellphone
+                : (source.driver.email ?? ''),
+        recipientName: source.driver.name,
+        sender: MESSAGE_SENDERS[provider],
+        subject: channel === 'email' ? subject : null,
+        body:
+            channel === 'sms'
+                ? smsBody
+                : `${greeting}\n\n${lead}\n\nReference: ${reference}\n\nSent by the Martori Farms check-in system. Replies are not monitored.`,
+        html:
+            channel === 'email'
+                ? emailHtml(source.driver.name, subject, lead, reference)
+                : null,
+        segments: channel === 'sms' ? Math.ceil(smsBody.length / 160) : null,
+        providerMessageId:
+            status === 'queued' ? null : providerMessageId(provider, sentAt),
+        attempts: status === 'failed' ? 3 : random() < 0.06 ? 2 : 1,
+        sentAt: iso(sentAt),
+        related: source.related,
+        events: messageEvents(provider, status, sentAt, reason),
+    };
+}
+
+export const MOCK_MESSAGES: MessageRecord[] = Array.from(
+    { length: 160 },
+    makeMessage,
+).sort((a, b) => b.sentAt.localeCompare(a.sentAt));
+
+/** Whether a carrier is connected; texts are preview data until one is. */
+export const MOCK_SMS_CONNECTED = false;

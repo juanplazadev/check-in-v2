@@ -72,6 +72,9 @@ enum Permission: string
     case EditRolesAndPermissions = 'edit roles and permissions';
     case ViewErrors = 'view errors';
     case ViewDeployments = 'view deployments';
+    case ViewJobs = 'view jobs';
+    case ViewMessages = 'view messages';
+    case ManageJobs = 'manage jobs';
     case AccessDriverAccount = 'access driver account';
 
     /**
@@ -154,7 +157,10 @@ enum Permission: string
             self::ViewRolesAndPermissions,
             self::EditRolesAndPermissions,
             self::ViewErrors,
-            self::ViewDeployments => PermissionGroup::Administration,
+            self::ViewDeployments,
+            self::ViewJobs,
+            self::ManageJobs,
+            self::ViewMessages => PermissionGroup::Administration,
             self::AccessDriverAccount => PermissionGroup::Driver,
         };
     }
@@ -226,6 +232,9 @@ enum Permission: string
             self::EditRolesAndPermissions => 'Change which permissions each role grants.',
             self::ViewErrors => 'See application errors reported to Sentry.',
             self::ViewDeployments => 'See deployments, releases and their changelogs.',
+            self::ViewJobs => 'See the background job queues, workers and failed jobs.',
+            self::ManageJobs => 'Restart or pause the queue workers and retry or delete failed jobs.',
+            self::ViewMessages => 'See the emails and texts sent to drivers and whether they were delivered.',
             self::AccessDriverAccount => 'Use the driver account pages.',
         };
     }

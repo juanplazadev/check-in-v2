@@ -14,7 +14,7 @@ use function Pest\Laravel\get;
 
 /*
  * These pin the dashboard's route-to-page wiring and the gates in front of it: auth, verified, a
- * staff permission for every page, and view users, view roles and permissions, view errors or view deployments (admins only) for the admin pages. Check-in data has its own tests in
+ * staff permission for every page, and view users, view roles and permissions, view errors, view deployments, view jobs or view messages (admins only) for the admin pages. Check-in data has its own tests in
  * DashboardCheckInsTest, the appointment detail in DashboardAppointmentsTest, users in
  * DashboardUsersTest, locations in DashboardLocationsTest; the other pages still render mock data. Location scoping is pinned in DashboardLocationScopeTest.
  */
@@ -44,6 +44,8 @@ $adminPages = [
     'errors' => [fn (): string => route('dashboard.errors'), 'Dashboard/Errors/Index'],
     'error' => [fn (): string => route('dashboard.errors.show', ['issueId' => 123]), 'Dashboard/Errors/Show'],
     'deployments' => [fn (): string => route('dashboard.deployments'), 'Dashboard/Deployments/Index'],
+    'jobs' => [fn (): string => route('dashboard.jobs'), 'Dashboard/Jobs/Index'],
+    'messages' => [fn (): string => route('dashboard.messages'), 'Dashboard/Messages/Index'],
 ];
 
 dataset('operational pages', $operationalPages);

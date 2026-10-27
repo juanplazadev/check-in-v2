@@ -133,7 +133,9 @@ function visit(filters: Filters, changes: Partial<Filters>) {
             ...(next.period !== '14d' && { period: next.period }),
             ...(next.tab !== 'unresolved' && { tab: next.tab }),
             ...(next.sort !== 'date' && { sort: next.sort }),
-            ...(next.environment && { environment: next.environment }),
+            ...(next.environment !== 'production' && {
+                environment: next.environment ?? 'all',
+            }),
             ...(next.search && { search: next.search }),
             ...(next.cursor && { cursor: next.cursor }),
         },
@@ -753,8 +755,11 @@ export default function ErrorsIndex({
 }: ErrorsProps) {
     const period =
         periods.find((option) => option.value === filters.period) ?? periods[0];
+    const reported = report?.state === 'ready' ? report.data.environments : [];
     const environments =
-        report?.state === 'ready' ? report.data.environments : [];
+        filters.environment === null || reported.includes(filters.environment)
+            ? reported
+            : [filters.environment, ...reported];
 
     return (
         <>

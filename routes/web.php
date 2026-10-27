@@ -40,6 +40,9 @@ use App\Http\Controllers\Dashboard\CheckInRestoreController as DashboardCheckInR
 use App\Http\Controllers\Dashboard\CheckInUpdateController as DashboardCheckInUpdateController;
 use App\Http\Controllers\Dashboard\DeploymentController as DashboardDeploymentController;
 use App\Http\Controllers\Dashboard\ErrorController as DashboardErrorController;
+use App\Http\Controllers\Dashboard\FailedJobController as DashboardFailedJobController;
+use App\Http\Controllers\Dashboard\JobCommandController as DashboardJobCommandController;
+use App\Http\Controllers\Dashboard\JobController as DashboardJobController;
 use App\Http\Controllers\Dashboard\LiveQueueController;
 use App\Http\Controllers\Dashboard\LocationAppointmentHoursController as DashboardLocationAppointmentHoursController;
 use App\Http\Controllers\Dashboard\LocationAppointmentOptionsController as DashboardLocationAppointmentOptionsController;
@@ -522,6 +525,27 @@ Route::middleware('setLocale')->group(function (): void {
             Route::middleware(['throttle:60,1', PermissionMiddleware::using(Permission::ViewDeployments)])
                 ->get('/deployments', DashboardDeploymentController::class)
                 ->name('deployments');
+
+            // Email and text delivery receipts; mock data until the backend pass. Admins only, since it shows message bodies.
+            Route::inertia('/messages', 'Dashboard/Messages/Index')
+                ->middleware(PermissionMiddleware::using(Permission::ViewMessages))
+                ->name('messages');
+
+            // Read from Horizon's Redis records; the controls go through Horizon's command queue (see SendHorizonCommandAction). Admins only.
+            Route::middleware(['throttle:60,1', PermissionMiddleware::using(Permission::ViewJobs)])
+                ->get('/jobs', [DashboardJobController::class, 'index'])
+                ->name('jobs');
+
+            Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ManageJobs)])->group(function (): void {
+                Route::post('/jobs/command', DashboardJobCommandController::class)->name('jobs.command');
+                Route::post('/jobs/failed/retry', [DashboardFailedJobController::class, 'retryAll'])->name('jobs.failed.retryAll');
+                Route::post('/jobs/failed/{jobId}/retry', [DashboardFailedJobController::class, 'retry'])
+                    ->whereUuid('jobId')
+                    ->name('jobs.failed.retry');
+                Route::delete('/jobs/failed/{jobId}', [DashboardFailedJobController::class, 'destroy'])
+                    ->whereUuid('jobId')
+                    ->name('jobs.failed.destroy');
+            });
         });
     });
 
