@@ -3,7 +3,9 @@ import {
     Bug,
     CalendarClock,
     ChartLine,
+    Layers,
     LayoutDashboard,
+    MailCheck,
     MapPin,
     RadioTower,
     Rocket,
@@ -111,10 +113,22 @@ export const DASHBOARD_NAVIGATION: DashboardNavGroup[] = [
         label: 'System',
         items: [
             {
+                label: 'Jobs',
+                href: dashboardRoutes.jobs.url(),
+                icon: Layers,
+                permission: 'view jobs',
+            },
+            {
                 label: 'Errors',
                 href: dashboardRoutes.errors.url(),
                 icon: Bug,
                 permission: 'view errors',
+            },
+            {
+                label: 'Messages',
+                href: dashboardRoutes.messages.url(),
+                icon: MailCheck,
+                permission: 'view messages',
             },
             {
                 label: 'Deployments',

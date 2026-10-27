@@ -51,6 +51,13 @@ interface DataTableProps<TData extends object> {
     server?: ServerPagination;
     /** Extra classes per row, e.g. to flash a row that just arrived. */
     getRowClassName?: (row: TData) => string;
+    /**
+     * Makes rows open something (a drawer, say) on click or Enter. Gets the row and every row the
+     * search, filters and sorting leave, in order, so the opener can step through them.
+     */
+    onRowClick?: (row: TData, rows: TData[]) => void;
+    /** The row the opener is showing, highlighted. */
+    activeRowId?: string | null;
 }
 
 export interface ServerPagination {
@@ -140,6 +147,8 @@ export default function DataTable<TData extends object>({
     columnOrder = DEFINITION_ORDER,
     server,
     getRowClassName,
+    onRowClick,
+    activeRowId = null,
 }: DataTableProps<TData>) {
     // The table instance keeps its identity while its state changes underneath it, so React
     // Compiler memoization of reads like `table.getRowModel()` would render stale rows.
@@ -217,6 +226,11 @@ export default function DataTable<TData extends object>({
     });
 
     const rows = table.getRowModel().rows;
+    const openRow = (row: TData) =>
+        onRowClick?.(
+            row,
+            table.getPrePaginatedRowModel().rows.map((each) => each.original),
+        );
     const visibleColumnCount = table.getVisibleLeafColumns().length;
     const totalRows =
         server?.totalRows ?? table.getFilteredRowModel().rows.length;
@@ -317,9 +331,27 @@ export default function DataTable<TData extends object>({
                                 rows.map((row) => (
                                     <tr
                                         key={row.id}
-                                        className={getRowClassName?.(
-                                            row.original,
-                                        )}
+                                        className={`${getRowClassName?.(row.original) ?? ''} ${
+                                            onRowClick
+                                                ? 'cursor-pointer transition-colors hover:bg-gray-50 focus-visible:bg-gray-50 focus-visible:outline-none dark:hover:bg-gray-900/20 dark:focus-visible:bg-gray-900/20'
+                                                : ''
+                                        } ${row.id === activeRowId ? 'bg-brand-green/6 dark:bg-brand-green/8' : ''}`}
+                                        {...(onRowClick && {
+                                            tabIndex: 0,
+                                            'aria-selected':
+                                                row.id === activeRowId,
+                                            onClick: () =>
+                                                openRow(row.original),
+                                            onKeyDown: (event) => {
+                                                if (
+                                                    event.key === 'Enter' &&
+                                                    event.target ===
+                                                        event.currentTarget
+                                                ) {
+                                                    openRow(row.original);
+                                                }
+                                            },
+                                        })}
                                     >
                                         {row.getVisibleCells().map((cell) => (
                                             <td

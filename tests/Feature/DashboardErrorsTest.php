@@ -202,6 +202,32 @@ it("lists the tab's issues with the admin's search, sort and environment", funct
         && $request->hasHeader('Authorization', 'Bearer test-token'));
 });
 
+it('defaults to the production environment', function (): void {
+    fakeSentry(sentryReportRoutes());
+
+    test()->actingAs(User::factory()->withRole(Role::Admin)->create())
+        ->get(route('dashboard.errors', []))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('filters.environment', 'production')
+            ->loadDeferredProps(fn (AssertableInertia $reload): AssertableInertia => $reload->where('issues.state', 'ready')));
+
+    Http::assertSent(fn (Request $request): bool => str_ends_with(parse_url($request->url(), PHP_URL_PATH), '/organizations/acme/issues/')
+        && $request->data()['environment'] === 'production');
+});
+
+it('lifts the environment filter when the admin picks all environments', function (): void {
+    fakeSentry(sentryReportRoutes());
+
+    test()->actingAs(User::factory()->withRole(Role::Admin)->create())
+        ->get(route('dashboard.errors', ['environment' => 'all']))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->where('filters.environment', null)
+            ->loadDeferredProps(fn (AssertableInertia $reload): AssertableInertia => $reload->where('issues.state', 'ready')));
+
+    Http::assertNotSent(fn (Request $request): bool => str_ends_with(parse_url($request->url(), PHP_URL_PATH), '/organizations/acme/issues/')
+        && isset($request->data()['environment']));
+});
+
 it('shows the unavailable state and reports the failure when Sentry errors', function (): void {
     Exceptions::fake();
     fakeSentry(['/projects/acme/check-in/' => fn (): mixed => Http::response(status: 500)]);

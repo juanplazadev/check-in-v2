@@ -48,6 +48,12 @@ enum UserHistoryEvent: string
     case RolePermissionsEdited = 'role-permissions-edited';
     case UserCreated = 'user-created';
     case InvitationAccepted = 'invitation-accepted';
+    case QueueWorkersRestarted = 'queue-workers-restarted';
+    case QueuePaused = 'queue-paused';
+    case QueueResumed = 'queue-resumed';
+    case FailedJobRetried = 'failed-job-retried';
+    case FailedJobsRetried = 'failed-jobs-retried';
+    case FailedJobDeleted = 'failed-job-deleted';
 
     /**
      * How the dashboard's activity table reads the event, as something the
@@ -98,6 +104,12 @@ enum UserHistoryEvent: string
             self::RolePermissionsEdited => 'Edited role permissions',
             self::UserCreated => 'Added a user',
             self::InvitationAccepted => 'Accepted their invitation',
+            self::QueueWorkersRestarted => 'Restarted the queue workers',
+            self::QueuePaused => 'Paused the queue workers',
+            self::QueueResumed => 'Resumed the queue workers',
+            self::FailedJobRetried => 'Retried a failed job',
+            self::FailedJobsRetried => 'Retried all failed jobs',
+            self::FailedJobDeleted => 'Deleted a failed job',
         };
     }
 }

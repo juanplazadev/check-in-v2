@@ -225,6 +225,15 @@ final readonly class UserHistoryEntryResolver
             $parts[] = 'Changed '.implode(', ', $fields);
         }
 
+        if (in_array($entry->event, [UserHistoryEvent::FailedJobRetried, UserHistoryEvent::FailedJobDeleted], true)
+            && is_string($changes['job'] ?? null)) {
+            $parts[] = 'Job: '.$changes['job'];
+        }
+
+        if ($entry->event === UserHistoryEvent::FailedJobsRetried && is_int($changes['count'] ?? null)) {
+            $parts[] = $changes['count'].' '.Str::plural('job', $changes['count']);
+        }
+
         if (is_string($changes['recipient'] ?? null)) {
             $parts[] = 'Sent to '.$changes['recipient'];
         }

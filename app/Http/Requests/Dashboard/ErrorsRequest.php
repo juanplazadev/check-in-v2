@@ -13,9 +13,14 @@ use Illuminate\Validation\Rule;
 /**
  * The errors page's period, issue tab, sort, environment, search and page
  * cursor. The search is passed to Sentry as part of its own search syntax.
+ * The environment defaults to production; "all" lifts the filter.
  */
 final class ErrorsRequest extends FormRequest
 {
+    public const string DEFAULT_ENVIRONMENT = 'production';
+
+    public const string ALL_ENVIRONMENTS = 'all';
+
     public function authorize(): bool
     {
         return true;
@@ -45,9 +50,20 @@ final class ErrorsRequest extends FormRequest
             'period' => ErrorPeriod::tryFrom((string) $this->validated('period')) ?? ErrorPeriod::DEFAULT,
             'tab' => ErrorIssueTab::tryFrom((string) $this->validated('tab')) ?? ErrorIssueTab::DEFAULT,
             'sort' => ErrorIssueSort::tryFrom((string) $this->validated('sort')) ?? ErrorIssueSort::DEFAULT,
-            'environment' => $this->validated('environment'),
+            'environment' => $this->environmentFilter(),
             'search' => mb_trim((string) $this->validated('search')),
             'cursor' => $this->validated('cursor'),
         ];
+    }
+
+    private function environmentFilter(): ?string
+    {
+        $environment = $this->validated('environment');
+
+        return match ($environment) {
+            null, '' => self::DEFAULT_ENVIRONMENT,
+            self::ALL_ENVIRONMENTS => null,
+            default => $environment,
+        };
     }
 }

@@ -76,19 +76,24 @@ enum Role: string
 
     /**
      * What an editable role may be granted: every permission but the driver
-     * account, which is for drivers (and admins) only, and the Sentry-backed
-     * errors and deployments pages, which are for admins only.
+     * account, which is for drivers (and admins) only, and the errors,
+     * deployments, jobs and messages pages, which are for admins only.
      *
      * @return list<Permission>
      */
     public static function assignablePermissions(): array
     {
+        // The excluded cases happen to be the last ones today, so PHPStan sees a list already; the reindex guards later additions.
+        // @phpstan-ignore arrayValues.list
         return array_values(array_filter(
             Permission::cases(),
             fn (Permission $permission): bool => ! in_array($permission, [
                 Permission::AccessDriverAccount,
                 Permission::ViewErrors,
                 Permission::ViewDeployments,
+                Permission::ViewJobs,
+                Permission::ManageJobs,
+                Permission::ViewMessages,
             ], true),
         ));
     }
