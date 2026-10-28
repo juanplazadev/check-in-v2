@@ -13,13 +13,23 @@ use Illuminate\Validation\Rule;
 /**
  * The errors page's period, issue tab, sort, environment, search and page
  * cursor. The search is passed to Sentry as part of its own search syntax.
- * The environment defaults to production; "all" lifts the filter.
+ * The environment defaults to the one this app reports to Sentry as, so
+ * staging shows staging errors; "all" lifts the filter.
  */
 final class ErrorsRequest extends FormRequest
 {
-    public const string DEFAULT_ENVIRONMENT = 'production';
-
     public const string ALL_ENVIRONMENTS = 'all';
+
+    /**
+     * The environment this app tags its own Sentry events with, mirroring the
+     * SDK's fallback from sentry.environment to APP_ENV.
+     */
+    public static function defaultEnvironment(): string
+    {
+        $environment = config('sentry.environment');
+
+        return is_string($environment) && $environment !== '' ? $environment : app()->environment();
+    }
 
     public function authorize(): bool
     {
@@ -61,7 +71,7 @@ final class ErrorsRequest extends FormRequest
         $environment = $this->validated('environment');
 
         return match ($environment) {
-            null, '' => self::DEFAULT_ENVIRONMENT,
+            null, '' => self::defaultEnvironment(),
             self::ALL_ENVIRONMENTS => null,
             default => $environment,
         };

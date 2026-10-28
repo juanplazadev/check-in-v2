@@ -30,9 +30,7 @@ final readonly class EnsurePasswordIsChanged
             return $next($request);
         }
 
-        if ($request->expectsJson() && ! $request->header('X-Inertia')) {
-            abort(403, 'Choose a new password first.');
-        }
+        abort_if($request->expectsJson() && ! $request->header('X-Inertia'), 403, 'Choose a new password first.');
 
         return to_route('password.change');
     }

@@ -173,7 +173,7 @@ it('loads the dialog options only when asked, marking which roles see every loca
                 ])));
 });
 
-it('names the role and sign-in method on the admin\'s activity trail', function (): void {
+it("names the role and sign-in method on the admin's activity trail", function (): void {
     Notification::fake();
     $admin = User::factory()->withRole(Role::Admin)->create();
 

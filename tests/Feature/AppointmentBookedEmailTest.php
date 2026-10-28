@@ -96,7 +96,7 @@ it('renders the appointment details in the notification', function (): void {
         $html = $mail->render();
 
         return str_contains($html, $mail->appointment->reference_number)
-            && str_contains($html, $mail->appointment->location->name)
+            && str_contains($html, e($mail->appointment->location->name))
             && str_contains($html, 'SO-00001')
             && str_contains($html, 'John Doe')
             && str_contains($html, '+1 (201) 555-0123');

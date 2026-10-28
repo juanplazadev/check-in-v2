@@ -271,6 +271,7 @@ it('names a deleted check-in from its snapshot without linking it', function ():
 it('names a soft-deleted location without linking it', function (): void {
     $location = Location::factory()->create(['name' => 'Miami - Dock']);
     $location->delete();
+
     $user = User::factory()->withRole(Role::Admin)->create();
     UserHistory::factory()->create([
         'user_id' => $user->id,
@@ -291,6 +292,7 @@ it('hides a record at a location the viewer does not see', function (): void {
     $checkIn = CheckIn::factory()->create(['location_id' => Location::factory()->create()->id]);
     $viewer = User::factory()->withRole(Role::ShippingManager)->worksAt($dock)->create();
     $viewer->givePermissionTo(Permission::ViewUsers);
+
     $user = User::factory()->withRole(Role::Admin)->create();
     UserHistory::factory()->create([
         'user_id' => $user->id,

@@ -151,7 +151,7 @@ it('frees a door once the truck using it is done', function (string $state): voi
     expect($checkIn->refresh()->dock_id)->toBe($dock->id);
 })->with(['completed', 'cancelled']);
 
-it('refuses a door that is not active at the check-in\'s location', function (string $dockState): void {
+it("refuses a door that is not active at the check-in's location", function (string $dockState): void {
     $location = Location::factory()->create();
     $dock = $dockState === 'elsewhere'
         ? Dock::factory()->create()
@@ -160,7 +160,7 @@ it('refuses a door that is not active at the check-in\'s location', function (st
 
     $this->actingAs(doorAssigner($location))
         ->put(route('dashboard.checkIns.dock.update', $checkIn->uuid), ['dock' => $dock->uuid, 'notify' => true])
-        ->assertSessionHasErrors(['dock' => 'Choose an active door at this check-in\'s location.']);
+        ->assertSessionHasErrors(['dock' => "Choose an active door at this check-in's location."]);
 })->with(['at another location' => 'elsewhere', 'inactive' => 'inactive']);
 
 it('accepts a walk-in-only door', function (): void {
@@ -244,7 +244,7 @@ it('hides a check-in at a location the user is not attached to', function (): vo
         ->assertNotFound();
 });
 
-it('offers the location\'s active doors on the check-in page, with the booked door', function (): void {
+it("offers the location's active doors on the check-in page, with the booked door", function (): void {
     $location = Location::factory()->create();
     $booked = Dock::factory()->for($location)->create(['name' => 'Door 1']);
     $busy = Dock::factory()->for($location)->create(['name' => 'Door 2']);

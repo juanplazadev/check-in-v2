@@ -37,7 +37,7 @@ final readonly class AttachLocationUsersAction
 
             $attachedIds = $location->users()->syncWithoutDetaching($byId->keys()->all())['attached'];
 
-            $attached = array_values(array_map(fn (int|string $id): User => $byId->get((int) $id), $attachedIds));
+            $attached = array_values($byId->only($attachedIds)->all());
 
             foreach ($attached as $user) {
                 $this->recordHistory->handle($location, RecordHistoryEvent::LocationUserAttached, user: $actor, context: [

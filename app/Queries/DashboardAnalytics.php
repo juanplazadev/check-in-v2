@@ -161,6 +161,7 @@ final readonly class DashboardAnalytics
             if ($turnaround !== null) {
                 $location['turnarounds'][] = $turnaround;
             }
+
             unset($location);
         }
 

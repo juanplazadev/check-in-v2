@@ -167,7 +167,7 @@ it('redirects a page past the last attached staff to the last page', function (i
     'nobody left' => [0, []],
 ]);
 
-it('pages a location\'s history, newest first', function (): void {
+it("pages a location's history, newest first", function (): void {
     $location = Location::factory()->create();
     $oldest = RecordHistory::factory()->forRecord($location)->create(['created_at' => now()->subDay()]);
     RecordHistory::factory()->forRecord($location)->count(LocationRecordResolver::HISTORY_PER_PAGE)->create();

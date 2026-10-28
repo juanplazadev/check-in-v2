@@ -54,12 +54,12 @@ it('lists every permission and what each role holds, as stored in the database',
                 'description' => 'Open the dashboard overview.',
                 'group' => 'dashboard',
             ])
-            ->where('assignable', fn (Collection $assignable): bool => ! $assignable->contains(Permission::AccessDriverAccount->value)
-                && ! $assignable->contains(Permission::ViewErrors->value)
-                && ! $assignable->contains(Permission::ViewDeployments->value)
-                && ! $assignable->contains(Permission::ViewJobs->value)
-                && ! $assignable->contains(Permission::ManageJobs->value)
-                && ! $assignable->contains(Permission::ViewMessages->value)
+            ->where('assignable', fn (Collection $assignable): bool => $assignable->doesntContain(Permission::AccessDriverAccount->value)
+                && $assignable->doesntContain(Permission::ViewErrors->value)
+                && $assignable->doesntContain(Permission::ViewDeployments->value)
+                && $assignable->doesntContain(Permission::ViewJobs->value)
+                && $assignable->doesntContain(Permission::ManageJobs->value)
+                && $assignable->doesntContain(Permission::ViewMessages->value)
                 && $assignable->count() === count(Permission::cases()) - 6)
             ->where('roles', function (Collection $roles) use ($expectedShipping): bool {
                 $byName = $roles->keyBy('name');

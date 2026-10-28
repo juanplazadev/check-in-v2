@@ -28,12 +28,13 @@ final class UserSeeder extends Seeder
 
     /**
      * Seeds known-credential accounts, so it refuses to run in production.
+     * Staging is seeded on its first deploy.
      */
     public function run(): void
     {
-        /*if (App::isProduction()) {
+        if (App::isProduction()) {
             return;
-        }*/
+        }
 
         $password = config('app.seed_admin_password');
 

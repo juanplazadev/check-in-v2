@@ -24,8 +24,8 @@ final readonly class HorizonPayload
     {
         try {
             return ['state' => 'ready', 'data' => $fetch()];
-        } catch (RedisException $exception) {
-            report($exception);
+        } catch (RedisException $redisException) {
+            report($redisException);
 
             return ['state' => 'unavailable'];
         }

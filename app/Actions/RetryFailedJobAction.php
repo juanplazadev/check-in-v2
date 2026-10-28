@@ -33,7 +33,7 @@ final readonly class RetryFailedJobAction
             return false;
         }
 
-        dispatch(new RetryFailedJob($id));
+        dispatch_sync(new RetryFailedJob($id));
 
         $this->recordUserHistory->handle($actor, UserHistoryEvent::FailedJobRetried, [
             'job' => (string) $job->name,

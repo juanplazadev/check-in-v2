@@ -51,6 +51,15 @@ it('redirects every recipient to the always_to inbox outside production', functi
         ->and($email->getCc())->toBe([]);
 });
 
+it('redirects in staging', function (): void {
+    config()->set('mail.always_to', 'staging-inbox@example.com');
+    app()->detectEnvironment(fn (): string => 'staging');
+
+    bootMailRedirect();
+
+    expect(recipientsOf(sendProbe()))->toBe(['staging-inbox@example.com']);
+});
+
 it('leaves recipients alone when no always_to address is configured', function (): void {
     // Set explicitly rather than leaning on the ambient environment: .env.example
     // ships `MAIL_ALWAYS_TO=`, so CI resolves the config to '' where a local .env

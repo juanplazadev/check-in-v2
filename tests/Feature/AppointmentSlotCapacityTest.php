@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use Carbon\CarbonInterface;
 use App\Actions\BookAppointmentAction;
 use App\Appointment\AppointmentScheduleResolver;
 use App\Enums\AppointmentStatus;
@@ -31,7 +32,7 @@ function capacityPayload(Location $location): array
 }
 
 /** An hour from now, in the location's own time. */
-function capacitySlot(Location $location): Carbon\CarbonInterface
+function capacitySlot(Location $location): CarbonInterface
 {
     return now()->addHour()->startOfHour()->setTimezone($location->timezone);
 }

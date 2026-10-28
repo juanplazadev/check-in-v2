@@ -57,7 +57,7 @@ final readonly class AssignCheckInDockAction
                 ->first();
 
             if (! $dock instanceof Dock) {
-                throw ValidationException::withMessages(['dock' => 'Choose an active door at this check-in\'s location.']);
+                throw ValidationException::withMessages(['dock' => "Choose an active door at this check-in's location."]);
             }
 
             if ($checkIn->dock_id === $dock->id) {

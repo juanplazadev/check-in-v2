@@ -43,6 +43,14 @@ pest()->extend(TestCase::class)
     })
     ->in('Browser', 'Feature', 'Unit');
 
+pest()->beforeEach(function (): void {
+    $unreachable = viteDevServerUnreachable();
+
+    if ($unreachable !== null) {
+        $this->fail("public/hot points at {$unreachable}, which this process cannot reach, so every page would render blank and the first click would hang. Run `npm run build` and stop the dev server (or move public/hot aside), or run the dev server inside Sail.");
+    }
+})->in('Browser');
+
 /*
 |--------------------------------------------------------------------------
 | Expectations
@@ -70,6 +78,40 @@ expect()->extend('toBeOne', fn () => $this->toBe(1));
 function something(): void
 {
     // ..
+}
+
+/**
+ * The dev server URL in public/hot when this process cannot connect to it,
+ * otherwise null. A host-run dev server writes a host address that the Sail
+ * container cannot reach. Checked once per process.
+ */
+function viteDevServerUnreachable(): ?string
+{
+    static $result = false;
+
+    if ($result !== false) {
+        return $result;
+    }
+
+    $hotFile = public_path('hot');
+
+    if (! is_file($hotFile)) {
+        return $result = null;
+    }
+
+    $url = mb_trim((string) file_get_contents($hotFile));
+    $host = mb_trim((string) parse_url($url, PHP_URL_HOST), '[]');
+    $port = parse_url($url, PHP_URL_PORT) ?? (str_starts_with($url, 'https') ? 443 : 80);
+
+    $socket = @fsockopen($host, $port, $errorCode, $errorMessage, 1);
+
+    if ($socket === false) {
+        return $result = $url;
+    }
+
+    fclose($socket);
+
+    return $result = null;
 }
 
 /**

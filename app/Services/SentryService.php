@@ -318,13 +318,9 @@ final readonly class SentryService
      */
     private function pooled(mixed $result): Response
     {
-        if ($result instanceof ConnectionException) {
-            throw $result;
-        }
+        throw_if($result instanceof ConnectionException, $result);
 
-        if (! $result instanceof Response) {
-            throw new ConnectionException('The Sentry request did not complete.', previous: $result instanceof Throwable ? $result : null);
-        }
+        throw_unless($result instanceof Response, ConnectionException::class, 'The Sentry request did not complete.', previous: $result instanceof Throwable ? $result : null);
 
         return $result;
     }

@@ -70,7 +70,7 @@ final readonly class SentryIssues
     {
         /** @var array<string, list<array{0: int, 1: int}>> $stats */
         $stats = $issue['stats'] ?? [];
-        $trend = array_map(fn (array $point): int => (int) $point[1], array_values($stats)[0] ?? []);
+        $trend = array_map(fn (array $point): int => (int) $point[1], array_first($stats) ?? []);
 
         return [
             'id' => (string) $issue['id'],
