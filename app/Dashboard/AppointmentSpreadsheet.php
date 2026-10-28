@@ -73,6 +73,7 @@ final readonly class AppointmentSpreadsheet
             'Scheduled for',
             'Booked at',
             'Check-in',
+            'Dock',
             'Cancelled at',
             'Cancelation reason',
             'Archived at',
@@ -99,6 +100,7 @@ final readonly class AppointmentSpreadsheet
             $this->dateTime($appointment->scheduled_for, $timezone),
             $this->dateTime($appointment->created_at, $timezone),
             $appointment->checkIn?->reference_number,
+            $appointment->dock?->label(),
             $this->dateTime($appointment->cancelled_at, $timezone),
             $appointment->cancelled_reason,
             $this->dateTime($appointment->deleted_at, $timezone),
@@ -119,6 +121,7 @@ final readonly class AppointmentSpreadsheet
             AppointmentColumn::PurchaseOrders => 'Purchase orders',
             AppointmentColumn::Status => 'Status',
             AppointmentColumn::CheckIn => 'Check-in',
+            AppointmentColumn::Dock => 'Dock',
         };
     }
 
@@ -133,6 +136,7 @@ final readonly class AppointmentSpreadsheet
             AppointmentColumn::PurchaseOrders => $this->purchaseOrders($appointment),
             AppointmentColumn::Status => Str::headline($appointment->status->value),
             AppointmentColumn::CheckIn => $appointment->checkIn?->reference_number,
+            AppointmentColumn::Dock => $appointment->dock?->label(),
         };
     }
 

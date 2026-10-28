@@ -18,6 +18,7 @@ enum AppointmentColumn: string
     case PurchaseOrders = 'purchaseOrders';
     case Status = 'status';
     case CheckIn = 'checkIn';
+    case Dock = 'dock';
 
     /**
      * The reference links to the record, so it is always shown.

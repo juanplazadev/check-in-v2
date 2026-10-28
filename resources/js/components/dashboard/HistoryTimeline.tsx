@@ -31,6 +31,14 @@ const DOT_CLASSES: Partial<Record<RecordHistoryEntry['event'], string>> = {
     'appointment-options-edited': 'bg-violet-500',
     'closure-added': 'bg-rose-500',
     'closure-removed': 'bg-gray-500',
+    'building-added': 'bg-blue-500',
+    'building-edited': 'bg-violet-500',
+    'building-removed': 'bg-gray-500',
+    'dock-added': 'bg-blue-500',
+    'dock-edited': 'bg-violet-500',
+    'dock-removed': 'bg-gray-500',
+    'dock-assigned': 'bg-blue-500',
+    'dock-unassigned': 'bg-gray-500',
 };
 
 function ChangeValue({ value }: { value: string | null }) {

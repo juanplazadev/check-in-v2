@@ -150,6 +150,8 @@ enum Role: string
             Permission::RestoreAppointments,
             Permission::ExportCheckInsView,
             Permission::ExportAppointmentsView,
+            Permission::AssignAppointmentDocks,
+            Permission::AssignCheckInDocks,
         ];
 
         return match ($this) {
@@ -164,6 +166,7 @@ enum Role: string
                 Permission::ReinstateAppointments,
                 Permission::PauseCheckIns,
                 Permission::EditLocationHours,
+                Permission::ManageDocks,
                 Permission::ViewAnalytics,
             ],
             self::Shipping => $shipping,

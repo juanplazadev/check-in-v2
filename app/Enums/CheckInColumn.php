@@ -34,6 +34,7 @@ enum CheckInColumn: string
     case TrailerPlateRegion = 'trailerPlateRegion';
     case LicenseRegion = 'licenseRegion';
     case LicenseExpiration = 'licenseExpiration';
+    case Dock = 'dock';
 
     /**
      * The {@see \App\Models\Location::checkInFormFields()} flags behind this

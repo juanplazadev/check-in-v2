@@ -17,6 +17,10 @@ return new class extends Migration
             $table->string('reference_number', 8)->unique();
             $table->foreignId('location_id')->constrained('locations')->restrictOnDelete();
             $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
+            // Assigned by staff after booking; null until then.
+            $table->foreignId('dock_id')->nullable()->constrained('docks')->nullOnDelete();
+            $table->timestampTz('dock_assigned_at')->nullable();
+            $table->foreignId('dock_assigned_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestampTz('scheduled_for');
             $table->string('drivers_name');
             $table->string('drivers_cellphone');
@@ -44,6 +48,8 @@ return new class extends Migration
             // Serves the hourly reminder sweep, which filters on exactly this
             // pair. Neither index above works for it as a leftmost prefix.
             $table->index(['status', 'scheduled_for']);
+            // Serves the "is this dock free at this slot" check.
+            $table->index(['dock_id', 'scheduled_for']);
         });
 
         if (DB::getDriverName() !== 'pgsql') {

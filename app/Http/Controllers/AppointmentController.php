@@ -7,12 +7,14 @@ namespace App\Http\Controllers;
 use App\Actions\BookAppointmentAction;
 use App\Appointment\AppointmentConfirmationResolver;
 use App\Appointment\AppointmentScheduleResolver;
+use App\Appointment\AppointmentSlotCapacity;
 use App\Auth\RegistrationGate;
 use App\DTOs\AppointmentLocationDTO;
 use App\Http\Requests\AppointmentFormRequest;
 use App\Http\Requests\AppointmentLocationSelectRequest;
 use App\Models\Location;
 use App\Models\User;
+use App\Queries\AppointmentLocation;
 use App\Session\AppointmentSession;
 use Illuminate\Container\Attributes\CurrentUser;
 use Illuminate\Http\RedirectResponse;
@@ -64,10 +66,15 @@ final class AppointmentController extends Controller
         return to_route('appointment.form', $location->uuid ?? '');
     }
 
-    public function form(): Response
+    public function form(AppointmentSlotCapacity $slotCapacity): Response
     {
+        $locationDTO = $this->session->getLocation();
+
         return inertia('AppointmentForm', [
-            'location' => $this->session->getLocation(),
+            'location' => $locationDTO,
+            // Read on every render rather than stored on the session DTO, so a
+            // slot that fills while the driver is on the form shows as full on reload.
+            'fullSlots' => $this->fullSlots($slotCapacity, $locationDTO),
         ]);
     }
 
@@ -101,5 +108,23 @@ final class AppointmentController extends Controller
     public function confirmed(string $uuid, AppointmentConfirmationResolver $resolver): Response
     {
         return inertia('AppointmentConfirmation', $resolver->resolve($uuid));
+    }
+
+    /**
+     * @return array<string, list<string>>
+     */
+    private function fullSlots(AppointmentSlotCapacity $slotCapacity, ?AppointmentLocationDTO $locationDTO): array
+    {
+        $location = $locationDTO instanceof AppointmentLocationDTO
+            ? resolve(AppointmentLocation::class)->execute($locationDTO->id)
+            : null;
+
+        if (! $location instanceof Location) {
+            return [];
+        }
+
+        $now = now();
+
+        return $slotCapacity->fullSlots($location, $now, $now->copy()->addDays($location->appointmentMaxBookingDaysAhead() + 1));
     }
 }

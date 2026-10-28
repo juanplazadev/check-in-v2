@@ -11,6 +11,9 @@
             @include('pdf.partials.row', ['label' => __('messages.accountHistoryRecord.time'), 'value' => $appointment['time']])
             @include('pdf.partials.row', ['label' => __('messages.accountHistoryRecord.locationHeading'), 'value' => $appointment['locationName']])
             @include('pdf.partials.row', ['label' => __('messages.accountHistoryRecord.address'), 'value' => $appointment['locationAddress']])
+            @if (filled($appointment['dock']))
+                @include('pdf.partials.row', ['label' => __('messages.accountHistoryRecord.dock'), 'value' => $appointment['dock']])
+            @endif
         </dl>
     </div>
 

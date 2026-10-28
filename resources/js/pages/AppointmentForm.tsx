@@ -7,13 +7,16 @@ import { Controller, useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import AlertBanner from '@/components/AlertBanner';
-import { DatePicker, TimePicker } from '@/components/DatePickerTime';
+import {
+    DatePicker,
+    TimePicker,
+    buildSlots,
+} from '@/components/DatePickerTime';
 import LocationScheduleCard from '@/components/LocationScheduleCard';
 import PurchaseOrderInputs, {
-    
-    poNumberSchema
+    poNumberSchema,
 } from '@/components/PurchaseOrderInputs';
-import type {PurchaseOrderTranslations} from '@/components/PurchaseOrderInputs';
+import type { PurchaseOrderTranslations } from '@/components/PurchaseOrderInputs';
 import SectionHeader from '@/components/SectionHeader';
 import { Button } from '@/components/ui/button';
 import {
@@ -68,6 +71,7 @@ interface AppointmentFormTranslations {
     cellphoneConsent: string;
     todaysHours: string;
     noAvailability: string;
+    slotFull: string;
     reviewButton: string;
     submitButton: string;
     submitting: string;
@@ -84,9 +88,24 @@ interface Translations {
 
 interface PageProps {
     location: Location;
+    /** Slots with no room left, by local date: { '2026-11-02': ['08:00:00'] }. */
+    fullSlots: Record<string, string[]>;
     translations: Translations;
     auth: { user: { name: string; cellphone: string | null } | null };
     [key: string]: unknown;
+}
+
+/** The first slot in a day's window that still has room. */
+function firstOpenSlot(
+    window: AvailabilityWindow,
+    intervalMinutes: number,
+    fullSlots: Record<string, string[]>,
+): string | undefined {
+    const full = new Set(fullSlots[window.date] ?? []);
+
+    return buildSlots(window.firstSlot, window.lastSlot, intervalMinutes).find(
+        (slot) => !full.has(slot),
+    );
 }
 
 // ── Review summary ──────────────────────────────────────────────────────────
@@ -182,7 +201,10 @@ function ReviewSummary({
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
-export default function ScheduleAppointment({ location }: PageProps) {
+export default function ScheduleAppointment({
+    location,
+    fullSlots,
+}: PageProps) {
     const { translations, auth } = usePage<PageProps>().props;
     const t = translations.appointmentForm;
     const poT = translations.purchaseOrders;
@@ -198,7 +220,19 @@ export default function ScheduleAppointment({ location }: PageProps) {
     const [step, setStep] = useState<'form' | 'review'>('form');
     const [serverError, setServerError] = useState<string | null>(null);
 
-    const availability = location.availability ?? [];
+    // A day whose every slot is full is left out, as if it had no hours.
+    const availability = useMemo(
+        () =>
+            (location.availability ?? []).filter(
+                (w) =>
+                    firstOpenSlot(
+                        w,
+                        location.slotIntervalMinutes,
+                        fullSlots,
+                    ) !== undefined,
+            ),
+        [location.availability, location.slotIntervalMinutes, fullSlots],
+    );
     const hasAvailability = availability.length > 0;
 
     const availableDates = useMemo(
@@ -238,7 +272,13 @@ export default function ScheduleAppointment({ location }: PageProps) {
             defaultValues: {
                 location_id: location.id,
                 date: firstWindow?.date ?? '',
-                time: firstWindow?.firstSlot ?? '10:00:00',
+                time: firstWindow
+                    ? (firstOpenSlot(
+                          firstWindow,
+                          location.slotIntervalMinutes,
+                          fullSlots,
+                      ) ?? firstWindow.firstSlot)
+                    : '10:00:00',
                 po_numbers: [{ value: '' }],
                 drivers_name: prefillName,
                 drivers_cellphone: prefillCellphone,
@@ -420,7 +460,12 @@ export default function ScheduleAppointment({ location }: PageProps) {
                                                                 if (w) {
                                                                     setValue(
                                                                         'time',
-                                                                        w.firstSlot,
+                                                                        firstOpenSlot(
+                                                                            w,
+                                                                            location.slotIntervalMinutes,
+                                                                            fullSlots,
+                                                                        ) ??
+                                                                            w.firstSlot,
                                                                         {
                                                                             shouldValidate: true,
                                                                         },
@@ -467,6 +512,16 @@ export default function ScheduleAppointment({ location }: PageProps) {
                                                             }
                                                             intervalMinutes={
                                                                 location.slotIntervalMinutes
+                                                            }
+                                                            fullSlots={
+                                                                selectedDate
+                                                                    ? fullSlots[
+                                                                          selectedDate
+                                                                      ]
+                                                                    : undefined
+                                                            }
+                                                            fullLabel={
+                                                                t.slotFull
                                                             }
                                                         />
                                                         {fieldState.invalid && (

@@ -18,7 +18,7 @@ final readonly class AppointmentRecordResolver
      *
      * @var list<string>
      */
-    public const array RELATIONS = ['location', 'purchaseOrders', 'checkIn', 'user'];
+    public const array RELATIONS = ['location', 'purchaseOrders', 'checkIn', 'user', 'dock.building'];
 
     public function __construct(private RecordHistoryEntryResolver $history) {}
 
@@ -49,6 +49,10 @@ final readonly class AppointmentRecordResolver
             ],
             'scheduledFor' => $appointment->scheduled_for->toIso8601String(),
             'purchaseOrders' => $purchaseOrders,
+            'dock' => $appointment->dock === null ? null : [
+                'uuid' => $appointment->dock->uuid,
+                'label' => $appointment->dock->label(),
+            ],
             'cancelledReason' => $appointment->cancelled_reason,
             'checkIn' => $appointment->checkIn === null ? null : [
                 'uuid' => $appointment->checkIn->uuid,

@@ -22,7 +22,7 @@ final readonly class CheckInRecordResolver
      *
      * @var list<string>
      */
-    public const array RELATIONS = ['location', 'purchaseOrders', 'appointment', 'user'];
+    public const array RELATIONS = ['location', 'purchaseOrders', 'appointment.dock', 'user', 'dock.building'];
 
     public function __construct(private RecordHistoryEntryResolver $history) {}
 
@@ -82,6 +82,13 @@ final readonly class CheckInRecordResolver
             'appointmentReference' => $checkIn->appointment?->reference_number,
             'appointmentUuid' => $checkIn->appointment?->uuid,
             'appointmentLinkedVia' => $checkIn->appointment_linked_via?->value,
+            'dock' => $checkIn->dock === null ? null : [
+                'uuid' => $checkIn->dock->uuid,
+                'label' => $checkIn->dock->label(),
+            ],
+            // The door the linked booking was placed on, offered first when sending the truck to a door.
+            'appointmentDockUuid' => $checkIn->appointment?->dock?->uuid,
+            'doorNotifiedAt' => $checkIn->door_notified_at?->toIso8601String(),
             'locale' => $checkIn->locale,
             'createdAt' => $checkIn->created_at->toIso8601String(),
             'completedAt' => $checkIn->completed_at?->toIso8601String(),

@@ -11,6 +11,7 @@ import {
     SlidersHorizontal,
     Truck,
     Users,
+    Warehouse,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
@@ -100,6 +101,11 @@ function navGroups(uuid: string): NavGroup[] {
                     label: 'Closures & holidays',
                     icon: CalendarOff,
                     href: routes.closures.url(uuid),
+                },
+                {
+                    label: 'Docks & buildings',
+                    icon: Warehouse,
+                    href: routes.docks.url(uuid),
                 },
             ],
         },

@@ -34,7 +34,8 @@ export type CheckInColumn =
     | 'truckPlateRegion'
     | 'trailerPlateRegion'
     | 'licenseRegion'
-    | 'licenseExpiration';
+    | 'licenseExpiration'
+    | 'dock';
 
 /** Mirrors App\Enums\AppointmentColumn: the appointment table columns a user may toggle. */
 export type AppointmentColumn =
@@ -45,7 +46,8 @@ export type AppointmentColumn =
     | 'location'
     | 'purchaseOrders'
     | 'status'
-    | 'checkIn';
+    | 'checkIn'
+    | 'dock';
 
 /** Mirrors App\Enums\RecordHistoryEvent. */
 export type RecordHistoryEvent =
@@ -81,7 +83,15 @@ export type RecordHistoryEvent =
     | 'check-in-options-edited'
     | 'appointment-options-edited'
     | 'closure-added'
-    | 'closure-removed';
+    | 'closure-removed'
+    | 'building-added'
+    | 'building-edited'
+    | 'building-removed'
+    | 'dock-added'
+    | 'dock-edited'
+    | 'dock-removed'
+    | 'dock-assigned'
+    | 'dock-unassigned';
 
 /** An internal staff note on a check-in, newest first on the detail page. */
 export interface CheckInNote {
@@ -207,6 +217,12 @@ export interface CheckInRecord {
     appointmentUuid: string | null;
     /** How the booking was tied on: the driver converted it, or staff linked it (mirrors App\Enums\AppointmentLinkMethod). */
     appointmentLinkedVia: 'conversion' | 'staff' | null;
+    /** The door staff sent this truck to; null until assigned. */
+    dock: { uuid: string; label: string } | null;
+    /** The door the linked booking was placed on, offered first when assigning one. */
+    appointmentDockUuid: string | null;
+    /** When the driver was last texted their door. */
+    doorNotifiedAt: string | null;
     /** The language the driver checked in with: one of config('app.locales'), e.g. 'es'. */
     locale: string;
     createdAt: string;
@@ -234,6 +250,8 @@ export interface AppointmentRecord {
     };
     scheduledFor: string;
     purchaseOrders: string[];
+    /** The dock staff placed this booking on; null until assigned. */
+    dock: { uuid: string; label: string } | null;
     cancelledReason: string | null;
     /** The check-in this booking turned into, once the driver arrived. */
     checkIn: { uuid: string; referenceNumber: string } | null;
@@ -316,6 +334,53 @@ export interface LocationMapPoint {
     longitude: number | null;
     /** Miles from the dock a driver may check in. */
     maxDistanceAllowed: number;
+}
+
+/** A building a location's docks are grouped under. Mirrors LocationDockResolver::docks(). */
+export interface LocationBuilding {
+    id: string;
+    name: string;
+}
+
+/** A dock door at a location. Mirrors LocationDockResolver::docks(). */
+export interface LocationDock {
+    id: string;
+    name: string;
+    /** With the building when there is one: "Building B / Door 12". */
+    label: string;
+    buildingId: string | null;
+    isActive: boolean;
+    acceptsAppointments: boolean;
+    /** Upcoming scheduled appointments placed on this dock. */
+    upcomingCount: number;
+    /** Whether it ever held an appointment or a check-in; such a dock can only be turned off. */
+    hasRecords: boolean;
+}
+
+/** Mirrors LocationDockResolver::docks(). */
+export interface LocationDocks {
+    /** Bookings each appointment slot takes; null means no limit (no bookable docks). */
+    capacity: number | null;
+    buildings: LocationBuilding[];
+    docks: LocationDock[];
+}
+
+/** One choice in a check-in's door picker. Mirrors LocationDockResolver::doorOptions(). */
+export interface CheckInDoorOption {
+    id: string;
+    label: string;
+    building: string | null;
+    /** Reference number of the pending check-in at this door, if any. */
+    inUseBy: string | null;
+}
+
+/** One choice in an appointment's dock picker. Mirrors LocationDockResolver::optionsFor(). */
+export interface AppointmentDockOption {
+    id: string;
+    label: string;
+    building: string | null;
+    /** Reference number of the booking that holds this dock at the same time, if any. */
+    takenBy: string | null;
 }
 
 /** A date whose hours differ from the weekly schedule. Mirrors LocationRecordResolver::mergeClosures(). */

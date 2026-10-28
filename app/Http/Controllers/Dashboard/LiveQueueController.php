@@ -6,12 +6,15 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Dashboard\AppointmentRecordResolver;
 use App\Dashboard\CheckInRecordResolver;
+use App\Dashboard\LocationDockResolver;
+use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Queries\DashboardLocations;
 use App\Queries\LiveQueueAppointments;
 use App\Queries\LiveQueueCheckIns;
 use Illuminate\Container\Attributes\CurrentUser;
+use Inertia\Inertia;
 use Inertia\Response;
 
 /**
@@ -28,6 +31,7 @@ final class LiveQueueController extends Controller
         DashboardLocations $locations,
         CheckInRecordResolver $checkInResolver,
         AppointmentRecordResolver $appointmentResolver,
+        LocationDockResolver $docks,
     ): Response {
         return inertia('Dashboard/Queue/Index', [
             'checkIns' => $checkIns->execute($user)->map($checkInResolver->record(...))->all(),
@@ -38,6 +42,10 @@ final class LiveQueueController extends Controller
                 'aheadHours' => LiveQueueAppointments::AHEAD_HOURS,
             ],
             'locations' => fn (): array => $locations->execute($user),
+            // Loaded when a door dialog opens, so the queue's own payload stays small.
+            'doorOptions' => Inertia::optional(fn (): array => $user->can(Permission::AssignCheckInDocks)
+                ? $docks->doorOptions($user->dashboardLocationIds())
+                : []),
         ]);
     }
 }

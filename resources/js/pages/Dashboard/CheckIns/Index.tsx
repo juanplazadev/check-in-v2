@@ -141,6 +141,7 @@ const COLUMN_LABELS: Record<CheckInColumn, string> = {
     trailerPlateRegion: 'Trailer plate region',
     licenseRegion: 'License region',
     licenseExpiration: 'License expiration',
+    dock: 'Door',
 };
 
 /** Shown until the user chooses otherwise; every other column starts hidden. */
@@ -371,6 +372,12 @@ const buildColumns = (dateField: DateRangeField, canViewUsers: boolean) =>
 
                 return date === null ? '-' : formatCalendarDate(date);
             },
+        }),
+        column.accessor((checkIn) => checkIn.dock?.label ?? null, {
+            id: 'dock',
+            header: COLUMN_LABELS.dock,
+            enableSorting: false,
+            cell: ({ getValue }) => getValue() ?? '-',
         }),
     ]);
 

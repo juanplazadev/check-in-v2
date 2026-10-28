@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Dashboard;
 
+use App\Dashboard\LocationDockResolver;
 use App\Dashboard\LocationRecordResolver;
 use App\Dashboard\LocationTimezones;
 use App\Enums\Permission;
@@ -141,6 +142,13 @@ final class LocationController extends Controller
         return $this->section($user, $uuid, 'Closures', fn (Location $location): array => [
             // Only those who may add closures are warned about bookings.
             'closures' => $this->resolver->closures($location, now(), $user->can(Permission::EditLocationHours)),
+        ]);
+    }
+
+    public function docks(#[CurrentUser] User $user, string $uuid, LocationDockResolver $docks): Response
+    {
+        return $this->section($user, $uuid, 'Docks', fn (Location $location): array => [
+            'docks' => $docks->docks($location),
         ]);
     }
 

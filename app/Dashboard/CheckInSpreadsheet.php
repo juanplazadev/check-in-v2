@@ -29,7 +29,7 @@ final readonly class CheckInSpreadsheet
      *
      * @var list<string>
      */
-    public const array RELATIONS = ['location', 'purchaseOrders', 'appointment'];
+    public const array RELATIONS = ['location', 'purchaseOrders', 'appointment', 'dock.building'];
 
     private const string DATE_FORMAT = 'Y-m-d';
 
@@ -96,6 +96,7 @@ final readonly class CheckInSpreadsheet
             'Purchase orders',
             'Loading instructions',
             'Appointment',
+            'Door',
             'Submitted at',
             'Completed at',
             'ERP synced at',
@@ -142,6 +143,7 @@ final readonly class CheckInSpreadsheet
             $this->purchaseOrders($checkIn),
             $checkIn->loading_instructions,
             $checkIn->appointment?->reference_number,
+            $checkIn->dock?->label(),
             $this->dateTime($checkIn->created_at, $timezone),
             $this->dateTime($checkIn->completed_at, $timezone),
             $this->dateTime($checkIn->erp_synced_at, $timezone),
@@ -176,6 +178,7 @@ final readonly class CheckInSpreadsheet
             CheckInColumn::TrailerPlateRegion => 'Trailer plate region',
             CheckInColumn::LicenseRegion => 'License region',
             CheckInColumn::LicenseExpiration => 'License expiration',
+            CheckInColumn::Dock => 'Door',
         };
     }
 
@@ -202,6 +205,7 @@ final readonly class CheckInSpreadsheet
             CheckInColumn::TrailerPlateRegion => $this->joined($checkIn->trailer_plate_state, $checkIn->trailer_plate_country),
             CheckInColumn::LicenseRegion => $this->joined($checkIn->drivers_license_state, $checkIn->drivers_license_country),
             CheckInColumn::LicenseExpiration => $this->date($checkIn->drivers_license_expiration_date),
+            CheckInColumn::Dock => $checkIn->dock?->label(),
         };
     }
 
