@@ -3,7 +3,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 import { UserIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Controller, useFieldArray, useForm } from 'react-hook-form';
+import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
 import AlertBanner from '@/components/AlertBanner';
@@ -13,6 +13,7 @@ import {
     buildSlots,
 } from '@/components/DatePickerTime';
 import LocationScheduleCard from '@/components/LocationScheduleCard';
+import { PhoneInput, formatUsPhone } from '@/components/PhoneInput';
 import PurchaseOrderInputs, {
     poNumberSchema,
 } from '@/components/PurchaseOrderInputs';
@@ -27,7 +28,6 @@ import {
     FieldDescription,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { PhoneInput, formatUsPhone } from '@/components/PhoneInput';
 import PublicLayout from '@/layouts/PublicLayout';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -266,7 +266,7 @@ export default function ScheduleAppointment({
 
     type FormValues = z.infer<typeof schema>;
 
-    const { control, handleSubmit, setError, watch, setValue, getValues } =
+    const { control, handleSubmit, setError, setValue, getValues } =
         useForm<FormValues>({
             resolver: zodResolver(schema),
             defaultValues: {
@@ -290,7 +290,7 @@ export default function ScheduleAppointment({
         name: 'po_numbers',
     });
 
-    const selectedDate = watch('date');
+    const selectedDate = useWatch({ control, name: 'date' });
     const currentWindow = selectedDate
         ? windowByDate.get(selectedDate)
         : undefined;

@@ -132,6 +132,7 @@ export default function QueueIndex({
     const [expanded, setExpanded] = useState(false);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLocation(readStored(LOCATION_KEY) ?? 'all');
         setSort(readStored(SORT_KEY) === 'newest' ? 'newest' : 'oldest');
         setDensity(readStored(DENSITY_KEY) === 'compact' ? 'compact' : 'cards');

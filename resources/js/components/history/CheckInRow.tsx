@@ -2,8 +2,8 @@ import { Link } from '@inertiajs/react';
 import { ChevronRight, MapPin } from 'lucide-react';
 
 import StatusBadge from '@/components/StatusBadge';
-
 import type { CheckInRowData } from './types';
+
 
 export default function CheckInRow({
     row,

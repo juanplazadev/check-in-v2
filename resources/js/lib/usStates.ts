@@ -74,6 +74,7 @@ export function stateAbbr(state?: string | null): string | null {
 
     if (trimmed.length === 2) {
         const upper = trimmed.toUpperCase();
+
         return US_STATES.some((s) => s.abbr === upper) ? upper : null;
     }
 

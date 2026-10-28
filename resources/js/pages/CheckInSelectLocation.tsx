@@ -215,6 +215,7 @@ export default function SelectLocation() {
         }
 
         fetchDistances(coords);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [coords]);
 
     return (

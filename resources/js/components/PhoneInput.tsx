@@ -14,9 +14,18 @@ export function formatUsPhone(raw: string): string {
     const mid = digits.substring(3, 6);
     const last = digits.substring(6, 10);
 
-    if (digits.length > 6) return `(${area}) ${mid}-${last}`;
-    if (digits.length > 3) return `(${area}) ${mid}`;
-    if (digits.length > 0) return `(${area}`;
+    if (digits.length > 6) {
+return `(${area}) ${mid}-${last}`;
+}
+
+    if (digits.length > 3) {
+return `(${area}) ${mid}`;
+}
+
+    if (digits.length > 0) {
+return `(${area}`;
+}
+
     return '';
 }
 
