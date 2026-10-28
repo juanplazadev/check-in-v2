@@ -95,6 +95,7 @@ export function LiveAlertsProvider({ children }: { children: ReactNode }) {
     // Browser-only state is read after hydration, so the server render and the first client
     // render agree.
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSettings((defaults) => readSettings(defaults));
         setDesktopPermission(currentPermission());
     }, []);

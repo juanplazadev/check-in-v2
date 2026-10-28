@@ -61,6 +61,7 @@ function maskExceptLast4(value: string): string {
     }
 
     const visible = value.slice(-4);
+
     return '•'.repeat(value.length - 4) + visible;
 }
 
@@ -74,6 +75,7 @@ function formatExp(date: string | null): string {
     }
 
     const [year, month] = date.split('-');
+
     return `${month}/${year.slice(-2)}`;
 }
 

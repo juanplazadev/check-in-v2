@@ -28,9 +28,9 @@ import {
     email as appointmentEmail,
     pdf as appointmentPdf,
 } from '@/routes/account/history/appointment';
-
-import type { RecordTranslations } from './recordTranslations';
 import { recordStatusLabel } from './recordTranslations';
+import type { RecordTranslations } from './recordTranslations';
+
 
 interface CancelTranslations {
     title: string;

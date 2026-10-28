@@ -12,6 +12,7 @@ import CountryDisplay from '@/components/CountryDisplay';
 import { DatePicker } from '@/components/DatePickerTime';
 import LocationAutocomplete from '@/components/LocationAutocomplete';
 import LocationScheduleCard from '@/components/LocationScheduleCard';
+import { PhoneInput, formatUsPhone } from '@/components/PhoneInput';
 import PurchaseOrderInputs, {
     poNumberSchema,
 } from '@/components/PurchaseOrderInputs';
@@ -26,7 +27,6 @@ import {
     FieldLabel,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { PhoneInput, formatUsPhone } from '@/components/PhoneInput';
 import { Textarea } from '@/components/ui/textarea';
 import PublicLayout from '@/layouts/PublicLayout';
 import { countryName } from '@/lib/countryFlag';

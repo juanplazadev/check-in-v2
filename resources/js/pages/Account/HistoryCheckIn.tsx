@@ -13,9 +13,9 @@ import {
     email as checkInEmail,
     pdf as checkInPdf,
 } from '@/routes/account/history/checkIn';
-
-import type { RecordTranslations } from './recordTranslations';
 import { recordStatusLabel } from './recordTranslations';
+import type { RecordTranslations } from './recordTranslations';
+
 
 interface CheckInDetail {
     uuid: string;
