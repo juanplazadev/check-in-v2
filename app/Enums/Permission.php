@@ -31,6 +31,7 @@ enum Permission: string
     case EditLocationHours = 'edit location hours';
     case EditCheckInOptions = 'edit check-in options';
     case EditAppointmentOptions = 'edit appointment options';
+    case ManageDocks = 'manage docks';
     case ViewNotifications = 'view notifications';
     case SearchDashboard = 'search dashboard';
     case FilterCheckIns = 'filter check-ins';
@@ -41,6 +42,7 @@ enum Permission: string
     case UnsyncCheckInsFromErp = 'unsync check-ins from erp';
     case EditCheckIns = 'edit check-ins';
     case LinkCheckInAppointments = 'link check-in appointments';
+    case AssignCheckInDocks = 'assign check-in docks';
     case ViewCheckInPdf = 'view check-in pdf';
     case PrintCheckInPdf = 'print check-in pdf';
     case EmailCheckInPdf = 'email check-in pdf';
@@ -51,6 +53,7 @@ enum Permission: string
     case ReinstateCheckIns = 'reinstate check-ins';
     case CancelAppointments = 'cancel appointments';
     case ReinstateAppointments = 'reinstate appointments';
+    case AssignAppointmentDocks = 'assign appointment docks';
     case WriteCheckInNotes = 'write check-in notes';
     case WriteAppointmentNotes = 'write appointment notes';
     case RevealDriverLicenses = 'reveal driver licenses';
@@ -110,6 +113,7 @@ enum Permission: string
             self::UnsyncCheckInsFromErp,
             self::EditCheckIns,
             self::LinkCheckInAppointments,
+            self::AssignCheckInDocks,
             self::CancelCheckIns,
             self::ReinstateCheckIns,
             self::WriteCheckInNotes,
@@ -121,6 +125,7 @@ enum Permission: string
             self::FilterAppointments,
             self::CancelAppointments,
             self::ReinstateAppointments,
+            self::AssignAppointmentDocks,
             self::WriteAppointmentNotes,
             self::ArchiveAppointments,
             self::RestoreAppointments,
@@ -148,6 +153,7 @@ enum Permission: string
             self::EditLocationHours,
             self::EditCheckInOptions,
             self::EditAppointmentOptions,
+            self::ManageDocks,
             self::PauseCheckIns,
             self::PauseAppointments,
             self::DeleteLocations,
@@ -184,6 +190,7 @@ enum Permission: string
             self::UnsyncCheckInsFromErp => 'Undo a check-in\'s ERP sync.',
             self::EditCheckIns => 'Change the details a driver entered.',
             self::LinkCheckInAppointments => 'Link or unlink a check-in and an appointment.',
+            self::AssignCheckInDocks => 'Send a waiting truck to a door and text the driver.',
             self::CancelCheckIns => 'Cancel a check-in.',
             self::ReinstateCheckIns => 'Reinstate a canceled check-in.',
             self::WriteCheckInNotes => 'Add notes to a check-in.',
@@ -195,6 +202,7 @@ enum Permission: string
             self::FilterAppointments => 'Filter the appointments table.',
             self::CancelAppointments => 'Cancel an appointment.',
             self::ReinstateAppointments => 'Reinstate a canceled appointment.',
+            self::AssignAppointmentDocks => 'Place an appointment on a dock or move it.',
             self::WriteAppointmentNotes => 'Add notes to an appointment.',
             self::ArchiveAppointments => 'Move an appointment to the archive.',
             self::RestoreAppointments => 'Bring an appointment back from the archive.',
@@ -222,6 +230,7 @@ enum Permission: string
             self::EditLocationHours => 'Change opening hours and closures.',
             self::EditCheckInOptions => 'Change a location\'s check-in settings.',
             self::EditAppointmentOptions => 'Change a location\'s booking settings.',
+            self::ManageDocks => 'Add, edit and remove a location\'s docks and buildings.',
             self::PauseCheckIns => 'Pause new check-ins at a location.',
             self::PauseAppointments => 'Pause new bookings at a location.',
             self::DeleteLocations => 'Delete a location.',

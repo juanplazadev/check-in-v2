@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { CalendarClock, Package } from 'lucide-react';
+import { CalendarClock, Package, Warehouse } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -77,6 +77,14 @@ function ArrivingRow({
                             <Package className="size-3" />
                             {poCount}
                         </span>
+                        {appointment.dock && (
+                            <span className="inline-flex min-w-0 items-center gap-0.5">
+                                <Warehouse className="size-3 shrink-0" />
+                                <span className="truncate">
+                                    {appointment.dock.label}
+                                </span>
+                            </span>
+                        )}
                     </div>
                     <div className="truncate text-xs text-gray-400">
                         {appointment.location.name}

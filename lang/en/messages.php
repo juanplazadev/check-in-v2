@@ -300,6 +300,11 @@ return [
         'guestBody' => ':app: your appointment is booked. Ref :reference. Show this reference at the gate.',
     ],
 
+    'doorAssignmentSms' => [
+        'body' => ':app: Ref :reference. Please go to :dock.',
+        'withBuilding' => ':app: Ref :reference. Please go to :dock, :building.',
+    ],
+
     'appointmentReminderEmail' => [
         'subject' => 'Reminder: your appointment :reference at :location',
         'preheader' => 'Your appointment at :location is tomorrow.',
@@ -352,6 +357,7 @@ return [
         'checkInDocumentTitle' => 'Check-in receipt',
         'appointmentDocumentTitle' => 'Appointment confirmation',
         'bookedOn' => 'Booked on',
+        'dock' => 'Dock',
         'questions' => 'Questions?',
         'extension' => 'ext.',
         'generatedOn' => 'Generated :date',
@@ -570,6 +576,7 @@ return [
         'notAvailableOnDay' => ':name is not available for appointments on :date. Please choose another day.',
         'closedForAppointmentsOnDateWithoutReason' => ':name is not accepting appointments on :date. Please choose another date.',
         'outsideBookingWindow' => 'Please choose an available appointment time within the next :days days.',
+        'slotFull' => 'That time just filled up. Please choose another time.',
     ],
 
     'purchaseOrders' => [
@@ -638,6 +645,7 @@ return [
         'cellphoneConsent' => 'Disclaimer: By providing my contact information, I acknowledge and give my explicit consent to be contacted via SMS and receive emails for various purposes, which may include marketing and promotional content. Message and data rates may apply. Message frequency may vary. Reply STOP to opt out. Refer to our Privacy Policy for more information.',
         'todaysHours' => "Today's Hours",
         'noAvailability' => 'No appointment times are currently available. Please check back later or contact the location.',
+        'slotFull' => 'Full',
         'reviewButton' => 'Review Appointment →',
         'submitting' => 'Submitting…',
         'reviewNote' => "You'll be able to review before confirming.",

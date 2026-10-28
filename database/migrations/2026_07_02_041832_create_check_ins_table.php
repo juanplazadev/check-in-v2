@@ -22,6 +22,12 @@ return new class extends Migration
             $table->timestampTz('appointment_linked_at')->nullable();
             $table->string('appointment_linked_via')->nullable();
             $table->foreignId('appointment_linked_by')->nullable()->constrained('users')->nullOnDelete();
+            // The door staff sent the truck to; null until assigned. Freed once the check-in leaves Pending.
+            $table->foreignId('dock_id')->nullable()->constrained('docks')->nullOnDelete();
+            $table->timestampTz('dock_assigned_at')->nullable();
+            $table->foreignId('dock_assigned_by')->nullable()->constrained('users')->nullOnDelete();
+            // When the driver was last texted their door.
+            $table->timestampTz('door_notified_at')->nullable();
             $table->string('status');
             $table->string('erp_status');
             $table->timestampTz('completed_at')->nullable();
@@ -73,6 +79,8 @@ return new class extends Migration
             $table->index('erp_synced_at');
             // Lets the dashboard's grouped tab counts read the index alone, not the table.
             $table->index(['status', 'deleted_at']);
+            // Serves the "is this door in use" check.
+            $table->index(['dock_id', 'status']);
         });
 
         if (DB::getDriverName() !== 'pgsql') {

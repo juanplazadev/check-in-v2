@@ -46,4 +46,12 @@ enum RecordHistoryEvent: string
     case AppointmentOptionsEdited = 'appointment-options-edited';
     case ClosureAdded = 'closure-added';
     case ClosureRemoved = 'closure-removed';
+    case BuildingAdded = 'building-added';
+    case BuildingEdited = 'building-edited';
+    case BuildingRemoved = 'building-removed';
+    case DockAdded = 'dock-added';
+    case DockEdited = 'dock-edited';
+    case DockRemoved = 'dock-removed';
+    case DockAssigned = 'dock-assigned';
+    case DockUnassigned = 'dock-unassigned';
 }

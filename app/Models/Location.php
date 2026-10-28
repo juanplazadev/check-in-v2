@@ -51,6 +51,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read Collection<int, CheckInScheduleOverride> $checkinScheduleOverrides
  * @property-read Collection<int, AppointmentSchedule> $appointmentSchedule
  * @property-read Collection<int, AppointmentScheduleOverride> $appointmentScheduleOverrides
+ * @property-read Collection<int, Building> $buildings
+ * @property-read Collection<int, Dock> $docks
  */
 #[Fillable(['uuid', 'address_id', 'max_distance_allowed', 'name', 'abbreviation', 'timezone', 'phone', 'phone_ext', 'email', 'is_active', 'is_checkins_enabled', 'checkins_paused_at', 'checkins_paused_until', 'checkins_paused_reason', 'is_appointments_enabled', 'appointments_paused_at', 'appointments_paused_until', 'appointments_paused_reason', 'config'])]
 #[Hidden(['id'])]
@@ -110,6 +112,24 @@ final class Location extends Model
     public function appointmentScheduleOverrides(): HasMany
     {
         return $this->hasMany(AppointmentScheduleOverride::class);
+    }
+
+    /**
+     * @return HasMany<Building, $this>
+     */
+    public function buildings(): HasMany
+    {
+        return $this->hasMany(Building::class)->orderBy('sort_order')->orderBy('name');
+    }
+
+    /**
+     * Every dock, active or not, across all buildings.
+     *
+     * @return HasMany<Dock, $this>
+     */
+    public function docks(): HasMany
+    {
+        return $this->hasMany(Dock::class)->orderBy('sort_order')->orderBy('name');
     }
 
     /**

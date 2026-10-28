@@ -37,6 +37,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read CarbonImmutable|null $appointment_linked_at
  * @property-read AppointmentLinkMethod|null $appointment_linked_via
  * @property-read int|null $appointment_linked_by
+ * @property-read int|null $dock_id
+ * @property-read CarbonImmutable|null $dock_assigned_at
+ * @property-read int|null $dock_assigned_by
+ * @property-read CarbonImmutable|null $door_notified_at
  * @property-read CheckInStatus $status
  * @property-read CheckInErpStatus $erp_status
  * @property-read CarbonImmutable|null $completed_at
@@ -79,6 +83,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read Location $location
  * @property-read User|null $user
  * @property-read Appointment|null $appointment
+ * @property-read Dock|null $dock
  * @property-read User|null $appointmentLinkedBy
  * @property-read User|null $completedBy
  * @property-read User|null $cancelledBy
@@ -86,7 +91,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read Collection<int, CheckInNote> $notes
  */
 #[Fillable(['uuid', 'reference_number', 'location_id', 'user_id', 'appointment_id',
-    'appointment_linked_at', 'appointment_linked_via', 'appointment_linked_by', 'status', 'erp_status',
+    'appointment_linked_at', 'appointment_linked_via', 'appointment_linked_by', 'dock_id', 'dock_assigned_at', 'dock_assigned_by', 'door_notified_at', 'status', 'erp_status',
     'completed_at', 'completed_by', 'cancelled_at', 'cancelled_by', 'cancelled_reason', 'erp_synced_at', 'erp_synced_via', 'erp_synced_by', 'customer',
     'destination_city', 'destination_state', 'destination_country', 'truck_name', 'truck_plate', 'truck_color',
     'truck_plate_state', 'truck_plate_country', 'trailer_plate', 'trailer_plate_state', 'trailer_plate_country',
@@ -131,6 +136,16 @@ final class CheckIn extends Model
     public function appointment(): BelongsTo
     {
         return $this->belongsTo(Appointment::class);
+    }
+
+    /**
+     * The door staff sent this truck to; null until assigned.
+     *
+     * @return BelongsTo<Dock, $this>
+     */
+    public function dock(): BelongsTo
+    {
+        return $this->belongsTo(Dock::class);
     }
 
     /**
@@ -229,6 +244,8 @@ final class CheckIn extends Model
             'status' => CheckInStatus::class,
             'erp_status' => CheckInErpStatus::class,
             'appointment_linked_at' => 'datetime',
+            'dock_assigned_at' => 'datetime',
+            'door_notified_at' => 'datetime',
             'appointment_linked_via' => AppointmentLinkMethod::class,
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',

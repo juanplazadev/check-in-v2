@@ -11,6 +11,9 @@
             @include('pdf.partials.row', ['label' => __('messages.accountHistoryRecord.time'), 'value' => $checkIn['time']])
             @include('pdf.partials.row', ['label' => __('messages.accountHistoryRecord.locationHeading'), 'value' => $checkIn['locationName']])
             @include('pdf.partials.row', ['label' => __('messages.accountHistoryRecord.address'), 'value' => $checkIn['locationAddress']])
+            @if (filled($checkIn['dock']))
+                @include('pdf.partials.row', ['label' => __('messages.accountHistoryRecord.dock'), 'value' => $checkIn['dock']])
+            @endif
         </dl>
     </div>
 

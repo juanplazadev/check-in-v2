@@ -6,6 +6,8 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Dashboard\CheckInDeletionImpact;
 use App\Dashboard\CheckInRecordResolver;
+use App\Dashboard\LocationDockResolver;
+use App\Enums\CheckInStatus;
 use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\CheckInIndexRequest;
@@ -61,7 +63,7 @@ final class CheckInController extends Controller
      * its existence is not confirmed. Archived check-ins still open, since the
      * archived tab links to them.
      */
-    public function show(#[CurrentUser] User $user, string $uuid, CheckInRecordResolver $resolver, CheckInDeletionImpact $impact): Response
+    public function show(#[CurrentUser] User $user, string $uuid, CheckInRecordResolver $resolver, CheckInDeletionImpact $impact, LocationDockResolver $docks): Response
     {
         $checkIn = CheckIn::query()
             ->withTrashed()
@@ -80,6 +82,12 @@ final class CheckInController extends Controller
                 'body' => $note->body,
                 'createdAt' => $note->created_at->toIso8601String(),
             ])->all(),
+            // Only a waiting truck can be sent to a door, and only by those who may.
+            'doorOptions' => $user->can(Permission::AssignCheckInDocks)
+                && ! $checkIn->trashed()
+                && $checkIn->status === CheckInStatus::Pending
+                    ? $docks->doorOptions([$checkIn->location_id])[$checkIn->location->uuid] ?? []
+                    : null,
             'deletionImpact' => $user->can(Permission::DeleteCheckIns)
                 ? Inertia::optional(fn (): array => $impact->summary($checkIn))
                 : null,

@@ -282,6 +282,11 @@ return [
         'guestBody' => ':app: vous êtes enregistré. Réf :reference. Présentez cette référence à l\'entrée.',
     ],
 
+    'doorAssignmentSms' => [
+        'body' => ':app: Réf :reference. Veuillez vous rendre à :dock.',
+        'withBuilding' => ':app: Réf :reference. Veuillez vous rendre à :dock, :building.',
+    ],
+
     'appointmentReminderEmail' => [
         'subject' => 'Rappel : votre rendez-vous :reference à :location',
         'preheader' => 'Votre rendez-vous à :location a lieu demain.',
@@ -339,6 +344,7 @@ return [
         'checkInDocumentTitle' => "Reçu d'enregistrement",
         'appointmentDocumentTitle' => 'Confirmation de rendez-vous',
         'bookedOn' => 'Réservé le',
+        'dock' => 'Quai',
         'questions' => 'Des questions ?',
         'extension' => 'poste',
         'generatedOn' => 'Généré le :date',
@@ -546,6 +552,7 @@ return [
         'notAvailableOnDay' => ":name n'est pas disponible pour les rendez-vous le :date. Veuillez choisir un autre jour.",
         'closedForAppointmentsOnDateWithoutReason' => ":name n'accepte pas de rendez-vous le :date. Veuillez choisir une autre date.",
         'outsideBookingWindow' => 'Veuillez choisir un créneau de rendez-vous disponible dans les :days prochains jours.',
+        'slotFull' => 'Ce créneau vient d\'être complet. Veuillez choisir un autre horaire.',
     ],
 
     'purchaseOrders' => [
@@ -614,6 +621,7 @@ return [
         'cellphoneConsent' => "Avertissement : En fournissant mes coordonnées, je reconnais et donne mon consentement explicite à être contacté par SMS et à recevoir des courriels à diverses fins, pouvant inclure du contenu marketing et promotionnel. Des frais de messagerie et de données peuvent s'appliquer. La fréquence des messages peut varier. Répondez STOP pour vous désabonner. Consultez notre Politique de confidentialité pour plus d'informations.",
         'todaysHours' => "Horaires d'aujourd'hui",
         'noAvailability' => "Aucun créneau de rendez-vous n'est actuellement disponible. Veuillez réessayer plus tard ou contacter l'établissement.",
+        'slotFull' => 'Complet',
         'reviewButton' => 'Vérifier le rendez-vous →',
         'submitting' => 'Envoi en cours…',
         'reviewNote' => 'Vous pourrez vérifier avant de confirmer.',

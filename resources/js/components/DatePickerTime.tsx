@@ -121,34 +121,50 @@ const TIME_GROUPS = [
     { label: 'Evening', matches: (hour: number) => hour >= 17 },
 ] as const;
 
+/** Every slot from first to last, as "HH:MM:00" values. */
+export function buildSlots(
+    firstSlot: string | undefined,
+    lastSlot: string | undefined,
+    intervalMinutes: number,
+): string[] {
+    if (!firstSlot || !lastSlot || intervalMinutes <= 0) {
+        return [];
+    }
+
+    const start = timeToMinutes(firstSlot);
+    const end = timeToMinutes(lastSlot);
+    const result: string[] = [];
+
+    for (let m = start; m <= end; m += intervalMinutes) {
+        result.push(minutesToValue(m));
+    }
+
+    return result;
+}
+
 export function TimePicker({
     value,
     onChange,
     firstSlot,
     lastSlot,
     intervalMinutes,
+    fullSlots = [],
+    fullLabel = 'Full',
 }: {
     value: string; // "HH:MM:00" 24h
     onChange: (v: string) => void;
     firstSlot?: string;
     lastSlot?: string;
     intervalMinutes: number;
+    /** Slots with no room left; shown but not selectable. */
+    fullSlots?: string[];
+    fullLabel?: string;
 }) {
-    const slots = React.useMemo(() => {
-        if (!firstSlot || !lastSlot || intervalMinutes <= 0) {
-            return [];
-        }
-
-        const start = timeToMinutes(firstSlot);
-        const end = timeToMinutes(lastSlot);
-        const result: string[] = [];
-
-        for (let m = start; m <= end; m += intervalMinutes) {
-            result.push(minutesToValue(m));
-        }
-
-        return result;
-    }, [firstSlot, lastSlot, intervalMinutes]);
+    const slots = React.useMemo(
+        () => buildSlots(firstSlot, lastSlot, intervalMinutes),
+        [firstSlot, lastSlot, intervalMinutes],
+    );
+    const fullSet = React.useMemo(() => new Set(fullSlots), [fullSlots]);
 
     const groups = React.useMemo(
         () =>
@@ -231,23 +247,42 @@ export function TimePicker({
                                         {group.label}
                                     </p>
                                     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                                        {group.slots.map((slot) => (
-                                            <button
-                                                key={slot}
-                                                type="button"
-                                                onClick={() =>
-                                                    handleSelect(slot)
-                                                }
-                                                className={cn(
-                                                    'flex min-h-10 items-center justify-center rounded-md border px-2 py-2 text-sm font-medium tabular-nums transition-colors',
-                                                    slot === value
-                                                        ? 'border-primary bg-primary text-primary-foreground'
-                                                        : 'border-input text-foreground hover:bg-accent hover:text-accent-foreground',
-                                                )}
-                                            >
-                                                {formatLabel(slot)}
-                                            </button>
-                                        ))}
+                                        {group.slots.map((slot) => {
+                                            const isFull = fullSet.has(slot);
+
+                                            return (
+                                                <button
+                                                    key={slot}
+                                                    type="button"
+                                                    disabled={isFull}
+                                                    onClick={() =>
+                                                        handleSelect(slot)
+                                                    }
+                                                    className={cn(
+                                                        'flex min-h-10 flex-col items-center justify-center rounded-md border px-2 py-2 text-sm font-medium tabular-nums transition-colors',
+                                                        isFull
+                                                            ? 'cursor-not-allowed border-dashed border-input text-muted-foreground'
+                                                            : slot === value
+                                                              ? 'border-primary bg-primary text-primary-foreground'
+                                                              : 'border-input text-foreground hover:bg-accent hover:text-accent-foreground',
+                                                    )}
+                                                >
+                                                    <span
+                                                        className={cn(
+                                                            isFull &&
+                                                                'line-through',
+                                                        )}
+                                                    >
+                                                        {formatLabel(slot)}
+                                                    </span>
+                                                    {isFull && (
+                                                        <span className="text-[10px] font-semibold tracking-wider uppercase">
+                                                            {fullLabel}
+                                                        </span>
+                                                    )}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             ))}

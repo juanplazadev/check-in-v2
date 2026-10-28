@@ -314,6 +314,9 @@ function makeCheckIn(index: number): CheckInRecord {
         appointmentReference: random() > 0.7 ? reference('A') : null,
         appointmentUuid: null,
         appointmentLinkedVia: null,
+        dock: null,
+        appointmentDockUuid: null,
+        doorNotifiedAt: null,
         locale: random() > 0.75 ? 'es' : 'en',
         createdAt: iso(createdAt),
         completedAt: status === 'completed' ? iso(createdAt + HOUR) : null,
@@ -366,6 +369,7 @@ function makeAppointment(): AppointmentRecord {
         },
         scheduledFor: iso(scheduledFor),
         purchaseOrders: purchaseOrders(),
+        dock: null,
         cancelledReason:
             status === 'cancelled'
                 ? 'Load was rescheduled by the shipper.'

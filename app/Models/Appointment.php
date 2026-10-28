@@ -28,6 +28,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read string $reference_number
  * @property-read int $location_id
  * @property-read int|null $user_id
+ * @property-read int|null $dock_id
+ * @property-read CarbonImmutable|null $dock_assigned_at
+ * @property-read int|null $dock_assigned_by
  * @property-read CarbonImmutable $scheduled_for
  * @property-read string $drivers_name
  * @property-read string $drivers_cellphone
@@ -44,10 +47,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read CarbonImmutable|null $deleted_at
  * @property-read Location $location
  * @property-read User|null $user
+ * @property-read Dock|null $dock
  * @property-read CheckIn|null $checkIn
  * @property-read Collection<int, AppointmentNote> $notes
  */
-#[Fillable(['uuid', 'reference_number', 'location_id', 'user_id', 'scheduled_for', 'drivers_name', 'drivers_cellphone', 'locale', 'status', 'cancelled_at', 'cancelled_by', 'cancelled_reason', 'claimed_at', 'claimed_via', 'reminder_sent_at'])]
+#[Fillable(['uuid', 'reference_number', 'location_id', 'user_id', 'dock_id', 'dock_assigned_at', 'dock_assigned_by', 'scheduled_for', 'drivers_name', 'drivers_cellphone', 'locale', 'status', 'cancelled_at', 'cancelled_by', 'cancelled_reason', 'claimed_at', 'claimed_via', 'reminder_sent_at'])]
 #[Hidden(['id'])]
 #[RouteKey('uuid')]
 final class Appointment extends Model
@@ -77,6 +81,16 @@ final class Appointment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * The dock staff placed this booking on; null until assigned.
+     *
+     * @return BelongsTo<Dock, $this>
+     */
+    public function dock(): BelongsTo
+    {
+        return $this->belongsTo(Dock::class);
     }
 
     /**
@@ -128,6 +142,7 @@ final class Appointment extends Model
             'cancelled_at' => 'datetime',
             'claimed_at' => 'datetime',
             'reminder_sent_at' => 'datetime',
+            'dock_assigned_at' => 'datetime',
         ];
     }
 }

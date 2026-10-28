@@ -4,11 +4,13 @@ import CheckInNoteController from '@/actions/App/Http/Controllers/Dashboard/Chec
 import BackLink from '@/components/dashboard/BackLink';
 import CheckInHero from '@/components/dashboard/check-in/CheckInHero';
 import CheckInSideRail from '@/components/dashboard/check-in/CheckInSideRail';
+import DoorCard from '@/components/dashboard/check-in/DoorCard';
 import DriverCard from '@/components/dashboard/check-in/DriverCard';
 import EquipmentCard from '@/components/dashboard/check-in/EquipmentCard';
 import LoadCard from '@/components/dashboard/check-in/LoadCard';
 import NotesCard from '@/components/dashboard/NotesCard';
 import type {
+    CheckInDoorOption,
     CheckInFormFields,
     CheckInNote,
     CheckInRecord,
@@ -22,6 +24,7 @@ export default function CheckInShow({
     fields,
     truckColors,
     notes,
+    doorOptions,
 }: {
     checkIn: CheckInRecord;
     /** The location's optional fields today; rows it no longer collects still show stored values. */
@@ -30,6 +33,8 @@ export default function CheckInShow({
     truckColors: string[];
     /** Internal staff notes, newest first. */
     notes: CheckInNote[];
+    /** The location's active doors; null when the viewer may not assign one or the truck is no longer waiting. */
+    doorOptions: CheckInDoorOption[] | null;
 }) {
     const backHref = dashboardRoutes.checkIns.url();
 
@@ -50,10 +55,10 @@ export default function CheckInShow({
                 event.type === 'updated' &&
                 event.checkIn.uuid === checkIn.uuid
             ) {
-                router.reload({ only: ['checkIn'] });
+                router.reload({ only: ['checkIn', 'doorOptions'] });
             }
         },
-        onReconnect: () => router.reload({ only: ['checkIn'] }),
+        onReconnect: () => router.reload({ only: ['checkIn', 'doorOptions'] }),
     });
 
     return (
@@ -71,6 +76,7 @@ export default function CheckInShow({
 
             <div className="grid grid-cols-12 gap-6">
                 <div className="col-span-full space-y-6 xl:col-span-8">
+                    <DoorCard checkIn={checkIn} options={doorOptions} />
                     <DriverCard checkIn={checkIn} fields={fields} />
                     <LoadCard checkIn={checkIn} />
                     <EquipmentCard checkIn={checkIn} fields={fields} />

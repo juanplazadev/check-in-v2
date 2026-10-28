@@ -2,6 +2,7 @@ import { Head, router } from '@inertiajs/react';
 import { CheckCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
+import AssignDoorDialog from '@/components/dashboard/check-in/AssignDoorDialog';
 import { useLiveAlerts } from '@/components/dashboard/live/LiveAlerts';
 import LiveIndicator from '@/components/dashboard/live/LiveIndicator';
 import PageHeader from '@/components/dashboard/PageHeader';
@@ -11,10 +12,12 @@ import QueueRow from '@/components/dashboard/queue/QueueRow';
 import { useLiveRecords } from '@/components/dashboard/queue/useLiveRecords';
 import type {
     AppointmentRecord,
+    CheckInDoorOption,
     CheckInRecord,
     LocationSummary,
 } from '@/components/dashboard/types';
 import { useAppointmentFeed } from '@/hooks/useAppointmentFeed';
+import { useCan } from '@/hooks/useCan';
 import { useCheckInFeed } from '@/hooks/useCheckInFeed';
 import DashboardLayout from '@/layouts/DashboardLayout';
 
@@ -24,6 +27,8 @@ interface QueueProps {
     appointments: AppointmentRecord[];
     appointmentWindow: { lateGraceHours: number; aheadHours: number };
     locations: LocationSummary[];
+    /** Optional prop: active doors by location uuid, loaded when a door dialog opens. */
+    doorOptions?: Record<string, CheckInDoorOption[]>;
 }
 
 type SortOrder = 'oldest' | 'newest';
@@ -112,7 +117,10 @@ export default function QueueIndex({
     appointments,
     appointmentWindow,
     locations,
+    doorOptions,
 }: QueueProps) {
+    const can = useCan();
+    const [doorFor, setDoorFor] = useState<CheckInRecord | null>(null);
     const { status } = useLiveAlerts();
     const now = useNow(1000);
 
@@ -290,6 +298,11 @@ export default function QueueIndex({
                                         isLeaving={queue.leaving.has(
                                             checkIn.uuid,
                                         )}
+                                        onAssignDoor={
+                                            can('assign check-in docks')
+                                                ? setDoorFor
+                                                : undefined
+                                        }
                                     />
                                 ))}
                             </ul>
@@ -318,6 +331,16 @@ export default function QueueIndex({
                     leaving={arriving.leaving}
                 />
             </div>
+
+            <AssignDoorDialog
+                open={doorFor !== null}
+                onOpenChange={(open) => !open && setDoorFor(null)}
+                checkIn={doorFor}
+                options={
+                    doorFor ? doorOptions?.[doorFor.location.uuid] : undefined
+                }
+                reloadProp="doorOptions"
+            />
         </>
     );
 }

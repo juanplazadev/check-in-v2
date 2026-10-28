@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Clock, Package } from 'lucide-react';
+import { Clock, Package, Warehouse } from 'lucide-react';
 
 import { formatWait, waitTone } from '@/components/dashboard/queue/wait';
 import RegionLabel from '@/components/dashboard/RegionLabel';
@@ -11,7 +11,26 @@ interface QueueItemProps {
     now: number;
     isFresh: boolean;
     isLeaving: boolean;
+    /** Absent when the viewer may not assign doors. */
+    onAssignDoor?: (checkIn: CheckInRecord) => void;
 }
+
+/** The truck's door, or a muted "No door" when none is assigned yet. */
+export function DoorBadge({ checkIn }: { checkIn: CheckInRecord }) {
+    return checkIn.dock ? (
+        <span className="inline-flex min-w-0 items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-xs font-semibold text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+            <Warehouse className="size-3.5 shrink-0" aria-hidden />
+            <span className="truncate">{checkIn.dock.label}</span>
+        </span>
+    ) : (
+        <span className="text-xs text-gray-400 dark:text-gray-500">
+            No door
+        </span>
+    );
+}
+
+export const ASSIGN_DOOR_BUTTON =
+    'btn-sm shrink-0 border-gray-200 text-gray-700 hover:border-gray-300 dark:border-gray-700/60 dark:text-gray-200 dark:hover:border-gray-600';
 
 export function NewTag() {
     return (
@@ -33,17 +52,20 @@ export default function QueueCard({
     now,
     isFresh,
     isLeaving,
+    onAssignDoor,
 }: QueueItemProps) {
     const waited = now - new Date(checkIn.createdAt).getTime();
     const tone = waitTone(waited);
 
     return (
-        <li className={enterLeaveClass(isLeaving)}>
+        <li
+            className={`${enterLeaveClass(isLeaving)} flex h-full flex-col rounded-xl border-l-4 bg-white shadow-sm transition hover:shadow-md dark:bg-gray-800 ${tone.border} ${
+                isFresh ? 'ring-2 ring-brand-green/60' : ''
+            }`}
+        >
             <Link
                 href={dashboardRoutes.checkIns.show.url(checkIn.uuid)}
-                className={`block h-full rounded-xl border-l-4 bg-white p-5 shadow-sm transition hover:shadow-md dark:bg-gray-800 ${tone.border} ${
-                    isFresh ? 'ring-2 ring-brand-green/60' : ''
-                }`}
+                className="block flex-1 p-5 pb-3"
             >
                 <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2">
@@ -111,6 +133,19 @@ export default function QueueCard({
                     </span>
                 </div>
             </Link>
+            {/* Outside the link: a button cannot sit inside an anchor. */}
+            <div className="flex items-center justify-between gap-2 border-t border-gray-100 px-5 py-3 dark:border-gray-700/60">
+                <DoorBadge checkIn={checkIn} />
+                {onAssignDoor && (
+                    <button
+                        type="button"
+                        onClick={() => onAssignDoor(checkIn)}
+                        className={ASSIGN_DOOR_BUTTON}
+                    >
+                        {checkIn.dock ? 'Change door' : 'Assign door'}
+                    </button>
+                )}
+            </div>
         </li>
     );
 }

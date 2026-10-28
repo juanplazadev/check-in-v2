@@ -10,6 +10,7 @@ import AttachCheckInDialog from '@/components/dashboard/appointment/AttachCheckI
 import BackLink from '@/components/dashboard/BackLink';
 import NotesCard from '@/components/dashboard/NotesCard';
 import type {
+    AppointmentDockOption,
     AppointmentRecord,
     CheckInNote,
 } from '@/components/dashboard/types';
@@ -19,10 +20,13 @@ import dashboardRoutes from '@/routes/dashboard';
 export default function AppointmentShow({
     appointment,
     notes,
+    dockOptions,
 }: {
     appointment: AppointmentRecord;
     /** Internal staff notes, newest first. */
     notes: CheckInNote[];
+    /** Null when the viewer may not assign docks, or the booking is not live. */
+    dockOptions: AppointmentDockOption[] | null;
 }) {
     const backHref = dashboardRoutes.appointments.url();
     // Owned here so both the hero's button and the side rail's link open the same dialog.
@@ -44,7 +48,10 @@ export default function AppointmentShow({
             <div className="grid grid-cols-12 gap-6">
                 <div className="col-span-full space-y-6 xl:col-span-8">
                     <AppointmentDriverCard appointment={appointment} />
-                    <AppointmentBookingCard appointment={appointment} />
+                    <AppointmentBookingCard
+                        appointment={appointment}
+                        dockOptions={dockOptions}
+                    />
                     <NotesCard
                         key={appointment.uuid}
                         action={AppointmentNoteController(appointment.uuid)}

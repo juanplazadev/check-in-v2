@@ -118,6 +118,7 @@ const COLUMN_LABELS: Record<AppointmentColumn, string> = {
     purchaseOrders: 'Purchase orders',
     status: 'Status',
     checkIn: 'Check-in',
+    dock: 'Dock',
 };
 
 /** Shown until the user chooses otherwise; every other column starts hidden. */
@@ -262,6 +263,12 @@ const buildColumns = (dateField: AppointmentDateField, canViewUsers: boolean) =>
                     ),
             },
         ),
+        column.accessor((appointment) => appointment.dock?.label ?? null, {
+            id: 'dock',
+            header: COLUMN_LABELS.dock,
+            enableSorting: false,
+            cell: ({ getValue }) => orDash(getValue()),
+        }),
     ]);
 
 const STATUSES: AppointmentStatus[] = [

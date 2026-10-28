@@ -6,6 +6,7 @@ namespace App\Http\Requests;
 
 use App\Appointment\AppointmentAvailabilityResolver;
 use App\Appointment\AppointmentScheduleResolver;
+use App\Appointment\AppointmentSlotCapacity;
 use App\DTOs\AppointmentLocationDTO;
 use App\Models\Location;
 use App\Queries\AppointmentLocation;
@@ -65,10 +66,11 @@ final class AppointmentFormRequest extends FormRequest
     public function after(
         AppointmentAvailabilityResolver $availabilityResolver,
         AppointmentScheduleResolver $scheduleResolver,
+        AppointmentSlotCapacity $slotCapacity,
         AppointmentSession $session,
     ): array {
         return [
-            function (Validator $validator) use ($availabilityResolver, $scheduleResolver, $session): void {
+            function (Validator $validator) use ($availabilityResolver, $scheduleResolver, $slotCapacity, $session): void {
                 $context = $session->getLocation();
 
                 $location = $context instanceof AppointmentLocationDTO
@@ -95,6 +97,13 @@ final class AppointmentFormRequest extends FormRequest
                     $validator->errors()->add('datetime', __('messages.appointmentBooking.outsideBookingWindow', [
                         'days' => $location->appointmentMaxBookingDaysAhead(),
                     ]));
+
+                    return;
+                }
+
+                // Checked again under the location lock in BookAppointmentAction.
+                if (! $slotCapacity->hasRoom($location, $appointmentDateTime)) {
+                    $validator->errors()->add('datetime', __('messages.appointmentBooking.slotFull'));
                 }
             },
         ];

@@ -16,6 +16,7 @@ use App\Http\Controllers\Dashboard\AppointmentCancelController as DashboardAppoi
 use App\Http\Controllers\Dashboard\AppointmentColumnController as DashboardAppointmentColumnController;
 use App\Http\Controllers\Dashboard\AppointmentController as DashboardAppointmentController;
 use App\Http\Controllers\Dashboard\AppointmentDeleteController as DashboardAppointmentDeleteController;
+use App\Http\Controllers\Dashboard\AppointmentDockController as DashboardAppointmentDockController;
 use App\Http\Controllers\Dashboard\AppointmentExportController as DashboardAppointmentExportController;
 use App\Http\Controllers\Dashboard\AppointmentNoteController as DashboardAppointmentNoteController;
 use App\Http\Controllers\Dashboard\AppointmentPdfController as DashboardAppointmentPdfController;
@@ -29,6 +30,7 @@ use App\Http\Controllers\Dashboard\CheckInColumnController as DashboardCheckInCo
 use App\Http\Controllers\Dashboard\CheckInCompleteController as DashboardCheckInCompleteController;
 use App\Http\Controllers\Dashboard\CheckInController as DashboardCheckInController;
 use App\Http\Controllers\Dashboard\CheckInDeleteController as DashboardCheckInDeleteController;
+use App\Http\Controllers\Dashboard\CheckInDockController as DashboardCheckInDockController;
 use App\Http\Controllers\Dashboard\CheckInExportController as DashboardCheckInExportController;
 use App\Http\Controllers\Dashboard\CheckInLicenseController as DashboardCheckInLicenseController;
 use App\Http\Controllers\Dashboard\CheckInNoteController as DashboardCheckInNoteController;
@@ -47,6 +49,7 @@ use App\Http\Controllers\Dashboard\LiveQueueController;
 use App\Http\Controllers\Dashboard\LocationAppointmentHoursController as DashboardLocationAppointmentHoursController;
 use App\Http\Controllers\Dashboard\LocationAppointmentOptionsController as DashboardLocationAppointmentOptionsController;
 use App\Http\Controllers\Dashboard\LocationAppointmentPauseController as DashboardLocationAppointmentPauseController;
+use App\Http\Controllers\Dashboard\LocationBuildingController as DashboardLocationBuildingController;
 use App\Http\Controllers\Dashboard\LocationCheckInHoursController as DashboardLocationCheckInHoursController;
 use App\Http\Controllers\Dashboard\LocationCheckInOptionsController as DashboardLocationCheckInOptionsController;
 use App\Http\Controllers\Dashboard\LocationCheckInPauseController as DashboardLocationCheckInPauseController;
@@ -54,6 +57,7 @@ use App\Http\Controllers\Dashboard\LocationClosureController as DashboardLocatio
 use App\Http\Controllers\Dashboard\LocationController as DashboardLocationController;
 use App\Http\Controllers\Dashboard\LocationDeleteController as DashboardLocationDeleteController;
 use App\Http\Controllers\Dashboard\LocationDetailsController as DashboardLocationDetailsController;
+use App\Http\Controllers\Dashboard\LocationDockController as DashboardLocationDockController;
 use App\Http\Controllers\Dashboard\LocationRestoreController as DashboardLocationRestoreController;
 use App\Http\Controllers\Dashboard\LocationStatusController as DashboardLocationStatusController;
 use App\Http\Controllers\Dashboard\LocationUserController as DashboardLocationUserController;
@@ -248,6 +252,13 @@ Route::middleware('setLocale')->group(function (): void {
                     ->whereUuid('uuid')
                     ->name('checkIns.notes.store');
 
+                // Sending a waiting truck to a door and texting the driver where to go.
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::AssignCheckInDocks)])->group(function (): void {
+                    Route::put('/check-ins/{uuid}/dock', [DashboardCheckInDockController::class, 'update'])->whereUuid('uuid')->name('checkIns.dock.update');
+                    Route::delete('/check-ins/{uuid}/dock', [DashboardCheckInDockController::class, 'destroy'])->whereUuid('uuid')->name('checkIns.dock.destroy');
+                    Route::post('/check-ins/{uuid}/dock/notify', [DashboardCheckInDockController::class, 'notify'])->whereUuid('uuid')->name('checkIns.dock.notify');
+                });
+
                 Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::CompleteCheckIns)])
                     ->post('/check-ins/{uuid}/complete', DashboardCheckInCompleteController::class)
                     ->whereUuid('uuid')
@@ -365,6 +376,12 @@ Route::middleware('setLocale')->group(function (): void {
                     ->whereUuid('uuid')
                     ->name('appointments.pdf.email');
 
+                // Placing a booking on a dock door; capacity per slot is set by the location's docks.
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::AssignAppointmentDocks)])->group(function (): void {
+                    Route::put('/appointments/{uuid}/dock', [DashboardAppointmentDockController::class, 'update'])->whereUuid('uuid')->name('appointments.dock.update');
+                    Route::delete('/appointments/{uuid}/dock', [DashboardAppointmentDockController::class, 'destroy'])->whereUuid('uuid')->name('appointments.dock.destroy');
+                });
+
                 Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::CancelAppointments)])
                     ->post('/appointments/{uuid}/cancel', DashboardAppointmentCancelController::class)
                     ->whereUuid('uuid')
@@ -439,6 +456,7 @@ Route::middleware('setLocale')->group(function (): void {
                     Route::get('/appointments/hours', [DashboardLocationController::class, 'appointmentHours'])->name('locations.appointmentHours');
                     Route::get('/appointments/options', [DashboardLocationController::class, 'appointmentOptions'])->name('locations.appointmentOptions');
                     Route::get('/closures', [DashboardLocationController::class, 'closures'])->name('locations.closures');
+                    Route::get('/docks', [DashboardLocationController::class, 'docks'])->name('locations.docks');
                     Route::get('/history', [DashboardLocationController::class, 'history'])->name('locations.history');
 
                     Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::EditLocations)])
@@ -488,6 +506,16 @@ Route::middleware('setLocale')->group(function (): void {
                     Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::EditAppointmentOptions)])
                         ->patch('/appointments/options', [DashboardLocationAppointmentOptionsController::class, 'update'])
                         ->name('locations.appointmentOptions.update');
+
+                    // Docks set how many appointments each slot takes; buildings only group them.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ManageDocks)])->group(function (): void {
+                        Route::post('/docks', [DashboardLocationDockController::class, 'store'])->name('locations.docks.store');
+                        Route::patch('/docks/{dockUuid}', [DashboardLocationDockController::class, 'update'])->whereUuid('dockUuid')->name('locations.docks.update');
+                        Route::delete('/docks/{dockUuid}', [DashboardLocationDockController::class, 'destroy'])->whereUuid('dockUuid')->name('locations.docks.destroy');
+                        Route::post('/buildings', [DashboardLocationBuildingController::class, 'store'])->name('locations.buildings.store');
+                        Route::patch('/buildings/{buildingUuid}', [DashboardLocationBuildingController::class, 'update'])->whereUuid('buildingUuid')->name('locations.buildings.update');
+                        Route::delete('/buildings/{buildingUuid}', [DashboardLocationBuildingController::class, 'destroy'])->whereUuid('buildingUuid')->name('locations.buildings.destroy');
+                    });
 
                     // Attaching decides which locations a location-scoped user sees.
                     Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ManageLocationUsers)])->group(function (): void {

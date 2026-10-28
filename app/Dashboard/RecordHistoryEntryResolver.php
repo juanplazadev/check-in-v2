@@ -74,6 +74,8 @@ final readonly class RecordHistoryEntryResolver
         'appointment.min_lead_time_minutes' => 'Minimum lead time (min)',
         'appointment.buffer_before_close_minutes' => 'Buffer before close (min)',
         'appointment.email_addresses' => 'Notification emails',
+        'building' => 'Building',
+        'accepts_appointments' => 'Appointments',
     ];
 
     public function __construct(private PhoneFormatter $phone) {}
@@ -88,7 +90,7 @@ final readonly class RecordHistoryEntryResolver
             'id' => $entry->id,
             'event' => $entry->event->value,
             'description' => $this->describe($entry, $createdLabel),
-            'changes' => in_array($entry->event, [RecordHistoryEvent::DetailsEdited, RecordHistoryEvent::CheckInHoursEdited, RecordHistoryEvent::AppointmentHoursEdited, RecordHistoryEvent::CheckInOptionsEdited, RecordHistoryEvent::AppointmentOptionsEdited], true) ? $this->changes($entry) : null,
+            'changes' => in_array($entry->event, [RecordHistoryEvent::DetailsEdited, RecordHistoryEvent::CheckInHoursEdited, RecordHistoryEvent::AppointmentHoursEdited, RecordHistoryEvent::CheckInOptionsEdited, RecordHistoryEvent::AppointmentOptionsEdited, RecordHistoryEvent::DockEdited], true) ? $this->changes($entry) : null,
             'actor' => $entry->user?->name,
             'createdAt' => $entry->created_at->toIso8601String(),
         ];
@@ -199,6 +201,16 @@ final readonly class RecordHistoryEntryResolver
                 $context['reason'] ?? '',
                 $this->closureFeatures($context),
             ),
+            RecordHistoryEvent::BuildingAdded => sprintf('Building %s added', $context['name'] ?? ''),
+            RecordHistoryEvent::BuildingEdited => sprintf('Building %s renamed to %s', $context['from'] ?? '', $context['to'] ?? ''),
+            RecordHistoryEvent::BuildingRemoved => sprintf('Building %s removed; its docks are now ungrouped', $context['name'] ?? ''),
+            RecordHistoryEvent::DockAdded => sprintf('Dock %s added', $context['dock'] ?? ''),
+            RecordHistoryEvent::DockEdited => sprintf('Dock %s edited', $context['dock'] ?? ''),
+            RecordHistoryEvent::DockRemoved => sprintf('Dock %s removed', $context['dock'] ?? ''),
+            RecordHistoryEvent::DockAssigned => isset($context['from'])
+                ? sprintf('Moved from dock %s to dock %s', $context['from'], $context['to'] ?? '')
+                : sprintf('Placed on dock %s', $context['to'] ?? ''),
+            RecordHistoryEvent::DockUnassigned => sprintf('Taken off dock %s', $context['from'] ?? ''),
         };
     }
 

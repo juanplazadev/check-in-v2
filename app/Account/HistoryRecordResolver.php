@@ -55,6 +55,7 @@ final readonly class HistoryRecordResolver
             'licenseExpiration' => $this->calendarDate($checkIn->drivers_license_expiration_date),
             'loadingInstructions' => $checkIn->loading_instructions,
             'purchaseOrders' => $purchaseOrders,
+            'dock' => $checkIn->dock?->label(),
         ];
     }
 
@@ -84,6 +85,7 @@ final readonly class HistoryRecordResolver
             'cancelledAt' => $cancelledAt?->format('M j, Y'),
             'cancelledReason' => $appointment->cancelled_reason,
             'purchaseOrders' => $purchaseOrders,
+            'dock' => $appointment->dock?->label(),
         ];
     }
 

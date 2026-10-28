@@ -6,6 +6,8 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Dashboard\AppointmentDeletionImpact;
 use App\Dashboard\AppointmentRecordResolver;
+use App\Dashboard\LocationDockResolver;
+use App\Enums\AppointmentStatus;
 use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\AppointmentIndexRequest;
@@ -65,7 +67,7 @@ final class AppointmentController extends Controller
      * so its existence is not confirmed. Archived appointments still open,
      * since the archived tab links to them.
      */
-    public function show(#[CurrentUser] User $user, string $uuid, AppointmentRecordResolver $resolver, AppointmentDeletionImpact $impact): Response
+    public function show(#[CurrentUser] User $user, string $uuid, AppointmentRecordResolver $resolver, AppointmentDeletionImpact $impact, LocationDockResolver $docks): Response
     {
         $appointment = Appointment::query()
             ->withTrashed()
@@ -82,6 +84,12 @@ final class AppointmentController extends Controller
                 'body' => $note->body,
                 'createdAt' => $note->created_at->toIso8601String(),
             ])->all(),
+            // Only a live booking can be placed on a dock, and only by those who may.
+            'dockOptions' => $user->can(Permission::AssignAppointmentDocks)
+                && ! $appointment->trashed()
+                && in_array($appointment->status, [AppointmentStatus::Scheduled, AppointmentStatus::CheckedIn], true)
+                    ? $docks->optionsFor($appointment)
+                    : null,
             'deletionImpact' => $user->can(Permission::DeleteAppointments)
                 ? Inertia::optional(fn (): array => $impact->summary($appointment))
                 : null,

@@ -282,6 +282,11 @@ return [
         'guestBody' => ':app: tu registro está hecho. Ref :reference. Muestra esta referencia en la entrada.',
     ],
 
+    'doorAssignmentSms' => [
+        'body' => ':app: Ref :reference. Por favor diríjase a :dock.',
+        'withBuilding' => ':app: Ref :reference. Por favor diríjase a :dock, :building.',
+    ],
+
     'appointmentReminderEmail' => [
         'subject' => 'Recordatorio: tu cita :reference en :location',
         'preheader' => 'Tu cita en :location es mañana.',
@@ -339,6 +344,7 @@ return [
         'checkInDocumentTitle' => 'Comprobante de registro',
         'appointmentDocumentTitle' => 'Confirmación de cita',
         'bookedOn' => 'Reservada el',
+        'dock' => 'Andén',
         'questions' => '¿Preguntas?',
         'extension' => 'ext.',
         'generatedOn' => 'Generado el :date',
@@ -546,6 +552,7 @@ return [
         'notAvailableOnDay' => ':name no está disponible para citas el :date. Por favor elija otro día.',
         'closedForAppointmentsOnDateWithoutReason' => ':name no acepta citas el :date. Por favor elija otra fecha.',
         'outsideBookingWindow' => 'Por favor elija una hora de cita disponible dentro de los próximos :days días.',
+        'slotFull' => 'Ese horario se acaba de llenar. Por favor elija otro horario.',
     ],
 
     'purchaseOrders' => [
@@ -614,6 +621,7 @@ return [
         'cellphoneConsent' => 'Aviso: Al proporcionar mi información de contacto, reconozco y doy mi consentimiento explícito para ser contactado por SMS y recibir correos electrónicos para diversos fines, que pueden incluir contenido de marketing y promocional. Pueden aplicarse tarifas por mensajes y datos. La frecuencia de los mensajes puede variar. Responda STOP para cancelar. Consulte nuestra Política de Privacidad para más información.',
         'todaysHours' => 'Horario de hoy',
         'noAvailability' => 'No hay horarios de cita disponibles actualmente. Por favor, vuelva más tarde o comuníquese con la ubicación.',
+        'slotFull' => 'Lleno',
         'reviewButton' => 'Revisar cita →',
         'submitting' => 'Enviando…',
         'reviewNote' => 'Podrá revisar antes de confirmar.',

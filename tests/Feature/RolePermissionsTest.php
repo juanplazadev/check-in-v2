@@ -24,7 +24,8 @@ $shipping = [
     ...$staffBasics,
     'complete check-ins', 'email check-in pdf', 'email appointment pdf', 'cancel check-ins', 'cancel appointments',
     'reveal driver licenses', 'archive check-ins', 'restore check-ins', 'archive appointments',
-    'restore appointments', 'export check-ins view', 'export appointments view',
+    'restore appointments', 'export check-ins view', 'export appointments view', 'assign appointment docks',
+    'assign check-in docks',
 ];
 
 dataset('role permissions', [
@@ -32,7 +33,7 @@ dataset('role permissions', [
     'shipping manager' => [Role::ShippingManager, [
         ...$shipping,
         'reopen check-ins', 'unsync check-ins from erp', 'edit check-ins', 'reinstate check-ins', 'reinstate appointments',
-        'link check-in appointments', 'pause check-ins', 'edit location hours', 'view analytics',
+        'link check-in appointments', 'pause check-ins', 'edit location hours', 'manage docks', 'view analytics',
     ]],
     'shipping' => [Role::Shipping, $shipping],
     'sales' => [Role::Sales, [...$staffBasics, 'view all locations', 'view analytics']],
