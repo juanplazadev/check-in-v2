@@ -209,7 +209,7 @@ it('adds and renames a building', function (): void {
         ->and($location->history()->pluck('event')->all())->toBe([RecordHistoryEvent::BuildingEdited, RecordHistoryEvent::BuildingAdded]);
 });
 
-it('ungroups a removed building\'s docks instead of deleting them', function (): void {
+it("ungroups a removed building's docks instead of deleting them", function (): void {
     $location = Location::factory()->create();
     $building = Building::factory()->for($location)->create();
     $dock = Dock::factory()->for($location)->for($building)->create();

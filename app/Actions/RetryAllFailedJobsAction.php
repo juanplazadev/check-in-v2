@@ -44,7 +44,7 @@ final readonly class RetryAllFailedJobsAction
                 }
 
                 $seen[$id] = true;
-                dispatch(new RetryFailedJob($id));
+                dispatch_sync(new RetryFailedJob($id));
             }
 
             $lastIndex = $page->keys()->last();

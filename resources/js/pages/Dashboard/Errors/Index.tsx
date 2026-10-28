@@ -73,6 +73,7 @@ interface PeriodOption {
 
 interface ErrorsProps {
     filters: Filters;
+    defaultEnvironment: string;
     periods: PeriodOption[];
     tabs: { value: IssueTab; label: string }[];
     sorts: { value: IssueSort; label: string }[];
@@ -120,8 +121,13 @@ function formatCount(value: number): string {
 /**
  * Reloads the page with the given filters. The headline report depends only
  * on the period and environment, so other changes reload just the issues.
+ * The server's default environment is left out of the URL.
  */
-function visit(filters: Filters, changes: Partial<Filters>) {
+function visit(
+    filters: Filters,
+    defaultEnvironment: string,
+    changes: Partial<Filters>,
+) {
     const next = { ...filters, cursor: null, ...changes };
     const reportChanged =
         next.period !== filters.period ||
@@ -133,7 +139,7 @@ function visit(filters: Filters, changes: Partial<Filters>) {
             ...(next.period !== '14d' && { period: next.period }),
             ...(next.tab !== 'unresolved' && { tab: next.tab }),
             ...(next.sort !== 'date' && { sort: next.sort }),
-            ...(next.environment !== 'production' && {
+            ...(next.environment !== defaultEnvironment && {
                 environment: next.environment ?? 'all',
             }),
             ...(next.search && { search: next.search }),
@@ -561,10 +567,12 @@ function IssueBadges({ issue }: { issue: IssueRow }) {
 function IssueList({
     page,
     filters,
+    defaultEnvironment,
     reloading,
 }: {
     page: IssuePage;
     filters: Filters;
+    defaultEnvironment: string;
     reloading: boolean;
 }) {
     if (page.rows.length === 0) {
@@ -682,7 +690,9 @@ function IssueList({
                         className="btn-sm border-gray-200 bg-white text-gray-600 hover:border-gray-300 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700/60 dark:bg-gray-800 dark:text-gray-300"
                         disabled={page.previous === null}
                         onClick={() =>
-                            visit(filters, { cursor: page.previous })
+                            visit(filters, defaultEnvironment, {
+                                cursor: page.previous,
+                            })
                         }
                     >
                         <ChevronLeft className="size-4" />
@@ -692,7 +702,11 @@ function IssueList({
                         type="button"
                         className="btn-sm border-gray-200 bg-white text-gray-600 hover:border-gray-300 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700/60 dark:bg-gray-800 dark:text-gray-300"
                         disabled={page.next === null}
-                        onClick={() => visit(filters, { cursor: page.next })}
+                        onClick={() =>
+                            visit(filters, defaultEnvironment, {
+                                cursor: page.next,
+                            })
+                        }
                     >
                         <ChevronRight className="size-4" />
                         <span className="sr-only">Next page</span>
@@ -703,7 +717,13 @@ function IssueList({
     );
 }
 
-function SearchBox({ filters }: { filters: Filters }) {
+function SearchBox({
+    filters,
+    defaultEnvironment,
+}: {
+    filters: Filters;
+    defaultEnvironment: string;
+}) {
     const [term, setTerm] = useState(filters.search);
 
     return (
@@ -712,7 +732,7 @@ function SearchBox({ filters }: { filters: Filters }) {
             role="search"
             onSubmit={(event) => {
                 event.preventDefault();
-                visit(filters, { search: term.trim() });
+                visit(filters, defaultEnvironment, { search: term.trim() });
             }}
         >
             <label htmlFor="issue-search" className="sr-only">
@@ -733,7 +753,7 @@ function SearchBox({ filters }: { filters: Filters }) {
                     className="absolute top-1/2 right-2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
                     onClick={() => {
                         setTerm('');
-                        visit(filters, { search: '' });
+                        visit(filters, defaultEnvironment, { search: '' });
                     }}
                 >
                     <X className="size-4" />
@@ -746,6 +766,7 @@ function SearchBox({ filters }: { filters: Filters }) {
 
 export default function ErrorsIndex({
     filters,
+    defaultEnvironment,
     periods,
     tabs,
     sorts,
@@ -784,7 +805,7 @@ export default function ErrorsIndex({
                                 ]}
                                 value={filters.environment ?? ''}
                                 onChange={(environment) =>
-                                    visit(filters, {
+                                    visit(filters, defaultEnvironment, {
                                         environment: environment || null,
                                     })
                                 }
@@ -796,7 +817,9 @@ export default function ErrorsIndex({
                             options={periods}
                             value={filters.period}
                             onChange={(selected) =>
-                                visit(filters, { period: selected })
+                                visit(filters, defaultEnvironment, {
+                                    period: selected,
+                                })
                             }
                         />
                         {sentryUrl && (
@@ -845,9 +868,13 @@ export default function ErrorsIndex({
                                                 type="button"
                                                 aria-pressed={active}
                                                 onClick={() =>
-                                                    visit(filters, {
-                                                        tab: tab.value,
-                                                    })
+                                                    visit(
+                                                        filters,
+                                                        defaultEnvironment,
+                                                        {
+                                                            tab: tab.value,
+                                                        },
+                                                    )
                                                 }
                                                 className={`inline-flex items-center justify-center rounded-full border px-3 py-1 text-sm leading-5 font-medium shadow-sm transition ${
                                                     active
@@ -865,6 +892,7 @@ export default function ErrorsIndex({
                                 <SearchBox
                                     key={filters.search}
                                     filters={filters}
+                                    defaultEnvironment={defaultEnvironment}
                                 />
                                 <Select
                                     icon={ArrowDownUp}
@@ -872,7 +900,9 @@ export default function ErrorsIndex({
                                     options={sorts}
                                     value={filters.sort}
                                     onChange={(sort) =>
-                                        visit(filters, { sort })
+                                        visit(filters, defaultEnvironment, {
+                                            sort,
+                                        })
                                     }
                                     className="min-w-40"
                                 />
@@ -885,6 +915,7 @@ export default function ErrorsIndex({
                                     <IssueList
                                         page={issues.data}
                                         filters={filters}
+                                        defaultEnvironment={defaultEnvironment}
                                         reloading={reloading}
                                     />
                                 ) : (

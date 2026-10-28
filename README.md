@@ -185,13 +185,19 @@ Uses [Driftingly/Laravel Rector](https://github.com/driftingly/rector-laravel) w
 
 ### Tests
 
+The suite has three parts: `Unit`, `Feature` and `Browser`. Unit and Feature need nothing running and take well under a minute in parallel, so use them for everyday runs:
+
 ```bash
-./vendor/bin/sail artisan test                                              # all tests
-./vendor/bin/sail artisan test --compact                                    # compact output
-./vendor/bin/sail artisan test --parallel                                   # run tests in parallel (faster)
-./vendor/bin/sail artisan test --parallel --compact                         # parallel + compact output
-./vendor/bin/sail pest --filter "switches locale when locale is available"  # specific test
-./vendor/bin/sail pest tests/Unit/LocaleSwitchTest.php                      # specific file
+./vendor/bin/sail artisan test --parallel --compact --testsuite=Unit,Feature  # everyday run (no browser)
+./vendor/bin/sail artisan test --parallel --compact                           # full suite, browser included (see below)
+./vendor/bin/sail pest --filter "switches locale when locale is available"    # specific test
+./vendor/bin/sail pest tests/Unit/LocaleSwitchTest.php                        # specific file
+```
+
+PHP in the Sail container has no memory limit, so the suite needs no memory flag there. On the host, PHP is capped at 128M and a large run dies partway. Call Pest directly with a higher limit, because `artisan test` does not pass `-d` on to Pest:
+
+```bash
+php -d memory_limit=2G vendor/bin/pest --compact tests/Feature
 ```
 
 #### Browser tests (Playwright)
@@ -203,9 +209,18 @@ Browser tests live in `tests/Browser` and drive a real Chromium instance via Pla
 docker compose exec -u root checkin npx playwright install-deps chromium  # install system libraries (as root)
 ```
 
+The pages under test load their JS from Vite, inside the container. A dev server started on the host writes its host address to `public/hot`, and the container cannot reach that address, so every page renders blank. Before running the browser suite:
+
+1. Build the assets on the host: `npm run build`
+2. Stop the host dev server, or move `public/hot` aside until the run is over.
+
 Then run the browser suite:
 
 ```bash
-./vendor/bin/sail artisan test tests/Browser                    # all browser tests
-./vendor/bin/sail artisan test --parallel tests/Browser         # browser tests in parallel
+./vendor/bin/sail artisan test --compact tests/Browser             # all browser tests
+./vendor/bin/sail artisan test --parallel --compact tests/Browser  # browser tests in parallel
 ```
+
+If `public/hot` points at an address the container cannot reach, each browser test fails at once with a message that says so. Without that check, the run would hang.
+
+When writing browser tests, click buttons with a Playwright selector such as `->click('button:has-text("Cancelled")')`. A plain `->click('Cancelled')` needs an exact text match, and on a button that also shows a count it waits forever, with no output and no timeout.

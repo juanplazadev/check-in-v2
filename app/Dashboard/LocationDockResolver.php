@@ -47,11 +47,10 @@ final readonly class LocationDockResolver
 
         return [
             'capacity' => $this->capacity->capacityFor($location),
-            'buildings' => $buildings
+            'buildings' => array_values($buildings
                 ->map(fn (Building $building): array => ['id' => $building->uuid, 'name' => $building->name])
-                ->values()
-                ->all(),
-            'docks' => $this->naturalOrder($docks->all())
+                ->all()),
+            'docks' => array_values($this->naturalOrder($docks->all())
                 ->map(fn (Dock $dock): array => [
                     'id' => $dock->uuid,
                     'name' => $dock->name,
@@ -62,8 +61,7 @@ final readonly class LocationDockResolver
                     'upcomingCount' => (int) $dock->getAttribute('upcoming_count'),
                     'hasRecords' => (int) $dock->getAttribute('appointment_count') + (int) $dock->getAttribute('check_in_count') > 0,
                 ])
-                ->values()
-                ->all(),
+                ->all()),
         ];
     }
 
@@ -89,15 +87,14 @@ final readonly class LocationDockResolver
             ->whereIn('status', AppointmentSlotCapacity::OCCUPYING_STATUSES)
             ->pluck('reference_number', 'dock_id');
 
-        return $this->naturalOrder($docks->all())
+        return array_values($this->naturalOrder($docks->all())
             ->map(fn (Dock $dock): array => [
                 'id' => $dock->uuid,
                 'label' => $dock->label(),
                 'building' => $dock->building?->name,
                 'takenBy' => $taken[$dock->id] ?? null,
             ])
-            ->values()
-            ->all();
+            ->all());
     }
 
     /**
@@ -137,7 +134,7 @@ final readonly class LocationDockResolver
     /**
      * Grouped by building, then "Door 2" before "Door 10".
      *
-     * @param  list<Dock>  $docks
+     * @param  array<int, Dock>  $docks
      * @return Collection<int, Dock>
      */
     private function naturalOrder(array $docks): Collection

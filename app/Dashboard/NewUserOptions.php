@@ -52,13 +52,12 @@ final readonly class NewUserOptions
      */
     public function locations(User $viewer): array
     {
-        return $this->locations->execute($viewer)
+        return array_values($this->locations->execute($viewer)
             ->map(fn (Location $location): array => [
                 'uuid' => $location->uuid,
                 'name' => $location->name,
                 'city' => $location->address->city,
             ])
-            ->values()
-            ->all();
+            ->all());
     }
 }

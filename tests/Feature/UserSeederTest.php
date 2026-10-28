@@ -31,3 +31,11 @@ it('seeds nothing in production', function (): void {
 
     expect(User::query()->count())->toBe(0);
 });
+
+it('seeds in staging', function (): void {
+    app()->detectEnvironment(fn (): string => 'staging');
+
+    (new UserSeeder)->run();
+
+    expect(User::query()->where('email', UserSeeder::ADMIN_EMAIL)->exists())->toBeTrue();
+});

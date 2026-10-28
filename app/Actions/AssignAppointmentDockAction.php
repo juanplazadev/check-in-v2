@@ -53,7 +53,7 @@ final readonly class AssignAppointmentDockAction
                 ->first();
 
             if (! $dock instanceof Dock || ! $dock->is_active || ! $dock->accepts_appointments) {
-                throw ValidationException::withMessages(['dock' => 'Choose an open dock at this appointment\'s location.']);
+                throw ValidationException::withMessages(['dock' => "Choose an open dock at this appointment's location."]);
             }
 
             if ($appointment->dock_id === $dock->id) {

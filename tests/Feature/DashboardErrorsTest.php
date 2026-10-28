@@ -202,18 +202,24 @@ it("lists the tab's issues with the admin's search, sort and environment", funct
         && $request->hasHeader('Authorization', 'Bearer test-token'));
 });
 
-it('defaults to the production environment', function (): void {
+it('defaults to the environment this app reports to Sentry as', function (?string $sentryEnvironment, string $expected): void {
     fakeSentry(sentryReportRoutes());
+    config()->set('sentry.environment', $sentryEnvironment);
+    app()->detectEnvironment(fn (): string => 'staging');
 
     test()->actingAs(User::factory()->withRole(Role::Admin)->create())
         ->get(route('dashboard.errors', []))
         ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
-            ->where('filters.environment', 'production')
+            ->where('filters.environment', $expected)
+            ->where('defaultEnvironment', $expected)
             ->loadDeferredProps(fn (AssertableInertia $reload): AssertableInertia => $reload->where('issues.state', 'ready')));
 
     Http::assertSent(fn (Request $request): bool => str_ends_with(parse_url($request->url(), PHP_URL_PATH), '/organizations/acme/issues/')
-        && $request->data()['environment'] === 'production');
-});
+        && $request->data()['environment'] === $expected);
+})->with([
+    'APP_ENV' => [null, 'staging'],
+    'SENTRY_ENVIRONMENT override' => ['staging-eu', 'staging-eu'],
+]);
 
 it('lifts the environment filter when the admin picks all environments', function (): void {
     fakeSentry(sentryReportRoutes());

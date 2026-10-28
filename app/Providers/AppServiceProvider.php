@@ -292,7 +292,7 @@ final class AppServiceProvider extends ServiceProvider
 
     private function setPasswordDefault(): void
     {
-        Password::defaults(fn (): ?Password => app()->isProduction()
+        Password::defaults(fn (): ?Password => app()->environment('production', 'staging')
             ? Password::min(12)
                 ->mixedCase()
                 ->letters()
@@ -313,9 +313,13 @@ final class AppServiceProvider extends ServiceProvider
         Model::automaticallyEagerLoadRelationships();
     }
 
+    /**
+     * Staging sits behind the same TLS proxy as production, so it needs
+     * https URLs too.
+     */
     private function forceHttps(): void
     {
-        if (app()->isProduction()) {
+        if (app()->environment('production', 'staging')) {
             URL::forceHttps();
         }
     }

@@ -278,6 +278,7 @@ it('deletes a failed job from Horizon and the failed_jobs table', function (): v
 it('forbids the job controls to a user who may only view jobs', function (string $method, Closure $url): void {
     $viewer = User::factory()->withRole(Role::Shipping)->create();
     $viewer->givePermissionTo(Permission::ViewJobs);
+
     mock(HorizonCommandQueue::class)->shouldNotReceive('push');
     mock(JobRepository::class)->shouldNotReceive('findFailed', 'deleteFailed', 'getFailed');
 

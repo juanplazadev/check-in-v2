@@ -41,6 +41,7 @@ final class ErrorController extends Controller
                 'search' => $filters['search'],
                 'cursor' => $filters['cursor'],
             ],
+            'defaultEnvironment' => ErrorsRequest::defaultEnvironment(),
             'periods' => array_map(fn (ErrorPeriod $period): array => [
                 'value' => $period->value,
                 'label' => $period->label(),

@@ -87,7 +87,7 @@ it('lets a dock be reused once the booking holding it is canceled', function ():
     expect($appointment->refresh()->dock_id)->toBe($dock->id);
 });
 
-it('refuses a dock that is not open at the appointment\'s location', function (string $dockState): void {
+it("refuses a dock that is not open at the appointment's location", function (string $dockState): void {
     $location = Location::factory()->create();
     $dock = match ($dockState) {
         'elsewhere' => Dock::factory()->create(),
@@ -97,7 +97,7 @@ it('refuses a dock that is not open at the appointment\'s location', function (s
 
     $this->actingAs(dockAssigner($location))
         ->put(route('dashboard.appointments.dock.update', $appointment->uuid), ['dock' => $dock->uuid])
-        ->assertSessionHasErrors(['dock' => 'Choose an open dock at this appointment\'s location.']);
+        ->assertSessionHasErrors(['dock' => "Choose an open dock at this appointment's location."]);
 
     expect($appointment->refresh()->dock_id)->toBeNull();
 })->with([
@@ -151,7 +151,7 @@ it('hides an appointment at a location the user is not attached to', function ()
         ->assertNotFound();
 });
 
-it('offers the location\'s open docks on the appointment page, marking taken ones', function (): void {
+it("offers the location's open docks on the appointment page, marking taken ones", function (): void {
     $location = Location::factory()->create();
     $free = Dock::factory()->for($location)->create(['name' => 'Door 1']);
     $held = Dock::factory()->for($location)->create(['name' => 'Door 2']);

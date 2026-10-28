@@ -117,6 +117,7 @@ it('forbids staff other than admins', function (Role $role): void {
     $location = Location::factory()->create();
     $deleted = Location::factory()->create();
     $deleted->delete();
+
     $user = User::factory()->withRole($role)->worksAt($location)->create();
 
     $this->actingAs($user)
