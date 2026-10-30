@@ -25,7 +25,7 @@ $shipping = [
     'complete check-ins', 'email check-in pdf', 'email appointment pdf', 'cancel check-ins', 'cancel appointments',
     'reveal driver licenses', 'archive check-ins', 'restore check-ins', 'archive appointments',
     'restore appointments', 'export check-ins view', 'export appointments view', 'assign appointment docks',
-    'assign check-in docks',
+    'change appointment load types', 'assign check-in docks',
 ];
 
 dataset('role permissions', [

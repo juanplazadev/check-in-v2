@@ -153,6 +153,21 @@ final readonly class AppointmentScheduleResolver
     }
 
     /**
+     * When the location closes on a local date, or null when it is closed all day.
+     */
+    public function closesAt(Location $location, string $date): ?CarbonInterface
+    {
+        $day = Date::parse($date, $location->timezone)->startOfDay();
+        $schedule = $this->resolveSchedule($location, $day);
+
+        if (! $schedule->closeTime instanceof CarbonInterface || $schedule->isOverrideClosure) {
+            return null;
+        }
+
+        return $day->copy()->setTimeFrom($schedule->closeTime);
+    }
+
+    /**
      * @return list<AppointmentAvailabilityWindowDTO>
      */
     private function resolveAvailabilityWindows(
@@ -213,21 +228,6 @@ final readonly class AppointmentScheduleResolver
         }
 
         return $windows;
-    }
-
-    /**
-     * When the location closes on a local date, or null when it is closed all day.
-     */
-    private function closesAt(Location $location, string $date): ?CarbonInterface
-    {
-        $day = Date::parse($date, $location->timezone)->startOfDay();
-        $schedule = $this->resolveSchedule($location, $day);
-
-        if (! $schedule->closeTime instanceof CarbonInterface || $schedule->isOverrideClosure) {
-            return null;
-        }
-
-        return $day->copy()->setTimeFrom($schedule->closeTime);
     }
 
     private function ceilToInterval(CarbonInterface $at, int $intervalMinutes): CarbonInterface

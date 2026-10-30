@@ -236,6 +236,7 @@ it('lists the full start times on the booking form for each load type length', f
 
 it('sends only the staff-set load type to the booking form and hides the choice', function (): void {
     $location = Location::factory()->appointmentsOnly()->create();
+    Dock::factory()->for($location)->create();
     $default = LoadType::factory()->for($location)->lasting(180)->create();
     LoadType::factory()->for($location)->lasting(30)->create();
     $location->update(['default_load_type_id' => $default->id]);
@@ -249,3 +250,24 @@ it('sends only the staff-set load type to the booking form and hides the choice'
             ->has('loadTypes', 1)
             ->where('loadTypes.0.id', $default->uuid));
 });
+
+it('sends no load types to the booking form without a bookable dock', function (string $dockState): void {
+    $location = Location::factory()->appointmentsOnly()->create();
+    LoadType::factory()->for($location)->create();
+
+    if ($dockState !== 'none') {
+        Dock::factory()->for($location)->{$dockState}()->create();
+    }
+
+    post(route('appointment.gate', $location->uuid), ['uuid' => $location->uuid]);
+
+    get(route('appointment.form', $location->uuid))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->component('AppointmentForm')
+            ->where('chooseLoadType', false)
+            ->has('loadTypes', 0));
+})->with([
+    'no docks' => 'none',
+    'only an inactive dock' => 'inactive',
+    'only a walk-in dock' => 'walkInOnly',
+]);

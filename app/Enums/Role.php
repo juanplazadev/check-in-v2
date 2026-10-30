@@ -151,6 +151,7 @@ enum Role: string
             Permission::ExportCheckInsView,
             Permission::ExportAppointmentsView,
             Permission::AssignAppointmentDocks,
+            Permission::ChangeAppointmentLoadTypes,
             Permission::AssignCheckInDocks,
         ];
 

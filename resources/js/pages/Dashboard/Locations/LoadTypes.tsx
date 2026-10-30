@@ -46,17 +46,17 @@ function NoDocksWarning({ locationUuid }: { locationUuid: string }) {
         <div className="mb-4 flex gap-3 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
             <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
             <p>
-                This location has no docks that take appointments yet, so{' '}
-                <strong>any number of trucks can book the same time</strong> and
-                load durations don't block any slots. Durations still stop a
-                load from running past closing time.{' '}
+                <strong>Load types are off</strong> because this location has no
+                docks that take appointments. Drivers aren't asked for one,
+                every booking lasts one slot, and any number of trucks can book
+                the same time.{' '}
                 <Link
                     href={dashboardRoutes.locations.docks.url(locationUuid)}
                     className="font-semibold underline"
                 >
                     Add docks
                 </Link>{' '}
-                to put them into effect.
+                to turn them on.
             </p>
         </div>
     );
@@ -213,6 +213,7 @@ export default function LocationLoadTypesPage({
     const [removing, setRemoving] = useState<LocationLoadType | null>(null);
     const [busy, setBusy] = useState(false);
     const hasActive = loadTypes.some((loadType) => loadType.isActive);
+    const isTurnedOff = dockCapacity === null && loadTypes.length > 0;
 
     const groups = DIRECTIONS.map((direction) => ({
         ...direction,
@@ -263,11 +264,9 @@ export default function LocationLoadTypesPage({
                 }
             />
 
-            {hasActive && dockCapacity === null && (
-                <NoDocksWarning locationUuid={location.uuid} />
-            )}
+            {isTurnedOff && <NoDocksWarning locationUuid={location.uuid} />}
 
-            {hasActive && (
+            {hasActive && dockCapacity !== null && (
                 <DefaultLoadTypeCard
                     key={defaultLoadTypeId ?? 'drivers'}
                     locationUuid={location.uuid}
@@ -279,12 +278,14 @@ export default function LocationLoadTypesPage({
                 />
             )}
 
-            <BookingNote
-                hasActive={hasActive}
-                staffSet={defaultLoadTypeId !== null}
-                slotIntervalMinutes={slotIntervalMinutes}
-                dockCapacity={dockCapacity}
-            />
+            {!isTurnedOff && (
+                <BookingNote
+                    hasActive={hasActive}
+                    staffSet={defaultLoadTypeId !== null}
+                    slotIntervalMinutes={slotIntervalMinutes}
+                    dockCapacity={dockCapacity}
+                />
+            )}
 
             {groups.length === 0 ? (
                 <EmptyLoadTypes />

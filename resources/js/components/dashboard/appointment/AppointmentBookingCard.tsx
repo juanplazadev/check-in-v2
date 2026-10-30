@@ -1,8 +1,10 @@
 import AppointmentDockPicker from '@/components/dashboard/appointment/AppointmentDockPicker';
+import AppointmentLoadTypePicker from '@/components/dashboard/appointment/AppointmentLoadTypePicker';
 import Card from '@/components/dashboard/Card';
 import { DetailRow } from '@/components/dashboard/DetailCard';
 import type {
     AppointmentDockOption,
+    AppointmentLoadTypeOption,
     AppointmentRecord,
 } from '@/components/dashboard/types';
 import { formatDateTime, formatTime } from '@/lib/dashboard/format';
@@ -10,10 +12,13 @@ import { formatDateTime, formatTime } from '@/lib/dashboard/format';
 export default function AppointmentBookingCard({
     appointment,
     dockOptions = null,
+    loadTypeOptions = null,
 }: {
     appointment: AppointmentRecord;
     /** Null when the viewer may not assign docks, or the booking is not live. */
     dockOptions?: AppointmentDockOption[] | null;
+    /** Null when the viewer may not change load types, the booking is not live, or the location has none. */
+    loadTypeOptions?: AppointmentLoadTypeOption[] | null;
 }) {
     return (
         <Card id="purchase-orders" title="Booking" className="scroll-mt-24">
@@ -22,9 +27,13 @@ export default function AppointmentBookingCard({
                     {formatDateTime(appointment.scheduledFor)} -{' '}
                     {formatTime(appointment.endsAt)}
                 </DetailRow>
-                {appointment.loadType !== null && (
+                {(appointment.loadType !== null ||
+                    loadTypeOptions !== null) && (
                     <DetailRow label="Load type">
-                        {appointment.loadType}
+                        <AppointmentLoadTypePicker
+                            appointment={appointment}
+                            options={loadTypeOptions}
+                        />
                     </DetailRow>
                 )}
                 <DetailRow label="Dock">

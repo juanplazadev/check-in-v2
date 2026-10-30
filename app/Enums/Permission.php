@@ -55,6 +55,7 @@ enum Permission: string
     case CancelAppointments = 'cancel appointments';
     case ReinstateAppointments = 'reinstate appointments';
     case AssignAppointmentDocks = 'assign appointment docks';
+    case ChangeAppointmentLoadTypes = 'change appointment load types';
     case WriteCheckInNotes = 'write check-in notes';
     case WriteAppointmentNotes = 'write appointment notes';
     case RevealDriverLicenses = 'reveal driver licenses';
@@ -127,6 +128,7 @@ enum Permission: string
             self::CancelAppointments,
             self::ReinstateAppointments,
             self::AssignAppointmentDocks,
+            self::ChangeAppointmentLoadTypes,
             self::WriteAppointmentNotes,
             self::ArchiveAppointments,
             self::RestoreAppointments,
@@ -205,6 +207,7 @@ enum Permission: string
             self::CancelAppointments => 'Cancel an appointment.',
             self::ReinstateAppointments => 'Reinstate a canceled appointment.',
             self::AssignAppointmentDocks => 'Place an appointment on a dock or move it.',
+            self::ChangeAppointmentLoadTypes => "Change an appointment's load type, which changes how long it holds a dock.",
             self::WriteAppointmentNotes => 'Add notes to an appointment.',
             self::ArchiveAppointments => 'Move an appointment to the archive.',
             self::RestoreAppointments => 'Bring an appointment back from the archive.',

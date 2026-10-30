@@ -160,12 +160,17 @@ final class AppointmentFormRequest extends FormRequest
     }
 
     /**
-     * A location where staff set the load type gives every booking that one,
-     * whatever the client sent. Otherwise a location with active load types
-     * needs one of them, and a location with none takes no load type at all.
+     * A location with no bookable docks takes no load type, whatever the client
+     * sent. One where staff set the load type gives every booking that one.
+     * Otherwise a location with active load types needs one of them, and a
+     * location with none takes no load type at all.
      */
     private function resolveLoadType(Validator $validator, Location $location): bool
     {
+        if (! $location->hasBookableDocks()) {
+            return true;
+        }
+
         $staffLoadType = $location->bookingLoadType();
 
         if ($staffLoadType instanceof LoadType) {

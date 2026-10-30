@@ -48,9 +48,10 @@ final readonly class AppointmentSlotCapacity
 
     /**
      * Whether a booking from $start to $end fits alongside the ones already
-     * made, at every moment it runs.
+     * made, at every moment it runs. Pass $ignore to check a booking that is
+     * changing, so it is not counted against itself.
      */
-    public function hasRoom(Location $location, CarbonInterface $start, CarbonInterface $end): bool
+    public function hasRoom(Location $location, CarbonInterface $start, CarbonInterface $end, ?Appointment $ignore = null): bool
     {
         $capacity = $this->capacityFor($location);
 
@@ -58,7 +59,7 @@ final readonly class AppointmentSlotCapacity
             return true;
         }
 
-        $bookings = $this->overlapping($location, $start, $end)->map(fn (Appointment $appointment): array => [
+        $bookings = $this->overlapping($location, $start, $end, $ignore)->map(fn (Appointment $appointment): array => [
             $appointment->scheduled_for->getTimestamp(),
             $appointment->ends_at->getTimestamp(),
         ]);
@@ -154,11 +155,12 @@ final readonly class AppointmentSlotCapacity
      *
      * @return Collection<int, Appointment>
      */
-    private function overlapping(Location $location, CarbonInterface $start, CarbonInterface $end): Collection
+    private function overlapping(Location $location, CarbonInterface $start, CarbonInterface $end, ?Appointment $ignore = null): Collection
     {
         return $this->occupying($location)
             ->where('scheduled_for', '<', $end->copy()->utc())
             ->where('ends_at', '>', $start->copy()->utc())
+            ->when($ignore instanceof Appointment, fn (Builder $query): Builder => $query->whereKeyNot($ignore?->id))
             ->get(['scheduled_for', 'ends_at'])
             ->toBase();
     }

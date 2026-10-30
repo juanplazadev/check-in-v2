@@ -57,6 +57,7 @@ export type Permission =
     | 'cancel appointments'
     | 'reinstate appointments'
     | 'assign appointment docks'
+    | 'change appointment load types'
     | 'write check-in notes'
     | 'write appointment notes'
     | 'reveal driver licenses'

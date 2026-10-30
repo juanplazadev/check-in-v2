@@ -91,7 +91,7 @@ final readonly class RecordHistoryEntryResolver
             'id' => $entry->id,
             'event' => $entry->event->value,
             'description' => $this->describe($entry, $createdLabel),
-            'changes' => in_array($entry->event, [RecordHistoryEvent::DetailsEdited, RecordHistoryEvent::CheckInHoursEdited, RecordHistoryEvent::AppointmentHoursEdited, RecordHistoryEvent::CheckInOptionsEdited, RecordHistoryEvent::AppointmentOptionsEdited, RecordHistoryEvent::DockEdited, RecordHistoryEvent::LoadTypeEdited, RecordHistoryEvent::DefaultLoadTypeChanged], true) ? $this->changes($entry) : null,
+            'changes' => in_array($entry->event, [RecordHistoryEvent::DetailsEdited, RecordHistoryEvent::CheckInHoursEdited, RecordHistoryEvent::AppointmentHoursEdited, RecordHistoryEvent::CheckInOptionsEdited, RecordHistoryEvent::AppointmentOptionsEdited, RecordHistoryEvent::DockEdited, RecordHistoryEvent::LoadTypeEdited, RecordHistoryEvent::DefaultLoadTypeChanged, RecordHistoryEvent::LoadTypeChanged], true) ? $this->changes($entry) : null,
             'actor' => $entry->user?->name,
             'createdAt' => $entry->created_at->toIso8601String(),
         ];
@@ -212,6 +212,7 @@ final readonly class RecordHistoryEntryResolver
             RecordHistoryEvent::LoadTypeEdited => sprintf('Load type %s edited', $context['loadType'] ?? ''),
             RecordHistoryEvent::LoadTypeRemoved => sprintf('Load type %s removed', $context['loadType'] ?? ''),
             RecordHistoryEvent::DefaultLoadTypeChanged => 'Who picks the load type changed',
+            RecordHistoryEvent::LoadTypeChanged => 'Load type changed',
             RecordHistoryEvent::DockAssigned => isset($context['from'])
                 ? sprintf('Moved from dock %s to dock %s', $context['from'], $context['to'] ?? '')
                 : sprintf('Placed on dock %s', $context['to'] ?? ''),

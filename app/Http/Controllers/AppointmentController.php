@@ -90,9 +90,12 @@ final class AppointmentController extends Controller
         // gets that one alone, preselected, and its open times follow its length.
         $staffLoadType = $location->bookingLoadType();
 
-        $loadTypes = $staffLoadType instanceof LoadType
-            ? new Collection([$staffLoadType])
-            : LoadType::query()->whereBelongsTo($location)->active()->orderBy('sort_order')->orderBy('name')->get();
+        // Without a bookable dock load types are off, so the form gets none.
+        $loadTypes = match (true) {
+            ! $location->hasBookableDocks() => new Collection,
+            $staffLoadType instanceof LoadType => new Collection([$staffLoadType]),
+            default => LoadType::query()->whereBelongsTo($location)->active()->orderBy('sort_order')->orderBy('name')->get(),
+        };
 
         $durations = $loadTypes->isEmpty()
             ? [$location->appointmentDurationMinutes(null)]

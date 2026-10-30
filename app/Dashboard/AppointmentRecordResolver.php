@@ -49,7 +49,10 @@ final readonly class AppointmentRecordResolver
             ],
             'scheduledFor' => $appointment->scheduled_for->toIso8601String(),
             'endsAt' => $appointment->ends_at->toIso8601String(),
-            'loadType' => $appointment->loadType?->name,
+            'loadType' => $appointment->loadType === null ? null : [
+                'uuid' => $appointment->loadType->uuid,
+                'name' => $appointment->loadType->name,
+            ],
             'purchaseOrders' => $purchaseOrders,
             'dock' => $appointment->dock === null ? null : [
                 'uuid' => $appointment->dock->uuid,

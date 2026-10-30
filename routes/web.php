@@ -18,6 +18,7 @@ use App\Http\Controllers\Dashboard\AppointmentController as DashboardAppointment
 use App\Http\Controllers\Dashboard\AppointmentDeleteController as DashboardAppointmentDeleteController;
 use App\Http\Controllers\Dashboard\AppointmentDockController as DashboardAppointmentDockController;
 use App\Http\Controllers\Dashboard\AppointmentExportController as DashboardAppointmentExportController;
+use App\Http\Controllers\Dashboard\AppointmentLoadTypeController as DashboardAppointmentLoadTypeController;
 use App\Http\Controllers\Dashboard\AppointmentNoteController as DashboardAppointmentNoteController;
 use App\Http\Controllers\Dashboard\AppointmentPdfController as DashboardAppointmentPdfController;
 use App\Http\Controllers\Dashboard\AppointmentPdfEmailController as DashboardAppointmentPdfEmailController;
@@ -382,6 +383,12 @@ Route::middleware('setLocale')->group(function (): void {
                     Route::put('/appointments/{uuid}/dock', [DashboardAppointmentDockController::class, 'update'])->whereUuid('uuid')->name('appointments.dock.update');
                     Route::delete('/appointments/{uuid}/dock', [DashboardAppointmentDockController::class, 'destroy'])->whereUuid('uuid')->name('appointments.dock.destroy');
                 });
+
+                // Changing the load type changes how long the booking holds a dock.
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ChangeAppointmentLoadTypes)])
+                    ->put('/appointments/{uuid}/load-type', [DashboardAppointmentLoadTypeController::class, 'update'])
+                    ->whereUuid('uuid')
+                    ->name('appointments.loadType.update');
 
                 Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::CancelAppointments)])
                     ->post('/appointments/{uuid}/cancel', DashboardAppointmentCancelController::class)

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\Role;
 use App\Events\AppointmentCreated;
 use App\Models\Appointment;
+use App\Models\Dock;
 use App\Models\LoadType;
 use App\Models\Location;
 use App\Models\PurchaseOrder;
@@ -191,6 +192,7 @@ it('broadcasts a booked appointment to the live queue', function (): void {
 
 it('books the chosen load type and holds the dock for its duration', function (): void {
     $location = Location::factory()->appointmentsOnly()->create();
+    Dock::factory()->for($location)->create();
     $loadType = LoadType::factory()->for($location)->lasting(90)->create();
     passGate($location);
 
@@ -219,6 +221,7 @@ it('books one slot with no load type at a location that has none', function (): 
 
 it('requires a load type at a location that has active ones', function (): void {
     $location = Location::factory()->appointmentsOnly()->create();
+    Dock::factory()->for($location)->create();
     LoadType::factory()->for($location)->create();
     passGate($location);
 
@@ -230,6 +233,7 @@ it('requires a load type at a location that has active ones', function (): void 
 
 it('rejects a load type that is turned off', function (): void {
     $location = Location::factory()->appointmentsOnly()->create();
+    Dock::factory()->for($location)->create();
     LoadType::factory()->for($location)->create();
     $turnedOff = LoadType::factory()->for($location)->inactive()->create();
     passGate($location);
@@ -242,6 +246,7 @@ it('rejects a load type that is turned off', function (): void {
 
 it('rejects a load type from another location', function (): void {
     $location = Location::factory()->appointmentsOnly()->create();
+    Dock::factory()->for($location)->create();
     LoadType::factory()->for($location)->create();
     $elsewhere = LoadType::factory()->create();
     passGate($location);
@@ -254,6 +259,7 @@ it('rejects a load type from another location', function (): void {
 
 it('rejects a load that would run past closing time', function (): void {
     $location = Location::factory()->appointmentsOnly()->create();
+    Dock::factory()->for($location)->create();
     $loadType = LoadType::factory()->for($location)->lasting(120)->create();
     passGate($location);
 
@@ -266,6 +272,7 @@ it('rejects a load that would run past closing time', function (): void {
 
 it('books the load type staff set without the driver choosing one', function (): void {
     $location = Location::factory()->appointmentsOnly()->create();
+    Dock::factory()->for($location)->create();
     $default = LoadType::factory()->for($location)->lasting(180)->create();
     LoadType::factory()->for($location)->lasting(30)->create();
     $location->update(['default_load_type_id' => $default->id]);
@@ -282,6 +289,7 @@ it('books the load type staff set without the driver choosing one', function ():
 
 it('ignores a load type the driver sends when staff set one', function (): void {
     $location = Location::factory()->appointmentsOnly()->create();
+    Dock::factory()->for($location)->create();
     $default = LoadType::factory()->for($location)->lasting(180)->create();
     $other = LoadType::factory()->for($location)->lasting(30)->create();
     $location->update(['default_load_type_id' => $default->id]);
@@ -291,4 +299,19 @@ it('ignores a load type the driver sends when staff set one', function (): void 
         ->assertSessionHasNoErrors();
 
     expect(Appointment::query()->sole()->load_type_id)->toBe($default->id);
+});
+
+it('takes no load type at a location with no bookable docks', function (): void {
+    $location = Location::factory()->appointmentsOnly()->create();
+    $default = LoadType::factory()->for($location)->lasting(180)->create();
+    $location->update(['default_load_type_id' => $default->id]);
+    passGate($location);
+
+    post(route('appointment.store', $location->uuid), validPayload(['load_type' => $default->uuid]))
+        ->assertSessionHasNoErrors();
+
+    $appointment = Appointment::query()->sole();
+
+    expect($appointment->load_type_id)->toBeNull()
+        ->and($appointment->ends_at->equalTo($appointment->scheduled_for->addMinutes($location->appointmentSlotIntervalMinutes())))->toBeTrue();
 });
