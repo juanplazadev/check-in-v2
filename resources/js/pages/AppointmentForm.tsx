@@ -119,6 +119,8 @@ interface PageProps {
     location: Location;
     /** Empty when the location has no load types; every booking then lasts one slot. */
     loadTypes: LoadTypeOption[];
+    /** False when staff set the load type: loadTypes then holds that one, preselected, and no step is shown. */
+    chooseLoadType: boolean;
     /** When the location closes on each available day, "HH:MM:SS" by local date. */
     closingTimes: Record<string, string>;
     fullSlots: FullSlots;
@@ -394,6 +396,7 @@ function LoadTypeChoice({
 export default function ScheduleAppointment({
     location,
     loadTypes,
+    chooseLoadType,
     closingTimes,
     fullSlots,
 }: PageProps) {
@@ -673,7 +676,7 @@ export default function ScheduleAppointment({
                                     </div>
 
                                     {/* Load type */}
-                                    {hasLoadTypes && isOpenForBookings && (
+                                    {chooseLoadType && isOpenForBookings && (
                                         <div className="mt-5">
                                             <Controller
                                                 name="load_type"
@@ -906,7 +909,7 @@ export default function ScheduleAppointment({
                                         </div>
                                     ) : (
                                         <div className="mt-5 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
-                                            {isOpenForBookings && hasLoadTypes
+                                            {isOpenForBookings && chooseLoadType
                                                 ? t.noTimesForLoad
                                                 : t.noAvailability}
                                         </div>
@@ -1038,7 +1041,11 @@ export default function ScheduleAppointment({
                                 <ReviewSummary
                                     location={location}
                                     values={getValues()}
-                                    loadType={selectedLoadType}
+                                    loadType={
+                                        chooseLoadType
+                                            ? selectedLoadType
+                                            : undefined
+                                    }
                                     durationMinutes={
                                         durationMinutes ?? interval
                                     }

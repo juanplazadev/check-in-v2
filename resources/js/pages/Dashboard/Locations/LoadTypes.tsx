@@ -3,6 +3,7 @@ import { Package, Plus, TriangleAlert } from 'lucide-react';
 import { useState } from 'react';
 
 import LocationLoadTypeController from '@/actions/App/Http/Controllers/Dashboard/LocationLoadTypeController';
+import DefaultLoadTypeCard from '@/components/dashboard/location/DefaultLoadTypeCard';
 import {
     LoadTypeDialog,
     formatDuration,
@@ -26,6 +27,8 @@ interface LocationLoadTypesProps {
     slotIntervalMinutes: number;
     /** Bookings the location holds at once; null when it has no docks that take appointments. */
     dockCapacity: number | null;
+    /** The load type staff set for every booking; null when drivers choose. */
+    defaultLoadTypeId: string | null;
 }
 
 const SMALL_BUTTON =
@@ -61,10 +64,12 @@ function NoDocksWarning({ locationUuid }: { locationUuid: string }) {
 
 function BookingNote({
     hasActive,
+    staffSet,
     slotIntervalMinutes,
     dockCapacity,
 }: {
     hasActive: boolean;
+    staffSet: boolean;
     slotIntervalMinutes: number;
     dockCapacity: number | null;
 }) {
@@ -72,8 +77,18 @@ function BookingNote({
         <div className="mb-6 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:bg-gray-900/20 dark:text-gray-300">
             {hasActive ? (
                 <>
-                    Drivers <strong>pick one of these when they book</strong>. A
-                    booking holds its dock for the whole duration, so a long
+                    {staffSet ? (
+                        <>
+                            Every booking is made as{' '}
+                            <strong>the default load type</strong>.
+                        </>
+                    ) : (
+                        <>
+                            Drivers{' '}
+                            <strong>pick one of these when they book</strong>.
+                        </>
+                    )}{' '}
+                    A booking holds its dock for the whole duration, so a long
                     load blocks the slots it runs through and has to finish by
                     closing time.
                     {dockCapacity !== null && (
@@ -106,10 +121,12 @@ function BookingNote({
 
 function LoadTypeRow({
     loadType,
+    isDefault,
     onEdit,
     onRemove,
 }: {
     loadType: LocationLoadType;
+    isDefault: boolean;
     /** Absent when the viewer may not manage load types. */
     onEdit?: () => void;
     onRemove?: () => void;
@@ -130,6 +147,11 @@ function LoadTypeRow({
                         }`}
                 </span>
             </span>
+            {isDefault && (
+                <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+                    Default
+                </span>
+            )}
             {loadType.isActive ? (
                 <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">
                     Bookable
@@ -144,7 +166,7 @@ function LoadTypeRow({
                     Edit
                 </button>
             )}
-            {onRemove && !loadType.hasRecords && (
+            {onRemove && !loadType.hasRecords && !isDefault && (
                 <button
                     type="button"
                     onClick={onRemove}
@@ -182,6 +204,7 @@ export default function LocationLoadTypesPage({
     loadTypes,
     slotIntervalMinutes,
     dockCapacity,
+    defaultLoadTypeId,
 }: LocationLoadTypesProps) {
     const can = useCan();
     const canManage = can('manage load types');
@@ -244,8 +267,21 @@ export default function LocationLoadTypesPage({
                 <NoDocksWarning locationUuid={location.uuid} />
             )}
 
+            {hasActive && (
+                <DefaultLoadTypeCard
+                    key={defaultLoadTypeId ?? 'drivers'}
+                    locationUuid={location.uuid}
+                    loadTypes={loadTypes.filter(
+                        (loadType) => loadType.isActive,
+                    )}
+                    defaultLoadTypeId={defaultLoadTypeId}
+                    canManage={canManage}
+                />
+            )}
+
             <BookingNote
                 hasActive={hasActive}
+                staffSet={defaultLoadTypeId !== null}
                 slotIntervalMinutes={slotIntervalMinutes}
                 dockCapacity={dockCapacity}
             />
@@ -260,6 +296,9 @@ export default function LocationLoadTypesPage({
                                 <LoadTypeRow
                                     key={loadType.id}
                                     loadType={loadType}
+                                    isDefault={
+                                        loadType.id === defaultLoadTypeId
+                                    }
                                     onEdit={
                                         canManage
                                             ? () => setEditing(loadType)

@@ -164,6 +164,8 @@ final class LocationController extends Controller
             'slotIntervalMinutes' => $location->appointmentSlotIntervalMinutes(),
             // Null with no bookable docks: durations then block no slots, so the page warns about it.
             'dockCapacity' => $capacity->capacityFor($location),
+            // Null when drivers choose the load type themselves.
+            'defaultLoadTypeId' => $location->defaultLoadType?->uuid,
         ]);
     }
 

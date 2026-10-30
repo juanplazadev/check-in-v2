@@ -233,3 +233,19 @@ it('lists the full start times on the booking form for each load type length', f
             ->where('fullSlots.15', [$date => ['10:00:00', '10:15:00']])
             ->where('fullSlots.45', [$date => ['09:30:00', '09:45:00', '10:00:00', '10:15:00']]));
 });
+
+it('sends only the staff-set load type to the booking form and hides the choice', function (): void {
+    $location = Location::factory()->appointmentsOnly()->create();
+    $default = LoadType::factory()->for($location)->lasting(180)->create();
+    LoadType::factory()->for($location)->lasting(30)->create();
+    $location->update(['default_load_type_id' => $default->id]);
+
+    post(route('appointment.gate', $location->uuid), ['uuid' => $location->uuid]);
+
+    get(route('appointment.form', $location->uuid))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->component('AppointmentForm')
+            ->where('chooseLoadType', false)
+            ->has('loadTypes', 1)
+            ->where('loadTypes.0.id', $default->uuid));
+});

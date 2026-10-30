@@ -160,11 +160,20 @@ final class AppointmentFormRequest extends FormRequest
     }
 
     /**
-     * A location with active load types needs one of them; a location with
-     * none takes no load type at all.
+     * A location where staff set the load type gives every booking that one,
+     * whatever the client sent. Otherwise a location with active load types
+     * needs one of them, and a location with none takes no load type at all.
      */
     private function resolveLoadType(Validator $validator, Location $location): bool
     {
+        $staffLoadType = $location->bookingLoadType();
+
+        if ($staffLoadType instanceof LoadType) {
+            $this->loadType = $staffLoadType;
+
+            return true;
+        }
+
         $uuid = $validator->validated()['load_type'] ?? null;
         $active = LoadType::query()->whereBelongsTo($location)->active();
 

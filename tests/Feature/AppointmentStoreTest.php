@@ -263,3 +263,32 @@ it('rejects a load that would run past closing time', function (): void {
         'load_type' => $loadType->uuid,
     ]))->assertSessionHasErrors(['datetime' => 'This load would run past closing time. Please choose an earlier time or another day.']);
 });
+
+it('books the load type staff set without the driver choosing one', function (): void {
+    $location = Location::factory()->appointmentsOnly()->create();
+    $default = LoadType::factory()->for($location)->lasting(180)->create();
+    LoadType::factory()->for($location)->lasting(30)->create();
+    $location->update(['default_load_type_id' => $default->id]);
+    passGate($location);
+
+    post(route('appointment.store', $location->uuid), validPayload())
+        ->assertSessionHasNoErrors();
+
+    $appointment = Appointment::query()->sole();
+
+    expect($appointment->load_type_id)->toBe($default->id)
+        ->and($appointment->ends_at->equalTo($appointment->scheduled_for->addMinutes(180)))->toBeTrue();
+});
+
+it('ignores a load type the driver sends when staff set one', function (): void {
+    $location = Location::factory()->appointmentsOnly()->create();
+    $default = LoadType::factory()->for($location)->lasting(180)->create();
+    $other = LoadType::factory()->for($location)->lasting(30)->create();
+    $location->update(['default_load_type_id' => $default->id]);
+    passGate($location);
+
+    post(route('appointment.store', $location->uuid), validPayload(['load_type' => $other->uuid]))
+        ->assertSessionHasNoErrors();
+
+    expect(Appointment::query()->sole()->load_type_id)->toBe($default->id);
+});

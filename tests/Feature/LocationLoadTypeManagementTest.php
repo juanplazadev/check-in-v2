@@ -191,3 +191,100 @@ it('tells the load types page how many trucks the docks hold at once', function 
     'no docks, so durations block nothing' => [0, null],
     'two docks' => [2, 2],
 ]);
+
+it('sets the load type every booking gets and logs it on both trails', function (): void {
+    $location = Location::factory()->create();
+    $loadType = LoadType::factory()->for($location)->create(['name' => 'Live unload']);
+    $manager = loadTypesManager($location);
+
+    $this->actingAs($manager)
+        ->put(route('dashboard.locations.loadTypes.default.update', ['uuid' => $location->uuid]), ['load_type' => $loadType->uuid])
+        ->assertSessionHasNoErrors()
+        ->assertInertiaFlash('toast.message', 'Default load type saved.');
+
+    $history = $location->history()->sole();
+
+    expect($location->refresh()->default_load_type_id)->toBe($loadType->id)
+        ->and($history->event)->toBe(RecordHistoryEvent::DefaultLoadTypeChanged)
+        ->and($history->context)->toBe(['default_load_type' => ['from' => 'Drivers choose', 'to' => 'Live unload']])
+        ->and(UserHistory::query()->sole()->event)->toBe(UserHistoryEvent::LocationLoadTypesEdited);
+});
+
+it('lets drivers choose again when the default is cleared', function (): void {
+    $location = Location::factory()->create();
+    $loadType = LoadType::factory()->for($location)->create();
+    $location->update(['default_load_type_id' => $loadType->id]);
+
+    $this->actingAs(loadTypesManager($location))
+        ->put(route('dashboard.locations.loadTypes.default.update', ['uuid' => $location->uuid]), ['load_type' => null])
+        ->assertSessionHasNoErrors()
+        ->assertInertiaFlash('toast.message', 'Drivers now choose the load type.');
+
+    expect($location->refresh()->default_load_type_id)->toBeNull();
+});
+
+it('rejects a turned-off load type as the default', function (): void {
+    $location = Location::factory()->create();
+    $turnedOff = LoadType::factory()->for($location)->inactive()->create();
+
+    $this->actingAs(loadTypesManager($location))
+        ->put(route('dashboard.locations.loadTypes.default.update', ['uuid' => $location->uuid]), ['load_type' => $turnedOff->uuid])
+        ->assertSessionHasErrors(['load_type' => 'Choose an active load type at this location.']);
+
+    expect($location->refresh()->default_load_type_id)->toBeNull();
+});
+
+it('rejects a load type from another location as the default', function (): void {
+    $location = Location::factory()->create();
+    $elsewhere = LoadType::factory()->create();
+
+    $this->actingAs(loadTypesManager($location))
+        ->put(route('dashboard.locations.loadTypes.default.update', ['uuid' => $location->uuid]), ['load_type' => $elsewhere->uuid])
+        ->assertSessionHasErrors(['load_type' => 'Choose an active load type at this location.']);
+});
+
+it('forbids setting the default without manage load types', function (): void {
+    $location = Location::factory()->create();
+    $loadType = LoadType::factory()->for($location)->create();
+    $shipping = User::factory()->withRole(Role::Shipping)->worksAt($location)->create();
+
+    $this->actingAs($shipping)
+        ->put(route('dashboard.locations.loadTypes.default.update', ['uuid' => $location->uuid]), ['load_type' => $loadType->uuid])
+        ->assertForbidden();
+});
+
+it('keeps the default load type turned on', function (): void {
+    $location = Location::factory()->create();
+    $loadType = LoadType::factory()->for($location)->lasting(90)->create(['name' => 'Live unload']);
+    $location->update(['default_load_type_id' => $loadType->id]);
+
+    $this->actingAs(loadTypesManager($location))
+        ->patch(route('dashboard.locations.loadTypes.update', ['uuid' => $location->uuid, 'loadTypeUuid' => $loadType->uuid]), loadTypePayloadFor(['is_active' => false]))
+        ->assertSessionHasErrors(['is_active' => 'This is the default load type. Choose another default first.']);
+
+    expect($loadType->refresh()->is_active)->toBeTrue();
+});
+
+it('keeps the default load type when asked to remove it', function (): void {
+    $location = Location::factory()->create();
+    $loadType = LoadType::factory()->for($location)->create();
+    $location->update(['default_load_type_id' => $loadType->id]);
+
+    $this->actingAs(loadTypesManager($location))
+        ->delete(route('dashboard.locations.loadTypes.destroy', ['uuid' => $location->uuid, 'loadTypeUuid' => $loadType->uuid]))
+        ->assertSessionHasErrors(['loadType' => 'This is the default load type. Choose another default first.']);
+
+    expect(LoadType::query()->count())->toBe(1);
+});
+
+it('tells the load types page which load type is the default', function (): void {
+    $location = Location::factory()->create();
+    $loadType = LoadType::factory()->for($location)->create();
+    $location->update(['default_load_type_id' => $loadType->id]);
+
+    $this->actingAs(loadTypesManager($location))
+        ->get(route('dashboard.locations.loadTypes', ['uuid' => $location->uuid]))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->component('Dashboard/Locations/LoadTypes')
+            ->where('defaultLoadTypeId', $loadType->uuid));
+});

@@ -25,10 +25,21 @@ return new class extends Migration
 
             $table->unique(['location_id', 'name']);
         });
+
+        // Here rather than in the locations migration, which runs before this table exists.
+        Schema::table('locations', function (Blueprint $table): void {
+            // Set by staff: drivers skip the load type step and every booking starts as this one.
+            // Null means drivers choose.
+            $table->foreignId('default_load_type_id')->nullable()->constrained('load_types')->nullOnDelete();
+        });
     }
 
     public function down(): void
     {
+        Schema::table('locations', function (Blueprint $table): void {
+            $table->dropConstrainedForeignId('default_load_type_id');
+        });
+
         Schema::dropIfExists('load_types');
     }
 };

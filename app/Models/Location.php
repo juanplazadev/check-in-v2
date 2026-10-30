@@ -41,6 +41,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read CarbonImmutable|null $appointments_paused_until
  * @property-read string|null $appointments_paused_reason
  * @property-read array<string, string>|null $config
+ * @property-read int|null $default_load_type_id
  * @property-read CarbonImmutable $created_at
  * @property-read CarbonImmutable $updated_at
  * @property-read CarbonImmutable|null $deleted_at
@@ -54,8 +55,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read Collection<int, Building> $buildings
  * @property-read Collection<int, Dock> $docks
  * @property-read Collection<int, LoadType> $loadTypes
+ * @property-read LoadType|null $defaultLoadType
  */
-#[Fillable(['uuid', 'address_id', 'max_distance_allowed', 'name', 'abbreviation', 'timezone', 'phone', 'phone_ext', 'email', 'is_active', 'is_checkins_enabled', 'checkins_paused_at', 'checkins_paused_until', 'checkins_paused_reason', 'is_appointments_enabled', 'appointments_paused_at', 'appointments_paused_until', 'appointments_paused_reason', 'config'])]
+#[Fillable(['uuid', 'address_id', 'max_distance_allowed', 'name', 'abbreviation', 'timezone', 'phone', 'phone_ext', 'email', 'is_active', 'is_checkins_enabled', 'checkins_paused_at', 'checkins_paused_until', 'checkins_paused_reason', 'is_appointments_enabled', 'appointments_paused_at', 'appointments_paused_until', 'appointments_paused_reason', 'config', 'default_load_type_id'])]
 #[Hidden(['id'])]
 #[RouteKey('uuid')]
 final class Location extends Model
@@ -141,6 +143,28 @@ final class Location extends Model
     public function loadTypes(): HasMany
     {
         return $this->hasMany(LoadType::class)->orderBy('sort_order')->orderBy('name');
+    }
+
+    /**
+     * The load type staff set for every booking. While set, drivers skip the
+     * load type step; see bookingLoadType().
+     *
+     * @return BelongsTo<LoadType, $this>
+     */
+    public function defaultLoadType(): BelongsTo
+    {
+        return $this->belongsTo(LoadType::class, 'default_load_type_id');
+    }
+
+    /**
+     * The load type every booking gets when staff set it, or null when drivers
+     * choose. A default that has since been turned off reads as drivers choose.
+     */
+    public function bookingLoadType(): ?LoadType
+    {
+        $loadType = $this->defaultLoadType;
+
+        return $loadType instanceof LoadType && $loadType->is_active ? $loadType : null;
     }
 
     /**

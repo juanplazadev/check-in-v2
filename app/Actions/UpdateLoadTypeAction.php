@@ -8,8 +8,10 @@ use App\Enums\LoadDirection;
 use App\Enums\RecordHistoryEvent;
 use App\Enums\UserHistoryEvent;
 use App\Models\LoadType;
+use App\Models\Location;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 /**
@@ -18,6 +20,9 @@ use Throwable;
  *
  * Bookings already made keep the end time they were booked with, so a new
  * duration only applies to bookings made from now on.
+ *
+ * The location's default load type cannot be turned off; staff pick another
+ * default, or let drivers choose, first.
  */
 final readonly class UpdateLoadTypeAction
 {
@@ -29,11 +34,21 @@ final readonly class UpdateLoadTypeAction
     /**
      * @param  array{name: string, direction: LoadDirection, duration_minutes: int, is_active: bool}  $attributes
      *
+     * @throws ValidationException When the location's default load type is being turned off.
      * @throws Throwable
      */
     public function handle(LoadType $loadType, User $user, array $attributes): void
     {
         DB::transaction(function () use ($loadType, $user, $attributes): void {
+            // Locked so the default cannot be set on this load type while it is being turned off.
+            $location = Location::query()->lockForUpdate()->findOrFail($loadType->location_id);
+
+            if (! $attributes['is_active'] && $location->default_load_type_id === $loadType->id) {
+                throw ValidationException::withMessages([
+                    'is_active' => 'This is the default load type. Choose another default first.',
+                ]);
+            }
+
             $before = $this->snapshot($loadType);
             $loadType->update($attributes);
             $after = $this->snapshot($loadType->refresh());

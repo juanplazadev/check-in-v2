@@ -522,6 +522,7 @@ Route::middleware('setLocale')->group(function (): void {
                     // The loads drivers pick from when booking; each one's duration sets how long it holds a dock.
                     Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ManageLoadTypes)])->group(function (): void {
                         Route::post('/load-types', [DashboardLocationLoadTypeController::class, 'store'])->name('locations.loadTypes.store');
+                        Route::put('/load-types/default', [DashboardLocationLoadTypeController::class, 'updateDefault'])->name('locations.loadTypes.default.update');
                         Route::patch('/load-types/{loadTypeUuid}', [DashboardLocationLoadTypeController::class, 'update'])->whereUuid('loadTypeUuid')->name('locations.loadTypes.update');
                         Route::delete('/load-types/{loadTypeUuid}', [DashboardLocationLoadTypeController::class, 'destroy'])->whereUuid('loadTypeUuid')->name('locations.loadTypes.destroy');
                     });

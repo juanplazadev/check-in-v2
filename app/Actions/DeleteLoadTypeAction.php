@@ -16,7 +16,7 @@ use Throwable;
 /**
  * Removes a load type that was added by mistake. One that was ever booked,
  * archived bookings included, is kept so those bookings still name their
- * load; staff turn it off instead.
+ * load; staff turn it off instead. The location's default is kept too.
  */
 final readonly class DeleteLoadTypeAction
 {
@@ -34,6 +34,12 @@ final readonly class DeleteLoadTypeAction
         DB::transaction(function () use ($loadType, $user): void {
             // Locked so a driver cannot book the load type while it is being removed.
             $location = Location::query()->lockForUpdate()->findOrFail($loadType->location_id);
+
+            if ($location->default_load_type_id === $loadType->id) {
+                throw ValidationException::withMessages([
+                    'loadType' => 'This is the default load type. Choose another default first.',
+                ]);
+            }
 
             if ($loadType->appointments()->exists()) {
                 throw ValidationException::withMessages([

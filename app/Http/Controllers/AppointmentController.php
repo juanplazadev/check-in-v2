@@ -18,6 +18,7 @@ use App\Models\User;
 use App\Queries\AppointmentLocation;
 use App\Session\AppointmentSession;
 use Illuminate\Container\Attributes\CurrentUser;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Response;
 use Throwable;
@@ -79,12 +80,19 @@ final class AppointmentController extends Controller
             return inertia('AppointmentForm', [
                 'location' => $locationDTO,
                 'loadTypes' => [],
+                'chooseLoadType' => false,
                 'closingTimes' => [],
                 'fullSlots' => [],
             ]);
         }
 
-        $loadTypes = LoadType::query()->whereBelongsTo($location)->active()->orderBy('sort_order')->orderBy('name')->get();
+        // When staff set the load type, the driver never sees a choice: the form
+        // gets that one alone, preselected, and its open times follow its length.
+        $staffLoadType = $location->bookingLoadType();
+
+        $loadTypes = $staffLoadType instanceof LoadType
+            ? new Collection([$staffLoadType])
+            : LoadType::query()->whereBelongsTo($location)->active()->orderBy('sort_order')->orderBy('name')->get();
 
         $durations = $loadTypes->isEmpty()
             ? [$location->appointmentDurationMinutes(null)]
@@ -101,6 +109,7 @@ final class AppointmentController extends Controller
                 'directionLabel' => $loadType->direction->label(),
                 'durationMinutes' => $loadType->duration_minutes,
             ])->all(),
+            'chooseLoadType' => ! $staffLoadType instanceof LoadType && $loadTypes->isNotEmpty(),
             // A booking has to finish by closing, so a long load cannot start late in the day.
             'closingTimes' => $scheduleResolver->closingTimes($location, $locationDTO->availability),
             // Read on every render rather than stored on the session DTO, so a

@@ -208,6 +208,9 @@ function LoadTypeBody({
                 checked={isActive}
                 onChange={setIsActive}
             />
+            {errors.is_active !== undefined && (
+                <p className="text-sm text-rose-500">{errors.is_active}</p>
+            )}
 
             <AlertDialogFooter>
                 <AlertDialogCancel asChild>

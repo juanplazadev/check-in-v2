@@ -6,8 +6,10 @@ namespace App\Http\Controllers\Dashboard;
 
 use App\Actions\CreateLoadTypeAction;
 use App\Actions\DeleteLoadTypeAction;
+use App\Actions\SetDefaultLoadTypeAction;
 use App\Actions\UpdateLoadTypeAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Dashboard\LocationDefaultLoadTypeRequest;
 use App\Http\Requests\Dashboard\LocationLoadTypeRequest;
 use App\Models\LoadType;
 use App\Models\Location;
@@ -60,6 +62,19 @@ final class LocationLoadTypeController extends Controller
         $delete->handle($request->loadType, $user);
 
         return $this->done(sprintf('%s removed.', $name));
+    }
+
+    /**
+     * @throws Throwable
+     */
+    public function updateDefault(#[CurrentUser] User $user, LocationDefaultLoadTypeRequest $request, SetDefaultLoadTypeAction $setDefault): RedirectResponse
+    {
+        abort_unless($request->location instanceof Location, 404);
+
+        $loadType = $request->defaultLoadType();
+        $setDefault->handle($request->location, $user, $loadType);
+
+        return $this->done($loadType instanceof LoadType ? 'Default load type saved.' : 'Drivers now choose the load type.');
     }
 
     private function done(string $message): RedirectResponse
