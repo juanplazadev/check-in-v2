@@ -8,7 +8,10 @@
         <h2>{{ __('messages.accountHistoryRecord.locationHeading') }}</h2>
         <dl>
             @include('pdf.partials.row', ['label' => __('messages.accountHistoryRecord.date'), 'value' => $appointment['date']])
-            @include('pdf.partials.row', ['label' => __('messages.accountHistoryRecord.time'), 'value' => $appointment['time']])
+            @include('pdf.partials.row', ['label' => __('messages.accountHistoryRecord.time'), 'value' => $appointment['timeRange']])
+            @if (filled($appointment['loadType']))
+                @include('pdf.partials.row', ['label' => __('messages.accountHistoryRecord.loadType'), 'value' => $appointment['loadType']])
+            @endif
             @include('pdf.partials.row', ['label' => __('messages.accountHistoryRecord.locationHeading'), 'value' => $appointment['locationName']])
             @include('pdf.partials.row', ['label' => __('messages.accountHistoryRecord.address'), 'value' => $appointment['locationAddress']])
             @if (filled($appointment['dock']))

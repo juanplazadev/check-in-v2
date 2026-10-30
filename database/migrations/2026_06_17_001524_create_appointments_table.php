@@ -22,6 +22,11 @@ return new class extends Migration
             $table->timestampTz('dock_assigned_at')->nullable();
             $table->foreignId('dock_assigned_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestampTz('scheduled_for');
+            // Null at a location with no load types; the booking then lasts one slot.
+            $table->foreignId('load_type_id')->nullable()->constrained('load_types')->nullOnDelete();
+            // scheduled_for plus the load type's duration at booking time, so a later
+            // change to the load type never moves or stretches existing bookings.
+            $table->timestampTz('ends_at');
             $table->string('drivers_name');
             $table->string('drivers_cellphone');
             $table->string('locale', 2)->default('en');
@@ -40,7 +45,8 @@ return new class extends Migration
             $table->timestampsTz();
             $table->softDeletes();
 
-            $table->index(['location_id', 'scheduled_for']);
+            // Serves the capacity check, which looks for bookings overlapping a time range.
+            $table->index(['location_id', 'scheduled_for', 'ends_at']);
             $table->index(['drivers_cellphone', 'created_at']);
             // Serves the driver history list, which filters by user and sorts
             // by scheduled_for. Covers plain user_id lookups as a leftmost prefix.
@@ -48,8 +54,8 @@ return new class extends Migration
             // Serves the hourly reminder sweep, which filters on exactly this
             // pair. Neither index above works for it as a leftmost prefix.
             $table->index(['status', 'scheduled_for']);
-            // Serves the "is this dock free at this slot" check.
-            $table->index(['dock_id', 'scheduled_for']);
+            // Serves the "is this dock free for this time range" check.
+            $table->index(['dock_id', 'scheduled_for', 'ends_at']);
         });
 
         if (DB::getDriverName() !== 'pgsql') {

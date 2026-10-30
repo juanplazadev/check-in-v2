@@ -15,30 +15,21 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
+import { dateLocale, formatTimeOfDay } from '@/lib/locale';
 import { cn } from '@/lib/utils';
 
 // ─── Time helpers ─────────────────────────────────────────────────────────────
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-function timeToMinutes(time: string): number {
+export function timeToMinutes(time: string): number {
     const [h, m] = time.split(':').map(Number);
 
     return h * 60 + m;
 }
 
-function minutesToValue(total: number): string {
+export function minutesToValue(total: number): string {
     return `${pad(Math.floor(total / 60))}:${pad(total % 60)}:00`;
-}
-
-function formatLabel(value: string): string {
-    const total = timeToMinutes(value);
-    const h24 = Math.floor(total / 60);
-    const m = total % 60;
-    const isPm = h24 >= 12;
-    const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-
-    return `${h12}:${pad(m)} ${isPm ? 'PM' : 'AM'}`;
 }
 
 // ─── Date Picker ──────────────────────────────────────────────────────────────
@@ -50,6 +41,8 @@ export function DatePicker({
     minDate,
     maxDate,
     endMonth,
+    placeholder = 'Select date',
+    locale,
 }: {
     date: Date | undefined;
     onDateChange: (d: Date | undefined) => void;
@@ -57,7 +50,12 @@ export function DatePicker({
     minDate?: Date;
     maxDate?: Date;
     endMonth?: Date;
+    /** Shown before a date is picked. */
+    placeholder?: string;
+    /** An app locale code ("es"); the month and weekday names follow it. */
+    locale?: string;
 }) {
+    const calendarLocale = dateLocale(locale);
     const [open, setOpen] = React.useState(false);
 
     const isDisabled = (day: Date) => {
@@ -87,7 +85,9 @@ export function DatePicker({
                         data-icon="inline-start"
                         className="size-4 opacity-50"
                     />
-                    {date ? format(date, 'PP') : 'Select date'}
+                    {date
+                        ? format(date, 'PP', { locale: calendarLocale })
+                        : placeholder}
                     <ChevronDownIcon className="size-4 opacity-50" />
                 </Button>
             </PopoverTrigger>
@@ -103,6 +103,7 @@ export function DatePicker({
                     startMonth={minDate}
                     endMonth={endMonth}
                     disabled={isDisabled}
+                    locale={calendarLocale}
                     onSelect={(d) => {
                         onDateChange(d);
                         setOpen(false);
@@ -115,10 +116,22 @@ export function DatePicker({
 
 // ─── Time Picker ──────────────────────────────────────────────────────────────
 
+export interface TimeGroupLabels {
+    morning: string;
+    afternoon: string;
+    evening: string;
+}
+
+const DEFAULT_GROUP_LABELS: TimeGroupLabels = {
+    morning: 'Morning',
+    afternoon: 'Afternoon',
+    evening: 'Evening',
+};
+
 const TIME_GROUPS = [
-    { label: 'Morning', matches: (hour: number) => hour < 12 },
-    { label: 'Afternoon', matches: (hour: number) => hour >= 12 && hour < 17 },
-    { label: 'Evening', matches: (hour: number) => hour >= 17 },
+    { key: 'morning', matches: (hour: number) => hour < 12 },
+    { key: 'afternoon', matches: (hour: number) => hour >= 12 && hour < 17 },
+    { key: 'evening', matches: (hour: number) => hour >= 17 },
 ] as const;
 
 /** Every slot from first to last, as "HH:MM:00" values. */
@@ -150,6 +163,8 @@ export function TimePicker({
     intervalMinutes,
     fullSlots = [],
     fullLabel = 'Full',
+    groupLabels = DEFAULT_GROUP_LABELS,
+    locale = 'en',
 }: {
     value: string; // "HH:MM:00" 24h
     onChange: (v: string) => void;
@@ -159,6 +174,9 @@ export function TimePicker({
     /** Slots with no room left; shown but not selectable. */
     fullSlots?: string[];
     fullLabel?: string;
+    groupLabels?: TimeGroupLabels;
+    /** An app locale code; times read "9:00 AM" in English and "09:00" in French. */
+    locale?: string;
 }) {
     const slots = React.useMemo(
         () => buildSlots(firstSlot, lastSlot, intervalMinutes),
@@ -169,12 +187,12 @@ export function TimePicker({
     const groups = React.useMemo(
         () =>
             TIME_GROUPS.map((group) => ({
-                label: group.label,
+                label: groupLabels[group.key],
                 slots: slots.filter((slot) =>
                     group.matches(Math.floor(timeToMinutes(slot) / 60)),
                 ),
             })).filter((group) => group.slots.length > 0),
-        [slots],
+        [slots, groupLabels],
     );
 
     const [openItem, setOpenItem] = React.useState('');
@@ -230,7 +248,7 @@ export function TimePicker({
                     <span className="flex items-center gap-2 font-normal">
                         <ClockIcon className="size-4 text-muted-foreground" />
                         <span className="tabular-nums">
-                            {formatLabel(value)}
+                            {formatTimeOfDay(value, locale)}
                         </span>
                     </span>
                 </AccordionTrigger>
@@ -273,7 +291,10 @@ export function TimePicker({
                                                                 'line-through',
                                                         )}
                                                     >
-                                                        {formatLabel(slot)}
+                                                        {formatTimeOfDay(
+                                                            slot,
+                                                            locale,
+                                                        )}
                                                     </span>
                                                     {isFull && (
                                                         <span className="text-[10px] font-semibold tracking-wider uppercase">

@@ -9,6 +9,7 @@ use App\Models\Appointment;
 use App\Models\Building;
 use App\Models\CheckIn;
 use App\Models\Dock;
+use App\Models\LoadType;
 use App\Models\Location;
 use App\Models\User;
 use App\Models\UserHistory;
@@ -237,3 +238,18 @@ it('shows the docks page with the slot capacity', function (): void {
             ->where('docks.docks.1.name', 'Door 3')
             ->where('docks.docks.2.name', 'Door 10'));
 });
+
+it('tells the docks page whether drivers pick a load type yet', function (bool $active): void {
+    $location = Location::factory()->create();
+    Dock::factory()->for($location)->create();
+    LoadType::factory()->for($location)->state(['is_active' => $active])->create();
+
+    $this->actingAs(docksManager($location))
+        ->get(route('dashboard.locations.docks', ['uuid' => $location->uuid]))
+        ->assertInertia(fn (AssertableInertia $page): AssertableInertia => $page
+            ->component('Dashboard/Locations/Docks')
+            ->where('hasActiveLoadTypes', $active));
+})->with([
+    'only a turned-off load type' => false,
+    'an active load type' => true,
+]);

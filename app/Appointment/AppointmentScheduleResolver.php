@@ -63,7 +63,11 @@ final readonly class AppointmentScheduleResolver
         );
     }
 
-    public function isBookableSlot(Location $location, CarbonInterface $candidate): bool
+    /**
+     * Whether a booking can start at $candidate: on the slot grid inside its
+     * day's window. With $end, it must also finish by closing time.
+     */
+    public function isBookableSlot(Location $location, CarbonInterface $candidate, ?CarbonInterface $end = null): bool
     {
         $localNow = Date::now($location->timezone);
         $localCandidate = $candidate->copy()->setTimezone($location->timezone);
@@ -92,11 +96,42 @@ final readonly class AppointmentScheduleResolver
 
             $steps = (int) $first->diffInMinutes($localCandidate);
 
-            return $steps % $interval === 0
-                && $first->copy()->addMinutes($steps)->equalTo($localCandidate);
+            if ($steps % $interval !== 0 || ! $first->copy()->addMinutes($steps)->equalTo($localCandidate)) {
+                return false;
+            }
+
+            if (! $end instanceof CarbonInterface) {
+                return true;
+            }
+
+            $closesAt = $this->closesAt($location, $window->date);
+
+            return $closesAt instanceof CarbonInterface && $end->lte($closesAt);
         }
 
         return false;
+    }
+
+    /**
+     * When the location closes on each window's day, as local "H:i:s" keyed
+     * by date. A booking has to finish by then.
+     *
+     * @param  list<AppointmentAvailabilityWindowDTO>  $windows
+     * @return array<string, string>
+     */
+    public function closingTimes(Location $location, array $windows): array
+    {
+        $closingTimes = [];
+
+        foreach ($windows as $window) {
+            $closesAt = $this->closesAt($location, $window->date);
+
+            if ($closesAt instanceof CarbonInterface) {
+                $closingTimes[$window->date] = $closesAt->format('H:i:s');
+            }
+        }
+
+        return $closingTimes;
     }
 
     public function resolveSchedule(Location $location, CarbonInterface $at): LocationScheduleDTO
@@ -178,6 +213,21 @@ final readonly class AppointmentScheduleResolver
         }
 
         return $windows;
+    }
+
+    /**
+     * When the location closes on a local date, or null when it is closed all day.
+     */
+    private function closesAt(Location $location, string $date): ?CarbonInterface
+    {
+        $day = Date::parse($date, $location->timezone)->startOfDay();
+        $schedule = $this->resolveSchedule($location, $day);
+
+        if (! $schedule->closeTime instanceof CarbonInterface || $schedule->isOverrideClosure) {
+            return null;
+        }
+
+        return $day->copy()->setTimeFrom($schedule->closeTime);
     }
 
     private function ceilToInterval(CarbonInterface $at, int $intervalMinutes): CarbonInterface

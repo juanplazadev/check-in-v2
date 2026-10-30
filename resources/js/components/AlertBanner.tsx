@@ -7,6 +7,8 @@ interface AlertBannerProps {
     className?: string;
     onClose: () => void;
     children: ReactNode;
+    /** Screen-reader text for the close button, in the page's language. */
+    closeLabel?: string;
 }
 
 export default function AlertBanner({
@@ -16,6 +18,7 @@ export default function AlertBanner({
     className,
     onClose,
     children,
+    closeLabel = 'Close',
 }: AlertBannerProps) {
     if (!open) {
         return null;
@@ -80,9 +83,9 @@ export default function AlertBanner({
             {/* Close */}
             <button
                 onClick={onClose}
-                className={`mt-0.5 shrink-0 opacity-50 transition-opacity hover:opacity-75 cursor-pointer ${styles.icon}`}
+                className={`mt-0.5 shrink-0 cursor-pointer opacity-50 transition-opacity hover:opacity-75 ${styles.icon}`}
             >
-                <span className="sr-only">Close</span>
+                <span className="sr-only">{closeLabel}</span>
                 <svg className="h-3.5 w-3.5 fill-current" viewBox="0 0 16 16">
                     <path d="M7.95 6.536l4.242-4.243a1 1 0 111.415 1.414L9.364 7.95l4.243 4.242a1 1 0 11-1.415 1.415L7.95 9.364l-4.243 4.243a1 1 0 01-1.414-1.415L6.536 7.95 2.293 3.707a1 1 0 011.414-1.414L7.95 6.536z" />
                 </svg>

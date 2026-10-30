@@ -103,7 +103,7 @@
                     <tr>
                         <td style="padding:16px 4px 0;" align="center">
                             <p style="margin:0; font-size:11px; color:#9ca3af;">
-                                This is an automated notification from the {{ config('app.name') }} system. Please do not reply to this email.
+                                {{ __('messages.mailFooter.automated', ['app' => config('app.name')]) }}
                             </p>
                         </td>
                     </tr>

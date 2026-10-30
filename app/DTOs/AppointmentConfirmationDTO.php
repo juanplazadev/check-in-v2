@@ -13,7 +13,9 @@ final readonly class AppointmentConfirmationDTO
         public string $uuid,
         public string $referenceNumber,
         public string $scheduledDate,
+        /** Start to end, like "9:00 AM - 10:30 AM". */
         public string $scheduledTime,
+        public ?string $loadType,
         public string $driversName,
         public string $locationName,
         public string $locationAddress,

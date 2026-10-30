@@ -167,6 +167,7 @@ enum Role: string
                 Permission::PauseCheckIns,
                 Permission::EditLocationHours,
                 Permission::ManageDocks,
+                Permission::ManageLoadTypes,
                 Permission::ViewAnalytics,
             ],
             self::Shipping => $shipping,

@@ -43,7 +43,7 @@ final class AppointmentReminderMail extends Mailable implements ShouldQueue
 
     public function content(): Content
     {
-        $this->appointment->loadMissing(['location.address', 'purchaseOrders']);
+        $this->appointment->loadMissing(['location.address', 'purchaseOrders', 'loadType']);
 
         $record = resolve(HistoryRecordResolver::class)->appointment($this->appointment);
 
@@ -61,7 +61,8 @@ final class AppointmentReminderMail extends Mailable implements ShouldQueue
                 'rows' => $this->presentRows([
                     ['label' => __('messages.accountHistoryRecord.locationHeading'), 'value' => $record['locationName'], 'sub' => $record['locationAddress']],
                     ['label' => __('messages.accountHistoryRecord.date'), 'value' => $record['date']],
-                    ['label' => __('messages.accountHistoryRecord.time'), 'value' => $record['time']],
+                    ['label' => __('messages.accountHistoryRecord.time'), 'value' => $record['timeRange']],
+                    ['label' => __('messages.accountHistoryRecord.loadType'), 'value' => $record['loadType']],
                     ['label' => __('messages.accountHistoryRecord.purchaseOrders'), 'value' => implode(', ', $record['purchaseOrders'])],
                     ['label' => __('messages.accountHistoryRecord.driverName'), 'value' => $record['driversName']],
                 ]),

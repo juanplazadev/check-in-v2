@@ -4,6 +4,7 @@ import Logo from '@/components/Logo';
 import { contact, schedule } from '@/routes';
 
 interface PublicNavigation {
+    logoLabel: string;
     checkIn: string;
     appointment: string;
     services: string;
@@ -116,7 +117,13 @@ export default function Footer({ hideLogin = false }: { hideLogin?: boolean }) {
                 <div className="flex items-center justify-between border-t border-gray-200/80 pt-4 dark:border-gray-700/50">
                     {/* Logo links home */}
                     <Link href="/" prefetch>
-                        <Logo size="sm" />
+                        <Logo
+                            size="sm"
+                            label={pageTranslations.logoLabel.replace(
+                                ':app',
+                                import.meta.env.VITE_APP_NAME,
+                            )}
+                        />
                     </Link>
                     <div className="flex flex-col items-end gap-1">
                         <span className="text-xs text-gray-400">

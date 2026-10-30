@@ -7,6 +7,7 @@ namespace Database\Factories;
 use App\Enums\AppointmentStatus;
 use App\Enums\ReferenceType;
 use App\Models\Appointment;
+use App\Models\LoadType;
 use App\Models\Location;
 use App\Models\User;
 use App\Reference\ReferenceNumberGenerator;
@@ -29,6 +30,8 @@ final class AppointmentFactory extends Factory
             'uuid' => fake()->uuid(),
             'reference_number' => resolve(ReferenceNumberGenerator::class)->generate(ReferenceType::Appointment),
             'scheduled_for' => Date::now(),
+            // Follows whatever scheduledFor() sets, as a 30-minute booking.
+            'ends_at' => fn (array $attributes): CarbonInterface => Date::parse($attributes['scheduled_for'])->addMinutes(30),
             'drivers_name' => fake()->name(),
             'drivers_cellphone' => '+1'.fake()->numerify('##########'),
             'locale' => fake()->randomElement(['en', 'es']),
@@ -85,6 +88,28 @@ final class AppointmentFactory extends Factory
             'scheduled_for' => $when,
             'created_at' => $when->isPast() ? $when : Date::now(),
             'updated_at' => $when->isPast() ? $when : Date::now(),
+        ]);
+    }
+
+    /**
+     * Book the appointment as this load type, lasting as long as it does.
+     */
+    public function ofLoadType(LoadType $loadType): static
+    {
+        return $this->state([
+            'location_id' => $loadType->location_id,
+            'load_type_id' => $loadType->id,
+        ])->lasting($loadType->duration_minutes);
+    }
+
+    /**
+     * Make the booking last this long from its start. A closure, so it follows
+     * scheduledFor() whichever order the states are chained in.
+     */
+    public function lasting(int $minutes): static
+    {
+        return $this->state([
+            'ends_at' => fn (array $attributes): CarbonInterface => Date::parse($attributes['scheduled_for'])->addMinutes($minutes),
         ]);
     }
 

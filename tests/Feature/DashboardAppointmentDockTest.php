@@ -68,9 +68,37 @@ it('refuses a dock another booking holds at the same time', function (): void {
 
     $this->actingAs(dockAssigner($location))
         ->put(route('dashboard.appointments.dock.update', $appointment->uuid), ['dock' => $dock->uuid])
-        ->assertSessionHasErrors(['dock' => 'APT11111 already holds Door 1 at this time.']);
+        ->assertSessionHasErrors(['dock' => 'APT11111 already holds Door 1 during this appointment.']);
 
     expect($appointment->refresh()->dock_id)->toBeNull();
+});
+
+it('refuses a dock held by a longer booking that is still running when this one starts', function (): void {
+    $location = Location::factory()->create();
+    $dock = Dock::factory()->for($location)->create(['name' => 'Door 1']);
+    $at = now()->addDay()->startOfHour();
+    Appointment::factory()->for($location)->scheduledFor($at)->lasting(120)->create(['dock_id' => $dock->id, 'reference_number' => 'APT11111']);
+    $appointment = Appointment::factory()->for($location)->scheduledFor($at->copy()->addHour())->create();
+
+    $this->actingAs(dockAssigner($location))
+        ->put(route('dashboard.appointments.dock.update', $appointment->uuid), ['dock' => $dock->uuid])
+        ->assertSessionHasErrors(['dock' => 'APT11111 already holds Door 1 during this appointment.']);
+
+    expect($appointment->refresh()->dock_id)->toBeNull();
+});
+
+it('places a booking on a dock whose previous booking ends as this one starts', function (): void {
+    $location = Location::factory()->create();
+    $dock = Dock::factory()->for($location)->create();
+    $at = now()->addDay()->startOfHour();
+    Appointment::factory()->for($location)->scheduledFor($at)->lasting(60)->create(['dock_id' => $dock->id]);
+    $appointment = Appointment::factory()->for($location)->scheduledFor($at->copy()->addHour())->create();
+
+    $this->actingAs(dockAssigner($location))
+        ->put(route('dashboard.appointments.dock.update', $appointment->uuid), ['dock' => $dock->uuid])
+        ->assertSessionHasNoErrors();
+
+    expect($appointment->refresh()->dock_id)->toBe($dock->id);
 });
 
 it('lets a dock be reused once the booking holding it is canceled', function (): void {

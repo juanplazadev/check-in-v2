@@ -18,13 +18,15 @@ final readonly class AppointmentConfirmationResolver
      */
     public function resolve(string $uuid): array
     {
-        $appointment = Appointment::with(['location.address', 'purchaseOrders'])
+        $appointment = Appointment::with(['location.address', 'purchaseOrders', 'loadType'])
             ->where('uuid', $uuid)
             ->where('status', AppointmentStatus::Scheduled)
             ->firstOrFail();
 
         $location = $appointment->location;
-        $scheduledFor = $appointment->scheduled_for->setTimezone($location->timezone);
+        // In the driver's language, so the month reads "noviembre" on a Spanish page.
+        $scheduledFor = $appointment->scheduled_for->setTimezone($location->timezone)->settings(['locale' => app()->getLocale()]);
+        $endsAt = $appointment->ends_at->setTimezone($location->timezone);
 
         /** @var list<string> $purchaseOrders */
         $purchaseOrders = $appointment->purchaseOrders->pluck('number')->all();
@@ -33,8 +35,9 @@ final readonly class AppointmentConfirmationResolver
             'appointment' => new AppointmentConfirmationDTO(
                 uuid: $appointment->uuid,
                 referenceNumber: $appointment->reference_number,
-                scheduledDate: $scheduledFor->format('F j, Y'),
-                scheduledTime: $scheduledFor->format('g:i A'),
+                scheduledDate: $scheduledFor->translatedFormat('F j, Y'),
+                scheduledTime: sprintf('%s - %s', $scheduledFor->format('g:i A'), $endsAt->format('g:i A')),
+                loadType: $appointment->loadType?->name,
                 driversName: $appointment->drivers_name,
                 locationName: $location->name,
                 locationAddress: $this->address->buildAddress($location->address->toArray()),

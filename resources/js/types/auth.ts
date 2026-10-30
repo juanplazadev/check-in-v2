@@ -34,6 +34,7 @@ export type Permission =
     | 'edit check-in options'
     | 'edit appointment options'
     | 'manage docks'
+    | 'manage load types'
     | 'view notifications'
     | 'search dashboard'
     | 'filter check-ins'

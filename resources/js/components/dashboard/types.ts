@@ -249,6 +249,10 @@ export interface AppointmentRecord {
         hasAccount: boolean;
     };
     scheduledFor: string;
+    /** When the booking stops holding its dock: scheduledFor plus the load type's duration. */
+    endsAt: string;
+    /** Null at a location with no load types. */
+    loadType: string | null;
     purchaseOrders: string[];
     /** The dock staff placed this booking on; null until assigned. */
     dock: { uuid: string; label: string } | null;
@@ -363,6 +367,20 @@ export interface LocationDocks {
     capacity: number | null;
     buildings: LocationBuilding[];
     docks: LocationDock[];
+}
+
+/** A kind of load drivers book. Mirrors LocationLoadTypeResolver::loadTypes(). */
+export interface LocationLoadType {
+    id: string;
+    name: string;
+    direction: 'inbound' | 'outbound';
+    /** How long a booking of this type holds a dock. */
+    durationMinutes: number;
+    isActive: boolean;
+    /** Upcoming scheduled appointments booked with this load type. */
+    upcomingCount: number;
+    /** Whether it was ever booked; such a load type can only be turned off. */
+    hasRecords: boolean;
 }
 
 /** One choice in a check-in's door picker. Mirrors LocationDockResolver::doorOptions(). */

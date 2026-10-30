@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Enums\Role;
 use App\Events\AppointmentCreated;
 use App\Models\Appointment;
+use App\Models\LoadType;
 use App\Models\Location;
 use App\Models\PurchaseOrder;
 use App\Models\User;
@@ -186,4 +187,79 @@ it('broadcasts a booked appointment to the live queue', function (): void {
         fn (AppointmentCreated $event): bool => $event->appointment->is(Appointment::query()->sole())
             && $event->broadcastWith()['appointment']['purchaseOrders'] === ['SO-00001'],
     );
+});
+
+it('books the chosen load type and holds the dock for its duration', function (): void {
+    $location = Location::factory()->appointmentsOnly()->create();
+    $loadType = LoadType::factory()->for($location)->lasting(90)->create();
+    passGate($location);
+
+    post(route('appointment.store', $location->uuid), validPayload(['load_type' => $loadType->uuid]))
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    $appointment = Appointment::query()->sole();
+
+    expect($appointment->load_type_id)->toBe($loadType->id)
+        ->and($appointment->ends_at->equalTo($appointment->scheduled_for->addMinutes(90)))->toBeTrue();
+});
+
+it('books one slot with no load type at a location that has none', function (): void {
+    $location = Location::factory()->appointmentsOnly()->create();
+    passGate($location);
+
+    post(route('appointment.store', $location->uuid), validPayload())
+        ->assertSessionHasNoErrors();
+
+    $appointment = Appointment::query()->sole();
+
+    expect($appointment->load_type_id)->toBeNull()
+        ->and($appointment->ends_at->equalTo($appointment->scheduled_for->addMinutes($location->appointmentSlotIntervalMinutes())))->toBeTrue();
+});
+
+it('requires a load type at a location that has active ones', function (): void {
+    $location = Location::factory()->appointmentsOnly()->create();
+    LoadType::factory()->for($location)->create();
+    passGate($location);
+
+    post(route('appointment.store', $location->uuid), validPayload())
+        ->assertSessionHasErrors(['load_type' => 'Please select a load type.']);
+
+    expect(Appointment::query()->count())->toBe(0);
+});
+
+it('rejects a load type that is turned off', function (): void {
+    $location = Location::factory()->appointmentsOnly()->create();
+    LoadType::factory()->for($location)->create();
+    $turnedOff = LoadType::factory()->for($location)->inactive()->create();
+    passGate($location);
+
+    post(route('appointment.store', $location->uuid), validPayload(['load_type' => $turnedOff->uuid]))
+        ->assertSessionHasErrors(['load_type' => 'That load type is no longer available. Please choose another.']);
+
+    expect(Appointment::query()->count())->toBe(0);
+});
+
+it('rejects a load type from another location', function (): void {
+    $location = Location::factory()->appointmentsOnly()->create();
+    LoadType::factory()->for($location)->create();
+    $elsewhere = LoadType::factory()->create();
+    passGate($location);
+
+    post(route('appointment.store', $location->uuid), validPayload(['load_type' => $elsewhere->uuid]))
+        ->assertSessionHasErrors(['load_type' => 'That load type is no longer available. Please choose another.']);
+
+    expect(Appointment::query()->count())->toBe(0);
+});
+
+it('rejects a load that would run past closing time', function (): void {
+    $location = Location::factory()->appointmentsOnly()->create();
+    $loadType = LoadType::factory()->for($location)->lasting(120)->create();
+    passGate($location);
+
+    // The location closes at 23:59:59, so a two-hour load cannot start at 23:00.
+    post(route('appointment.store', $location->uuid), validPayload([
+        'datetime' => now()->setTime(23, 0)->format('Y-m-d H:i:s'),
+        'load_type' => $loadType->uuid,
+    ]))->assertSessionHasErrors(['datetime' => 'This load would run past closing time. Please choose an earlier time or another day.']);
 });

@@ -62,14 +62,16 @@ final readonly class AssignAppointmentDockAction
 
             $holder = Appointment::query()
                 ->where('dock_id', $dock->id)
-                ->where('scheduled_for', $appointment->scheduled_for)
+                // Any booking on the dock that runs into this one, not only one starting at the same time.
+                ->where('scheduled_for', '<', $appointment->ends_at)
+                ->where('ends_at', '>', $appointment->scheduled_for)
                 ->whereKeyNot($appointment->id)
                 ->whereIn('status', AppointmentSlotCapacity::OCCUPYING_STATUSES)
                 ->value('reference_number');
 
             if ($holder !== null) {
                 throw ValidationException::withMessages([
-                    'dock' => sprintf('%s already holds %s at this time.', $holder, $dock->name),
+                    'dock' => sprintf('%s already holds %s during this appointment.', $holder, $dock->name),
                 ]);
             }
 

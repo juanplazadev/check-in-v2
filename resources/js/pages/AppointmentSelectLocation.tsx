@@ -5,6 +5,8 @@ import AlertBanner from '@/components/AlertBanner';
 import PublicLayout from '@/layouts/PublicLayout';
 
 interface AppointmentSelectLocation {
+    pageTitle: string;
+    genericError: string;
     selectAnAppointmentLocation: string;
     closed: string;
     open: string;
@@ -16,6 +18,7 @@ interface AppointmentSelectLocation {
 
 interface Translations {
     appointmentSelectLocation: AppointmentSelectLocation;
+    publicNavigation: { close: string };
 }
 
 interface PageProps {
@@ -42,10 +45,15 @@ export default function AppointmentSelectLocation() {
     // Translations
     const { translations, locations, usualLocationId, errors } =
         usePage<PageProps>().props;
-    const pageTranslations: AppointmentSelectLocation = translations.appointmentSelectLocation;
+    const pageTranslations: AppointmentSelectLocation =
+        translations.appointmentSelectLocation;
 
-    const [submittingLocationId, setSubmittingLocationId] = useState<string | null>(null);
-    const [appointmentError, setAppointmentError] = useState<string | null>(errors.uuid ?? null);
+    const [submittingLocationId, setSubmittingLocationId] = useState<
+        string | null
+    >(null);
+    const [appointmentError, setAppointmentError] = useState<string | null>(
+        errors.uuid ?? null,
+    );
 
     const handleSelectLocation = (locationId: string) => {
         setAppointmentError(null);
@@ -58,7 +66,7 @@ export default function AppointmentSelectLocation() {
                 onError: (errors) => {
                     setAppointmentError(
                         errors[Object.keys(errors)[0]] ??
-                            'Something went wrong. Please try again.',
+                            pageTranslations.genericError,
                     );
                     console.error(errors);
                     setSubmittingLocationId(null);
@@ -72,7 +80,7 @@ export default function AppointmentSelectLocation() {
 
     return (
         <PublicLayout>
-            <Head title="Appointment: Select Location" />
+            <Head title={pageTranslations.pageTitle} />
 
             <div className="px-4 py-3">
                 <div className="mx-auto max-w-md">
@@ -84,7 +92,8 @@ export default function AppointmentSelectLocation() {
                         type="error"
                         open={!!appointmentError}
                         onClose={() => setAppointmentError(null)}
-                        className='mb-3'
+                        closeLabel={translations.publicNavigation.close}
+                        className="mb-3"
                     >
                         {appointmentError}
                     </AlertBanner>
@@ -119,11 +128,11 @@ export default function AppointmentSelectLocation() {
                                         handleSelectLocation(location.id)
                                     }
                                     disabled={submittingLocationId !== null}
-                                    className="relative block w-full focus:outline-none disabled:opacity-60 cursor-pointer"
+                                    className="relative block w-full cursor-pointer focus:outline-none disabled:opacity-60"
                                     aria-label={`Book appointment at ${location.name}, ${location.address}`}
                                 >
                                     <div
-                                        className={`flex min-h-22 items-stretch rounded-lg border border-l-4 border-gray-200 border-l-brand-green bg-white text-sm font-medium shadow-sm transition hover:border-brand-green/60 dark:border-gray-700/60 dark:bg-gray-800 dark:hover:border-brand-green/50 dark:border-l-brand-green/60`}
+                                        className={`flex min-h-22 items-stretch rounded-lg border border-l-4 border-gray-200 border-l-brand-green bg-white text-sm font-medium shadow-sm transition hover:border-brand-green/60 dark:border-gray-700/60 dark:border-l-brand-green/60 dark:bg-gray-800 dark:hover:border-brand-green/50`}
                                     >
                                         {/* Text */}
                                         <div className="flex flex-1 flex-col justify-center gap-0.5 p-4 text-left">

@@ -28,7 +28,7 @@ final readonly class BookAppointmentAction
     ) {}
 
     /**
-     * @param  array<string, mixed>  $validated
+     * @param  array<string, mixed>  $validated  The request's booking(): validated input plus the resolved load_type_id and duration_minutes.
      *
      * @throws ValidationException When the slot filled up after the form request checked it.
      * @throws Throwable
@@ -39,7 +39,9 @@ final readonly class BookAppointmentAction
             // Locked so two drivers booking the last spot in a slot cannot both pass the check.
             $location = Location::query()->where('uuid', $locationDTO->id)->lockForUpdate()->firstOrFail();
 
-            if (! $this->slotCapacity->hasRoom($location, Date::parse($validated['datetime'], $location->timezone))) {
+            $start = Date::parse($validated['datetime'], $location->timezone);
+
+            if (! $this->slotCapacity->hasRoom($location, $start, $start->copy()->addMinutes($validated['duration_minutes']))) {
                 throw ValidationException::withMessages(['datetime' => __('messages.appointmentBooking.slotFull')]);
             }
 

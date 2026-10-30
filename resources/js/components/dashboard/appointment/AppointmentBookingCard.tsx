@@ -5,7 +5,7 @@ import type {
     AppointmentDockOption,
     AppointmentRecord,
 } from '@/components/dashboard/types';
-import { formatDateTime } from '@/lib/dashboard/format';
+import { formatDateTime, formatTime } from '@/lib/dashboard/format';
 
 export default function AppointmentBookingCard({
     appointment,
@@ -19,8 +19,14 @@ export default function AppointmentBookingCard({
         <Card id="purchase-orders" title="Booking" className="scroll-mt-24">
             <dl className="divide-y divide-gray-100 px-5 text-sm dark:divide-gray-700/60">
                 <DetailRow label="Scheduled for">
-                    {formatDateTime(appointment.scheduledFor)}
+                    {formatDateTime(appointment.scheduledFor)} -{' '}
+                    {formatTime(appointment.endsAt)}
                 </DetailRow>
+                {appointment.loadType !== null && (
+                    <DetailRow label="Load type">
+                        {appointment.loadType}
+                    </DetailRow>
+                )}
                 <DetailRow label="Dock">
                     <AppointmentDockPicker
                         appointment={appointment}

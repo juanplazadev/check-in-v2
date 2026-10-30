@@ -385,6 +385,7 @@ return [
         'statusScheduled' => 'Planifié',
         'statusNoShow' => 'Absent',
         'statusCheckedIn' => 'Enregistré',
+        'loadType' => 'Type de chargement',
     ],
 
     'accountProfile' => [
@@ -499,6 +500,12 @@ return [
         'privacyPolicy' => 'Politique de confidentialité',
         'termsOfService' => "Conditions d'utilisation",
         'allRightsReserved' => 'Tous droits réservés',
+        'toggleMenu' => 'Ouvrir ou fermer le menu de navigation',
+        'switchLanguage' => 'Passer en :language',
+        'themeToggle' => 'Basculer entre le mode clair et sombre',
+        'close' => 'Fermer',
+        'openInMaps' => 'Ouvrir dans Plans',
+        'logoLabel' => 'Logo :app',
     ],
 
     'locationRequiredModal' => [
@@ -528,6 +535,9 @@ return [
         'outsideExceptionHours' => ":name a des horaires spéciaux aujourd'hui : :open - :close. Veuillez revenir pendant les heures d'ouverture.",
         'selectLocationToContinue' => 'Veuillez sélectionner un emplacement pour continuer.',
         'retryLocation' => 'Réessayer',
+        'closedForCheckInWithReason' => ':name n\'est pas disponible pour l\'enregistrement pour le moment : :reason',
+        'closedForCheckInWithoutReason' => ':name n\'est pas disponible pour l\'enregistrement pour le moment.',
+        'closedForCheckInToday' => ':name est fermé pour l\'enregistrement aujourd\'hui. Veuillez revenir pendant les heures affichées.',
     ],
 
     'appointmentSelectLocation' => [
@@ -541,6 +551,8 @@ return [
         'closedToday' => "Fermé aujourd'hui",
         'invalidLocation' => 'Lieu non valide.',
         'selectLocationToContinue' => 'Veuillez sélectionner un lieu pour continuer.',
+        'pageTitle' => 'Rendez-vous : choisir un site',
+        'genericError' => 'Une erreur s\'est produite. Veuillez réessayer.',
     ],
 
     'appointmentBooking' => [
@@ -553,6 +565,7 @@ return [
         'closedForAppointmentsOnDateWithoutReason' => ":name n'accepte pas de rendez-vous le :date. Veuillez choisir une autre date.",
         'outsideBookingWindow' => 'Veuillez choisir un créneau de rendez-vous disponible dans les :days prochains jours.',
         'slotFull' => 'Ce créneau vient d\'être complet. Veuillez choisir un autre horaire.',
+        'runsPastClosing' => 'Ce chargement se terminerait après l\'heure de fermeture. Veuillez choisir une heure plus tôt ou un autre jour.',
     ],
 
     'purchaseOrders' => [
@@ -581,6 +594,7 @@ return [
         'driverLabel' => 'Conducteur',
         'arrivalReminder' => "Veuillez arriver 5 à 10 minutes avant l'heure de votre rendez-vous.",
         'needHelp' => 'Besoin d\'aide ?',
+        'loadTypeLabel' => 'Type de chargement',
     ],
 
     'checkInConfirmation' => [
@@ -629,6 +643,18 @@ return [
         'editButton' => 'Modifier',
         'submitButton' => 'Confirmer et envoyer',
         'open' => 'Ouvert',
+        'loadTypeLabel' => 'Type de chargement',
+        'loadTypeHint' => 'Choisissez le type de chargement. Il détermine combien de temps votre rendez-vous occupe un quai.',
+        'loadTypeRequired' => 'Veuillez sélectionner un type de chargement.',
+        'loadTypeInvalid' => 'Ce type de chargement n\'est plus disponible. Veuillez en choisir un autre.',
+        'durationMinutes' => ':minutes min',
+        'durationHours' => ':hours h',
+        'durationHoursMinutes' => ':hours h :minutes min',
+        'noTimesForLoad' => 'Aucun créneau n\'est disponible pour ce type de chargement. Choisissez-en un autre ou revenez plus tard.',
+        'selectDate' => 'Choisir une date',
+        'morning' => 'Matin',
+        'afternoon' => 'Après-midi',
+        'evening' => 'Soir',
     ],
 
     'checkInForm' => [
@@ -735,6 +761,8 @@ return [
         'reviewTitle' => 'Vérifiez votre enregistrement',
         'editButton' => 'Modifier',
         'submitButton' => "Confirmer et s'enregistrer",
+        'licenseExpirationTooFar' => 'La date d\'expiration ne peut pas dépasser 60 ans à partir d\'aujourd\'hui.',
+        'selectDate' => 'Choisir une date',
     ],
 
     'verifyEmail' => [
@@ -783,4 +811,14 @@ return [
     'validation' => [
         'currentPassword' => "Ce n'est pas votre mot de passe actuel.",
     ],
+
+    'loadDirection' => [
+        'inbound' => 'Réception',
+        'outbound' => 'Expédition',
+    ],
+
+    'mailFooter' => [
+        'automated' => 'Ceci est une notification automatique du système :app. Merci de ne pas répondre à cet e-mail.',
+    ],
+
 ];

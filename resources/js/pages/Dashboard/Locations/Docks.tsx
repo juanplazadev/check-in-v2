@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Building2, Plus, Warehouse } from 'lucide-react';
 import { useState } from 'react';
 
@@ -21,10 +21,13 @@ import type {
 import { useCan } from '@/hooks/useCan';
 import DashboardLayout from '@/layouts/DashboardLayout';
 import LocationLayout from '@/layouts/LocationLayout';
+import dashboardRoutes from '@/routes/dashboard';
 
 interface LocationDocksProps {
     location: DashboardLocationSummary;
     docks: LocationDocks;
+    /** Whether drivers pick a load type; without one every booking lasts one slot. */
+    hasActiveLoadTypes: boolean;
 }
 
 type Removal =
@@ -47,13 +50,30 @@ function CapacityNote({ capacity }: { capacity: number | null }) {
                 </>
             ) : (
                 <>
-                    Each appointment time slot takes up to{' '}
+                    Up to{' '}
                     <strong>
                         {capacity} {capacity === 1 ? 'truck' : 'trucks'}
-                    </strong>
-                    , one per active dock that takes appointments.
+                    </strong>{' '}
+                    can be booked <strong>at once</strong>, one per active dock
+                    that takes appointments.
                 </>
             )}
+        </div>
+    );
+}
+
+function LoadTypesHint({ locationUuid }: { locationUuid: string }) {
+    return (
+        <div className="-mt-4 mb-6 rounded-lg bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:bg-gray-900/20 dark:text-gray-300">
+            Next,{' '}
+            <Link
+                href={dashboardRoutes.locations.loadTypes.url(locationUuid)}
+                className="font-semibold text-brand-green hover:underline"
+            >
+                set up load types
+            </Link>{' '}
+            so each booking holds its dock for as long as the load takes. Until
+            then, every booking lasts one slot.
         </div>
     );
 }
@@ -149,6 +169,7 @@ function EmptyDocks() {
 export default function LocationDocksPage({
     location,
     docks,
+    hasActiveLoadTypes,
 }: LocationDocksProps) {
     const can = useCan();
     const canManage = can('manage docks');
@@ -236,6 +257,10 @@ export default function LocationDocksPage({
             />
 
             <CapacityNote capacity={docks.capacity} />
+
+            {docks.capacity !== null && !hasActiveLoadTypes && (
+                <LoadTypesHint locationUuid={location.uuid} />
+            )}
 
             {groups.length === 0 ? (
                 <EmptyDocks />

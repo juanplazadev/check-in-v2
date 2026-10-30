@@ -12,6 +12,7 @@ use App\Auth\RegistrationGate;
 use App\DTOs\AppointmentLocationDTO;
 use App\Http\Requests\AppointmentFormRequest;
 use App\Http\Requests\AppointmentLocationSelectRequest;
+use App\Models\LoadType;
 use App\Models\Location;
 use App\Models\User;
 use App\Queries\AppointmentLocation;
@@ -66,15 +67,46 @@ final class AppointmentController extends Controller
         return to_route('appointment.form', $location->uuid ?? '');
     }
 
-    public function form(AppointmentSlotCapacity $slotCapacity): Response
+    public function form(AppointmentSlotCapacity $slotCapacity, AppointmentScheduleResolver $scheduleResolver): Response
     {
         $locationDTO = $this->session->getLocation();
 
+        $location = $locationDTO instanceof AppointmentLocationDTO
+            ? resolve(AppointmentLocation::class)->execute($locationDTO->id)
+            : null;
+
+        if (! $locationDTO instanceof AppointmentLocationDTO || ! $location instanceof Location) {
+            return inertia('AppointmentForm', [
+                'location' => $locationDTO,
+                'loadTypes' => [],
+                'closingTimes' => [],
+                'fullSlots' => [],
+            ]);
+        }
+
+        $loadTypes = LoadType::query()->whereBelongsTo($location)->active()->orderBy('sort_order')->orderBy('name')->get();
+
+        $durations = $loadTypes->isEmpty()
+            ? [$location->appointmentDurationMinutes(null)]
+            : array_values($loadTypes->map(fn (LoadType $loadType): int => $loadType->duration_minutes)->unique()->all());
+
+        // Kept off the session DTO, which is serialized into the session, so
+        // widening it would break bookings mid-flight across a deploy.
         return inertia('AppointmentForm', [
             'location' => $locationDTO,
+            'loadTypes' => $loadTypes->map(fn (LoadType $loadType): array => [
+                'id' => $loadType->uuid,
+                'name' => $loadType->name,
+                'direction' => $loadType->direction->value,
+                'directionLabel' => $loadType->direction->label(),
+                'durationMinutes' => $loadType->duration_minutes,
+            ])->all(),
+            // A booking has to finish by closing, so a long load cannot start late in the day.
+            'closingTimes' => $scheduleResolver->closingTimes($location, $locationDTO->availability),
             // Read on every render rather than stored on the session DTO, so a
-            // slot that fills while the driver is on the form shows as full on reload.
-            'fullSlots' => $this->fullSlots($slotCapacity, $locationDTO),
+            // slot that fills while the driver is on the form shows as full on
+            // reload. Keyed by booking length, since a long load needs room for longer.
+            'fullSlots' => $slotCapacity->fullSlots($location, $locationDTO->availability, $locationDTO->slotIntervalMinutes, $durations),
         ]);
     }
 
@@ -88,7 +120,7 @@ final class AppointmentController extends Controller
             return to_route('appointment.selectLocation');
         }
 
-        $validated = $request->validated();
+        $validated = $request->booking();
 
         $appointment = $action->handle($validated, $locationDTO, $user);
 
@@ -108,23 +140,5 @@ final class AppointmentController extends Controller
     public function confirmed(string $uuid, AppointmentConfirmationResolver $resolver): Response
     {
         return inertia('AppointmentConfirmation', $resolver->resolve($uuid));
-    }
-
-    /**
-     * @return array<string, list<string>>
-     */
-    private function fullSlots(AppointmentSlotCapacity $slotCapacity, ?AppointmentLocationDTO $locationDTO): array
-    {
-        $location = $locationDTO instanceof AppointmentLocationDTO
-            ? resolve(AppointmentLocation::class)->execute($locationDTO->id)
-            : null;
-
-        if (! $location instanceof Location) {
-            return [];
-        }
-
-        $now = now();
-
-        return $slotCapacity->fullSlots($location, $now, $now->copy()->addDays($location->appointmentMaxBookingDaysAhead() + 1));
     }
 }

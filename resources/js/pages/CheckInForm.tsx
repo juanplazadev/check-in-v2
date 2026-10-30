@@ -30,6 +30,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import PublicLayout from '@/layouts/PublicLayout';
 import { countryName } from '@/lib/countryFlag';
+import { formatLongDate } from '@/lib/locale';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -136,6 +137,7 @@ interface CheckInFormTranslations {
     licenseStateLabel: string;
     licenseCountryLabel: string;
     licenseExpirationLabel: string;
+    selectDate: string;
     licenseExpirationRequired: string;
     licenseExpirationInvalid: string;
     licenseExpired: string;
@@ -158,6 +160,7 @@ interface PageProps {
     location: Location;
     fields: FieldFlags;
     translations: Translations;
+    currentLocale: string;
     truckColors: string[];
     auth: { user: { name: string; cellphone: string | null } | null };
     driverLicense: {
@@ -222,20 +225,19 @@ function ReviewSummary({
     location,
     fields,
     values,
+    locale,
     t,
     poTranslations,
 }: {
     location: Location;
     fields: FieldFlags;
     values: ReviewValues;
+    locale: string;
     t: CheckInFormTranslations;
     poTranslations: PurchaseOrderTranslations;
 }) {
     const formattedExpiration = values.drivers_license_expiration_date
-        ? format(
-              new Date(values.drivers_license_expiration_date + 'T00:00:00'),
-              'MMMM d, yyyy',
-          )
+        ? formatLongDate(values.drivers_license_expiration_date, locale)
         : '';
 
     const trailerChuteLabels: Record<string, string> = {
@@ -388,7 +390,8 @@ export default function CheckInForm({
     fields,
     truckColors,
 }: PageProps) {
-    const { translations, auth, driverLicense } = usePage<PageProps>().props;
+    const { translations, auth, driverLicense, currentLocale } =
+        usePage<PageProps>().props;
     const t = translations.checkInForm;
     const poT = translations.purchaseOrders;
 
@@ -1308,6 +1311,12 @@ export default function CheckInForm({
                                                             endMonth={
                                                                 licenseMaxDate
                                                             }
+                                                            placeholder={
+                                                                t.selectDate
+                                                            }
+                                                            locale={
+                                                                currentLocale
+                                                            }
                                                         />
                                                         {fieldState.invalid && (
                                                             <FieldError
@@ -1382,6 +1391,7 @@ export default function CheckInForm({
                         ) : (
                             <div>
                                 <ReviewSummary
+                                    locale={currentLocale}
                                     location={location}
                                     fields={fields}
                                     values={getValues() as ReviewValues}

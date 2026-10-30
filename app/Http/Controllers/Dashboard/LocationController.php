@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Dashboard;
 
+use App\Appointment\AppointmentSlotCapacity;
 use App\Dashboard\LocationDockResolver;
+use App\Dashboard\LocationLoadTypeResolver;
 use App\Dashboard\LocationRecordResolver;
 use App\Dashboard\LocationTimezones;
 use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\LocationHistoryRequest;
 use App\Http\Requests\Dashboard\LocationUsersRequest;
+use App\Models\LoadType;
 use App\Models\Location;
 use App\Models\User;
 use App\Queries\LocationDirectory;
@@ -149,6 +152,18 @@ final class LocationController extends Controller
     {
         return $this->section($user, $uuid, 'Docks', fn (Location $location): array => [
             'docks' => $docks->docks($location),
+            // Without one, every booking lasts a single slot, so the page points staff to load types next.
+            'hasActiveLoadTypes' => LoadType::query()->whereBelongsTo($location)->active()->exists(),
+        ]);
+    }
+
+    public function loadTypes(#[CurrentUser] User $user, string $uuid, LocationLoadTypeResolver $loadTypes, AppointmentSlotCapacity $capacity): Response
+    {
+        return $this->section($user, $uuid, 'LoadTypes', fn (Location $location): array => [
+            'loadTypes' => $loadTypes->loadTypes($location),
+            'slotIntervalMinutes' => $location->appointmentSlotIntervalMinutes(),
+            // Null with no bookable docks: durations then block no slots, so the page warns about it.
+            'dockCapacity' => $capacity->capacityFor($location),
         ]);
     }
 

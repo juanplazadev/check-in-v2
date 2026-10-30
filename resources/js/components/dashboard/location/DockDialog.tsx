@@ -185,7 +185,7 @@ function DockBody({
     );
 }
 
-function SwitchRow({
+export function SwitchRow({
     id,
     label,
     hint,

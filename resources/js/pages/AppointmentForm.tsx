@@ -3,6 +3,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { format } from 'date-fns';
 import { UserIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -11,6 +12,8 @@ import {
     DatePicker,
     TimePicker,
     buildSlots,
+    minutesToValue,
+    timeToMinutes,
 } from '@/components/DatePickerTime';
 import LocationScheduleCard from '@/components/LocationScheduleCard';
 import { PhoneInput, formatUsPhone } from '@/components/PhoneInput';
@@ -29,6 +32,8 @@ import {
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import PublicLayout from '@/layouts/PublicLayout';
+import { formatLongDate, formatTimeOfDay } from '@/lib/locale';
+import { cn } from '@/lib/utils';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,6 +55,15 @@ interface Location {
     isClosingSoon: boolean | null;
     availability: AvailabilityWindow[];
     slotIntervalMinutes: number;
+}
+
+/** Mirrors the loadTypes prop built in AppointmentController::form(). */
+interface LoadTypeOption {
+    id: string;
+    name: string;
+    direction: 'inbound' | 'outbound';
+    directionLabel: string;
+    durationMinutes: number;
 }
 
 interface AppointmentFormTranslations {
@@ -79,33 +93,140 @@ interface AppointmentFormTranslations {
     reviewTitle: string;
     editButton: string;
     open: string;
+    loadTypeLabel: string;
+    loadTypeHint: string;
+    loadTypeRequired: string;
+    durationMinutes: string;
+    durationHours: string;
+    durationHoursMinutes: string;
+    noTimesForLoad: string;
+    selectDate: string;
+    morning: string;
+    afternoon: string;
+    evening: string;
 }
 
 interface Translations {
     appointmentForm: AppointmentFormTranslations;
     purchaseOrders: PurchaseOrderTranslations;
+    publicNavigation: { close: string; openInMaps: string };
 }
+
+/** Start times with no room left, by booking length and local date: { '90': { '2026-11-02': ['08:00:00'] } }. */
+type FullSlots = Record<string, Record<string, string[]>>;
 
 interface PageProps {
     location: Location;
-    /** Slots with no room left, by local date: { '2026-11-02': ['08:00:00'] }. */
-    fullSlots: Record<string, string[]>;
+    /** Empty when the location has no load types; every booking then lasts one slot. */
+    loadTypes: LoadTypeOption[];
+    /** When the location closes on each available day, "HH:MM:SS" by local date. */
+    closingTimes: Record<string, string>;
+    fullSlots: FullSlots;
     translations: Translations;
+    currentLocale: string;
     auth: { user: { name: string; cellphone: string | null } | null };
     [key: string]: unknown;
+}
+
+/** Replaces :name placeholders, the way Laravel's __() does on the server. */
+function interpolate(text: string, values: Record<string, string | number>) {
+    return Object.entries(values).reduce(
+        (result, [key, value]) => result.replaceAll(`:${key}`, String(value)),
+        text,
+    );
+}
+
+/** "45 min", "1 h", "1 h 30 min", in the page's language. */
+function formatDuration(
+    minutes: number,
+    t: AppointmentFormTranslations,
+): string {
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+
+    if (hours === 0) {
+        return interpolate(t.durationMinutes, { minutes: rest });
+    }
+
+    return rest === 0
+        ? interpolate(t.durationHours, { hours })
+        : interpolate(t.durationHoursMinutes, { hours, minutes: rest });
+}
+
+/**
+ * A day's window cut down so a booking of this length still finishes by
+ * closing time, or undefined when no start time fits at all.
+ */
+function fitWindow(
+    window: AvailabilityWindow,
+    durationMinutes: number,
+    closingTimes: Record<string, string>,
+): AvailabilityWindow | undefined {
+    const closesAt = closingTimes[window.date];
+    const latestStart =
+        closesAt === undefined
+            ? timeToMinutes(window.lastSlot)
+            : Math.min(
+                  timeToMinutes(window.lastSlot),
+                  timeToMinutes(closesAt) - durationMinutes,
+              );
+
+    if (latestStart < timeToMinutes(window.firstSlot)) {
+        return undefined;
+    }
+
+    return { ...window, lastSlot: minutesToValue(latestStart) };
 }
 
 /** The first slot in a day's window that still has room. */
 function firstOpenSlot(
     window: AvailabilityWindow,
     intervalMinutes: number,
-    fullSlots: Record<string, string[]>,
+    fullSlots: string[],
 ): string | undefined {
-    const full = new Set(fullSlots[window.date] ?? []);
+    const full = new Set(fullSlots);
 
     return buildSlots(window.firstSlot, window.lastSlot, intervalMinutes).find(
         (slot) => !full.has(slot),
     );
+}
+
+/**
+ * The days a booking of this length can be made, each cut to the start times
+ * that fit. A day whose every slot is full is left out, as if it had no hours.
+ */
+function windowsFor(
+    availability: AvailabilityWindow[],
+    durationMinutes: number | null,
+    intervalMinutes: number,
+    closingTimes: Record<string, string>,
+    fullSlots: FullSlots,
+): AvailabilityWindow[] {
+    if (durationMinutes === null) {
+        return [];
+    }
+
+    const full = fullSlots[String(durationMinutes)] ?? {};
+
+    return availability
+        .map((w) => fitWindow(w, durationMinutes, closingTimes))
+        .filter(
+            (w): w is AvailabilityWindow =>
+                w !== undefined &&
+                firstOpenSlot(w, intervalMinutes, full[w.date] ?? []) !==
+                    undefined,
+        );
+}
+
+/** "9:00 AM - 10:30 AM", in the page's language. */
+function formatTimeRange(
+    time: string,
+    durationMinutes: number,
+    locale: string,
+): string {
+    const end = minutesToValue(timeToMinutes(time) + durationMinutes);
+
+    return `${formatTimeOfDay(time, locale)} - ${formatTimeOfDay(end, locale)}`;
 }
 
 // ── Review summary ──────────────────────────────────────────────────────────
@@ -113,6 +234,9 @@ function firstOpenSlot(
 function ReviewSummary({
     location,
     values,
+    loadType,
+    durationMinutes,
+    locale,
     t,
     poTranslations,
 }: {
@@ -124,15 +248,18 @@ function ReviewSummary({
         drivers_name: string;
         drivers_cellphone: string;
     };
+    loadType: LoadTypeOption | undefined;
+    durationMinutes: number;
+    locale: string;
     t: AppointmentFormTranslations;
     poTranslations: PurchaseOrderTranslations;
 }) {
     const formattedDate = values.date
-        ? format(new Date(values.date + 'T00:00:00'), 'MMMM d, yyyy')
+        ? formatLongDate(values.date, locale)
         : '';
 
     const formattedTime = values.time
-        ? format(new Date(`2000-01-01T${values.time}`), 'h:mm a')
+        ? formatTimeRange(values.time, durationMinutes, locale)
         : '';
 
     return (
@@ -166,6 +293,16 @@ function ReviewSummary({
                                 {formattedTime}
                             </dd>
                         </div>
+                        {loadType && (
+                            <div className="flex justify-between gap-4 px-4 py-3">
+                                <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                    {t.loadTypeLabel}
+                                </dt>
+                                <dd className="text-right text-sm text-gray-900 dark:text-gray-100">
+                                    {loadType.name}
+                                </dd>
+                            </div>
+                        )}
                         <div className="flex justify-between gap-4 px-4 py-3">
                             <dt className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                 {poTranslations.label}
@@ -199,15 +336,100 @@ function ReviewSummary({
     );
 }
 
+// ── Load type picker ────────────────────────────────────────────────────────
+
+function LoadTypeGroup({
+    label,
+    children,
+}: {
+    label: string;
+    children: ReactNode;
+}) {
+    return (
+        <div>
+            <p className="mb-2 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                {label}
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">{children}</div>
+        </div>
+    );
+}
+
+function LoadTypeChoice({
+    name,
+    duration,
+    selected,
+    onSelect,
+}: {
+    name: string;
+    duration: string;
+    selected: boolean;
+    onSelect: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={onSelect}
+            className={cn(
+                'flex min-h-12 cursor-pointer flex-col items-start justify-center rounded-md border px-3 py-2 text-left transition-colors',
+                selected
+                    ? 'border-brand-green bg-brand-green/10 ring-1 ring-brand-green'
+                    : 'border-input hover:bg-accent hover:text-accent-foreground',
+            )}
+        >
+            <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {name}
+            </span>
+            <span className="text-xs text-muted-foreground tabular-nums">
+                {duration}
+            </span>
+        </button>
+    );
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ScheduleAppointment({
     location,
+    loadTypes,
+    closingTimes,
     fullSlots,
 }: PageProps) {
-    const { translations, auth } = usePage<PageProps>().props;
+    const { translations, auth, currentLocale } = usePage<PageProps>().props;
     const t = translations.appointmentForm;
     const poT = translations.purchaseOrders;
+    const hasLoadTypes = loadTypes.length > 0;
+    const interval = location.slotIntervalMinutes;
+
+    /** How long a booking holds a dock; null until a driver picks a load type. */
+    const durationFor = (loadTypeId: string): number | null => {
+        if (!hasLoadTypes) {
+            return interval;
+        }
+
+        return (
+            loadTypes.find((loadType) => loadType.id === loadTypeId)
+                ?.durationMinutes ?? null
+        );
+    };
+
+    const windowsForLoadType = (loadTypeId: string) =>
+        windowsFor(
+            location.availability ?? [],
+            durationFor(loadTypeId),
+            interval,
+            closingTimes,
+            fullSlots,
+        );
+
+    const fullFor = (loadTypeId: string, date: string): string[] =>
+        fullSlots[String(durationFor(loadTypeId))]?.[date] ?? [];
+
+    // A single load type needs no choice, so it starts selected.
+    const initialLoadType = loadTypes.length === 1 ? loadTypes[0].id : '';
+    const initialWindow = windowsForLoadType(initialLoadType)[0];
 
     // Prefill the driver's identity for signed-in drivers, from their saved
     // profile. Guests start with blank fields.
@@ -220,36 +442,13 @@ export default function ScheduleAppointment({
     const [step, setStep] = useState<'form' | 'review'>('form');
     const [serverError, setServerError] = useState<string | null>(null);
 
-    // A day whose every slot is full is left out, as if it had no hours.
-    const availability = useMemo(
-        () =>
-            (location.availability ?? []).filter(
-                (w) =>
-                    firstOpenSlot(
-                        w,
-                        location.slotIntervalMinutes,
-                        fullSlots,
-                    ) !== undefined,
-            ),
-        [location.availability, location.slotIntervalMinutes, fullSlots],
-    );
-    const hasAvailability = availability.length > 0;
-
-    const availableDates = useMemo(
-        () => new Set(availability.map((w) => w.date)),
-        [availability],
-    );
-    const windowByDate = useMemo(
-        () => new Map(availability.map((w) => [w.date, w])),
-        [availability],
-    );
-
-    const firstWindow = availability[0];
-
     const schema = useMemo(
         () =>
             z.object({
                 location_id: z.string(),
+                load_type: hasLoadTypes
+                    ? z.string().min(1, t.loadTypeRequired)
+                    : z.string(),
                 date: z.string().min(1, t.dateRequired),
                 time: z.string().min(1, t.timeRequired),
                 po_numbers: poNumberSchema(poT),
@@ -261,7 +460,7 @@ export default function ScheduleAppointment({
                     .string()
                     .regex(/^\(\d{3}\) \d{3}-\d{4}$/, t.cellphoneInvalid),
             }),
-        [t, poT],
+        [t, poT, hasLoadTypes],
     );
 
     type FormValues = z.infer<typeof schema>;
@@ -271,13 +470,14 @@ export default function ScheduleAppointment({
             resolver: zodResolver(schema),
             defaultValues: {
                 location_id: location.id,
-                date: firstWindow?.date ?? '',
-                time: firstWindow
+                load_type: initialLoadType,
+                date: initialWindow?.date ?? '',
+                time: initialWindow
                     ? (firstOpenSlot(
-                          firstWindow,
-                          location.slotIntervalMinutes,
-                          fullSlots,
-                      ) ?? firstWindow.firstSlot)
+                          initialWindow,
+                          interval,
+                          fullFor(initialLoadType, initialWindow.date),
+                      ) ?? initialWindow.firstSlot)
                     : '10:00:00',
                 po_numbers: [{ value: '' }],
                 drivers_name: prefillName,
@@ -291,15 +491,68 @@ export default function ScheduleAppointment({
     });
 
     const selectedDate = useWatch({ control, name: 'date' });
+    const selectedLoadTypeId = useWatch({ control, name: 'load_type' });
+    const selectedLoadType = loadTypes.find(
+        (loadType) => loadType.id === selectedLoadTypeId,
+    );
+    const durationMinutes = durationFor(selectedLoadTypeId);
+
+    // Each load type has its own open times: a long load needs room for
+    // longer and has to finish by closing.
+    const availability = windowsForLoadType(selectedLoadTypeId);
+    const isOpenForBookings = (location.availability ?? []).length > 0;
+    const hasAvailability = availability.length > 0;
+
+    const availableDates = new Set(availability.map((w) => w.date));
+    const windowByDate = new Map(availability.map((w) => [w.date, w]));
     const currentWindow = selectedDate
         ? windowByDate.get(selectedDate)
         : undefined;
+
+    /** Moves the date and time to the first open ones when they no longer fit. */
+    const selectLoadType = (loadTypeId: string) => {
+        setValue('load_type', loadTypeId, { shouldValidate: true });
+
+        const windows = windowsForLoadType(loadTypeId);
+        const { date, time } = getValues();
+        const window =
+            windows.find((w) => w.date === date) ?? windows[0] ?? undefined;
+
+        if (!window) {
+            setValue('date', '');
+
+            return;
+        }
+
+        const full = new Set(fullFor(loadTypeId, window.date));
+        const slots = buildSlots(window.firstSlot, window.lastSlot, interval);
+        const stillFits =
+            window.date === date && slots.includes(time) && !full.has(time);
+
+        if (!stillFits) {
+            setValue('date', window.date);
+            setValue(
+                'time',
+                firstOpenSlot(window, interval, [...full]) ?? window.firstSlot,
+            );
+        }
+    };
+
+    const loadTypeGroups = (['inbound', 'outbound'] as const)
+        .map((direction) => ({
+            direction,
+            items: loadTypes.filter(
+                (loadType) => loadType.direction === direction,
+            ),
+        }))
+        .filter((group) => group.items.length > 0);
 
     const onReview = () => {
         handleSubmit(() => setStep('review'))();
     };
 
     const formFieldKeys: Array<keyof FormValues> = [
+        'load_type',
         'drivers_name',
         'drivers_cellphone',
         'date',
@@ -313,6 +566,7 @@ export default function ScheduleAppointment({
 
         const payload = {
             datetime: `${values.date} ${values.time}`,
+            load_type: values.load_type === '' ? null : values.load_type,
             po_numbers: values.po_numbers.map((po) => po.value),
             drivers_name: values.drivers_name,
             drivers_cellphone: values.drivers_cellphone,
@@ -395,6 +649,10 @@ export default function ScheduleAppointment({
                                                 onClose={() =>
                                                     setServerError(null)
                                                 }
+                                                closeLabel={
+                                                    translations
+                                                        .publicNavigation.close
+                                                }
                                             >
                                                 {serverError}
                                             </AlertBanner>
@@ -407,11 +665,101 @@ export default function ScheduleAppointment({
                                             location={location}
                                             todaysHoursLabel={t.todaysHours}
                                             openLabel={t.open}
+                                            openInMapsLabel={
+                                                translations.publicNavigation
+                                                    .openInMaps
+                                            }
                                         />
                                     </div>
 
+                                    {/* Load type */}
+                                    {hasLoadTypes && isOpenForBookings && (
+                                        <div className="mt-5">
+                                            <Controller
+                                                name="load_type"
+                                                control={control}
+                                                render={({
+                                                    field,
+                                                    fieldState,
+                                                }) => (
+                                                    <Field
+                                                        data-invalid={
+                                                            fieldState.invalid
+                                                        }
+                                                    >
+                                                        <FieldLabel>
+                                                            {t.loadTypeLabel}
+                                                        </FieldLabel>
+                                                        <FieldDescription>
+                                                            {t.loadTypeHint}
+                                                        </FieldDescription>
+                                                        <div
+                                                            role="radiogroup"
+                                                            aria-label={
+                                                                t.loadTypeLabel
+                                                            }
+                                                            className="space-y-3"
+                                                        >
+                                                            {loadTypeGroups.map(
+                                                                (group) => (
+                                                                    <LoadTypeGroup
+                                                                        key={
+                                                                            group.direction
+                                                                        }
+                                                                        label={
+                                                                            group
+                                                                                .items[0]
+                                                                                .directionLabel
+                                                                        }
+                                                                    >
+                                                                        {group.items.map(
+                                                                            (
+                                                                                loadType,
+                                                                            ) => (
+                                                                                <LoadTypeChoice
+                                                                                    key={
+                                                                                        loadType.id
+                                                                                    }
+                                                                                    name={
+                                                                                        loadType.name
+                                                                                    }
+                                                                                    duration={formatDuration(
+                                                                                        loadType.durationMinutes,
+                                                                                        t,
+                                                                                    )}
+                                                                                    selected={
+                                                                                        field.value ===
+                                                                                        loadType.id
+                                                                                    }
+                                                                                    onSelect={() =>
+                                                                                        selectLoadType(
+                                                                                            loadType.id,
+                                                                                        )
+                                                                                    }
+                                                                                />
+                                                                            ),
+                                                                        )}
+                                                                    </LoadTypeGroup>
+                                                                ),
+                                                            )}
+                                                        </div>
+                                                        {fieldState.invalid && (
+                                                            <FieldError
+                                                                errors={[
+                                                                    fieldState.error,
+                                                                ]}
+                                                            />
+                                                        )}
+                                                    </Field>
+                                                )}
+                                            />
+                                        </div>
+                                    )}
+
                                     {/* Date + Time */}
-                                    {hasAvailability ? (
+                                    {/* Hidden until a load type is picked, unless the location is closed for booking anyway. */}
+                                    {durationMinutes === null &&
+                                    isOpenForBookings ? null : hasAvailability ? (
                                         <div className="mt-5 space-y-5">
                                             <Controller
                                                 name="date"
@@ -431,6 +779,12 @@ export default function ScheduleAppointment({
                                                         <DatePicker
                                                             availableDates={
                                                                 availableDates
+                                                            }
+                                                            placeholder={
+                                                                t.selectDate
+                                                            }
+                                                            locale={
+                                                                currentLocale
                                                             }
                                                             date={
                                                                 field.value
@@ -462,8 +816,11 @@ export default function ScheduleAppointment({
                                                                         'time',
                                                                         firstOpenSlot(
                                                                             w,
-                                                                            location.slotIntervalMinutes,
-                                                                            fullSlots,
+                                                                            interval,
+                                                                            fullFor(
+                                                                                selectedLoadTypeId,
+                                                                                ds,
+                                                                            ),
                                                                         ) ??
                                                                             w.firstSlot,
                                                                         {
@@ -511,17 +868,29 @@ export default function ScheduleAppointment({
                                                                 currentWindow?.lastSlot
                                                             }
                                                             intervalMinutes={
-                                                                location.slotIntervalMinutes
+                                                                interval
                                                             }
                                                             fullSlots={
                                                                 selectedDate
-                                                                    ? fullSlots[
-                                                                          selectedDate
-                                                                      ]
+                                                                    ? fullFor(
+                                                                          selectedLoadTypeId,
+                                                                          selectedDate,
+                                                                      )
                                                                     : undefined
                                                             }
                                                             fullLabel={
                                                                 t.slotFull
+                                                            }
+                                                            groupLabels={{
+                                                                morning:
+                                                                    t.morning,
+                                                                afternoon:
+                                                                    t.afternoon,
+                                                                evening:
+                                                                    t.evening,
+                                                            }}
+                                                            locale={
+                                                                currentLocale
                                                             }
                                                         />
                                                         {fieldState.invalid && (
@@ -537,7 +906,9 @@ export default function ScheduleAppointment({
                                         </div>
                                     ) : (
                                         <div className="mt-5 rounded-lg border border-amber-300/60 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
-                                            {t.noAvailability}
+                                            {isOpenForBookings && hasLoadTypes
+                                                ? t.noTimesForLoad
+                                                : t.noAvailability}
                                         </div>
                                     )}
 
@@ -652,7 +1023,7 @@ export default function ScheduleAppointment({
                                 <div className="border-t border-gray-100 bg-gray-50 px-5 py-4 dark:border-gray-700/60 dark:bg-gray-800/60">
                                     <Button
                                         type="submit"
-                                        disabled={!hasAvailability}
+                                        disabled={!isOpenForBookings}
                                         className="w-full cursor-pointer bg-brand-green text-white hover:bg-brand-green/90 focus-visible:ring-brand-green/50"
                                     >
                                         {t.reviewButton}
@@ -667,6 +1038,11 @@ export default function ScheduleAppointment({
                                 <ReviewSummary
                                     location={location}
                                     values={getValues()}
+                                    loadType={selectedLoadType}
+                                    durationMinutes={
+                                        durationMinutes ?? interval
+                                    }
+                                    locale={currentLocale}
                                     t={t}
                                     poTranslations={poT}
                                 />

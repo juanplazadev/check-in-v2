@@ -10,6 +10,10 @@ import appointment from '@/routes/appointment';
 import checkIn from '@/routes/checkIn';
 
 interface PublicNavigation {
+    toggleMenu: string;
+    switchLanguage: string;
+    themeToggle: string;
+    logoLabel: string;
     checkIn: string;
     appointment: string;
     account: string;
@@ -56,7 +60,12 @@ export default function Navbar({ hideLogin = false }: { hideLogin?: boolean }) {
                 {/* Left: Logo + divider + links */}
                 <div className="flex items-center gap-8">
                     <Link href="/" className="flex items-center" prefetch>
-                        <Logo />
+                        <Logo
+                            label={nav.logoLabel.replace(
+                                ':app',
+                                import.meta.env.VITE_APP_NAME,
+                            )}
+                        />
                     </Link>
 
                     <div className="hidden h-5 w-px bg-gray-200 lg:block dark:bg-gray-700" />
@@ -111,7 +120,10 @@ export default function Navbar({ hideLogin = false }: { hideLogin?: boolean }) {
                                 key={code}
                                 type="button"
                                 onClick={() => switchLocale(code)}
-                                aria-label={`Switch to ${label}`}
+                                aria-label={nav.switchLanguage.replace(
+                                    ':language',
+                                    label,
+                                )}
                                 aria-pressed={currentLocale === code}
                                 className={`group relative cursor-pointer text-xs font-medium tracking-wide transition-colors duration-300 ${
                                     currentLocale === code
@@ -132,7 +144,7 @@ export default function Navbar({ hideLogin = false }: { hideLogin?: boolean }) {
                     </div>
 
                     {/* Theme toggle — moved to the right of lang */}
-                    <ThemeToggle />
+                    <ThemeToggle label={nav.themeToggle} />
 
                     {/* Signed-in avatar + menu */}
                     {isAuthenticated && (
@@ -149,7 +161,7 @@ export default function Navbar({ hideLogin = false }: { hideLogin?: boolean }) {
                     <button
                         onClick={() => setIsOpen(!isOpen)}
                         className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-brand-grey-link hover:bg-gray-100 focus:outline-none lg:hidden dark:hover:bg-gray-800"
-                        aria-label="Toggle navigation menu"
+                        aria-label={nav.toggleMenu}
                     >
                         <div className="relative h-4 w-5">
                             <span

@@ -32,6 +32,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read CarbonImmutable|null $dock_assigned_at
  * @property-read int|null $dock_assigned_by
  * @property-read CarbonImmutable $scheduled_for
+ * @property-read int|null $load_type_id
+ * @property-read CarbonImmutable $ends_at
  * @property-read string $drivers_name
  * @property-read string $drivers_cellphone
  * @property-read string $locale
@@ -48,10 +50,11 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read Location $location
  * @property-read User|null $user
  * @property-read Dock|null $dock
+ * @property-read LoadType|null $loadType
  * @property-read CheckIn|null $checkIn
  * @property-read Collection<int, AppointmentNote> $notes
  */
-#[Fillable(['uuid', 'reference_number', 'location_id', 'user_id', 'dock_id', 'dock_assigned_at', 'dock_assigned_by', 'scheduled_for', 'drivers_name', 'drivers_cellphone', 'locale', 'status', 'cancelled_at', 'cancelled_by', 'cancelled_reason', 'claimed_at', 'claimed_via', 'reminder_sent_at'])]
+#[Fillable(['uuid', 'reference_number', 'location_id', 'user_id', 'dock_id', 'dock_assigned_at', 'dock_assigned_by', 'scheduled_for', 'load_type_id', 'ends_at', 'drivers_name', 'drivers_cellphone', 'locale', 'status', 'cancelled_at', 'cancelled_by', 'cancelled_reason', 'claimed_at', 'claimed_via', 'reminder_sent_at'])]
 #[Hidden(['id'])]
 #[RouteKey('uuid')]
 final class Appointment extends Model
@@ -91,6 +94,14 @@ final class Appointment extends Model
     public function dock(): BelongsTo
     {
         return $this->belongsTo(Dock::class);
+    }
+
+    /**
+     * @return BelongsTo<LoadType, $this>
+     */
+    public function loadType(): BelongsTo
+    {
+        return $this->belongsTo(LoadType::class);
     }
 
     /**
@@ -138,6 +149,7 @@ final class Appointment extends Model
         return [
             'uuid' => 'string',
             'scheduled_for' => 'datetime',
+            'ends_at' => 'datetime',
             'status' => AppointmentStatus::class,
             'cancelled_at' => 'datetime',
             'claimed_at' => 'datetime',

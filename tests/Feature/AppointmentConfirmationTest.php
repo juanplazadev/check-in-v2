@@ -21,6 +21,7 @@ it('renders the confirmation page for a valid appointment UUID', function (): vo
                 ->where('referenceNumber', $appointment->reference_number)
                 ->has('scheduledDate')
                 ->has('scheduledTime')
+                ->where('loadType', null)
                 ->has('driversName')
                 ->has('locationName')
                 ->has('locationAddress')

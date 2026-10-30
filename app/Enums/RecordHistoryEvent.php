@@ -54,4 +54,7 @@ enum RecordHistoryEvent: string
     case DockRemoved = 'dock-removed';
     case DockAssigned = 'dock-assigned';
     case DockUnassigned = 'dock-unassigned';
+    case LoadTypeAdded = 'load-type-added';
+    case LoadTypeEdited = 'load-type-edited';
+    case LoadTypeRemoved = 'load-type-removed';
 }

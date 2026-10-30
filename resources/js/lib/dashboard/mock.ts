@@ -368,6 +368,8 @@ function makeAppointment(): AppointmentRecord {
             hasAccount: random() > 0.5,
         },
         scheduledFor: iso(scheduledFor),
+        endsAt: iso(scheduledFor + 60 * 60 * 1000),
+        loadType: null,
         purchaseOrders: purchaseOrders(),
         dock: null,
         cancelledReason:

@@ -1,4 +1,3 @@
-
 import { Head, usePage } from '@inertiajs/react';
 import { CheckCircle2, Clock, Mail, Phone } from 'lucide-react';
 
@@ -11,7 +10,9 @@ interface AppointmentData {
     uuid: string;
     referenceNumber: string;
     scheduledDate: string;
+    /** Start to end, like "9:00 AM - 10:30 AM". */
     scheduledTime: string;
+    loadType: string | null;
     driversName: string;
     locationName: string;
     locationAddress: string;
@@ -33,6 +34,7 @@ interface AppointmentConfirmationTranslations {
     locationLabel: string;
     dateLabel: string;
     timeLabel: string;
+    loadTypeLabel: string;
     poLabel: string;
     driverLabel: string;
     arrivalReminder: string;
@@ -130,9 +132,17 @@ export default function AppointmentConfirmation() {
                                         label={t.timeLabel}
                                         value={appointment.scheduledTime}
                                     />
+                                    {appointment.loadType && (
+                                        <SummaryRow
+                                            label={t.loadTypeLabel}
+                                            value={appointment.loadType}
+                                        />
+                                    )}
                                     <SummaryRow
                                         label={t.poLabel}
-                                        value={appointment.purchaseOrders.join(', ')}
+                                        value={appointment.purchaseOrders.join(
+                                            ', ',
+                                        )}
                                     />
                                     <SummaryRow
                                         label={t.driverLabel}

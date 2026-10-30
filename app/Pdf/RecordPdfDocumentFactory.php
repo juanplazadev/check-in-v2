@@ -57,7 +57,7 @@ final readonly class RecordPdfDocumentFactory
         return [
             'barcode' => $this->barcode->svg($reference),
             'statusLabel' => $this->statusLabel($status),
-            'generatedOn' => Date::now()->format('M j, Y'),
+            'generatedOn' => Date::now()->settings(['locale' => app()->getLocale()])->translatedFormat('M j, Y'),
         ];
     }
 

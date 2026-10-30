@@ -27,6 +27,7 @@ final class DatabaseSeeder extends Seeder
             LocationSeeder::class,
             ScheduleSeeder::class,
             ScheduleOverrideSeeder::class,
+            LoadTypeSeeder::class,
             UserSeeder::class,
             DriverHistorySeeder::class,
         ]);

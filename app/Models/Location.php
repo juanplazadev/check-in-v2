@@ -53,6 +53,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property-read Collection<int, AppointmentScheduleOverride> $appointmentScheduleOverrides
  * @property-read Collection<int, Building> $buildings
  * @property-read Collection<int, Dock> $docks
+ * @property-read Collection<int, LoadType> $loadTypes
  */
 #[Fillable(['uuid', 'address_id', 'max_distance_allowed', 'name', 'abbreviation', 'timezone', 'phone', 'phone_ext', 'email', 'is_active', 'is_checkins_enabled', 'checkins_paused_at', 'checkins_paused_until', 'checkins_paused_reason', 'is_appointments_enabled', 'appointments_paused_at', 'appointments_paused_until', 'appointments_paused_reason', 'config'])]
 #[Hidden(['id'])]
@@ -133,6 +134,16 @@ final class Location extends Model
     }
 
     /**
+     * Every load type, active or not.
+     *
+     * @return HasMany<LoadType, $this>
+     */
+    public function loadTypes(): HasMany
+    {
+        return $this->hasMany(LoadType::class)->orderBy('sort_order')->orderBy('name');
+    }
+
+    /**
      * Staff edits and attachments on this location, newest first. Shares
      * record_history with check-ins and appointments; see {@see CheckIn::history()}.
      *
@@ -187,6 +198,15 @@ final class Location extends Model
         $value = (int) data_get($this->config, 'appointment.slot_interval_minutes', $default);
 
         return in_array($value, $allowed, true) ? $value : $default;
+    }
+
+    /**
+     * How long a booking holds a dock: its load type's duration, or one slot
+     * at a location with no load types.
+     */
+    public function appointmentDurationMinutes(?LoadType $loadType): int
+    {
+        return $loadType instanceof LoadType ? $loadType->duration_minutes : $this->appointmentSlotIntervalMinutes();
     }
 
     public function appointmentMinLeadTimeMinutes(): int

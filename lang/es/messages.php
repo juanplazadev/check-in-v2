@@ -385,6 +385,7 @@ return [
         'statusScheduled' => 'Programada',
         'statusNoShow' => 'No se presentó',
         'statusCheckedIn' => 'Registrado',
+        'loadType' => 'Tipo de carga',
     ],
 
     'accountProfile' => [
@@ -499,6 +500,12 @@ return [
         'privacyPolicy' => 'Política de privacidad',
         'termsOfService' => 'Términos del servicio',
         'allRightsReserved' => 'Todos los derechos reservados',
+        'toggleMenu' => 'Abrir o cerrar el menú de navegación',
+        'switchLanguage' => 'Cambiar a :language',
+        'themeToggle' => 'Cambiar entre modo claro y oscuro',
+        'close' => 'Cerrar',
+        'openInMaps' => 'Abrir en Mapas',
+        'logoLabel' => 'Logotipo de :app',
     ],
 
     'locationRequiredModal' => [
@@ -528,6 +535,9 @@ return [
         'outsideExceptionHours' => ':name tiene horario especial hoy: :open - :close. Por favor regrese durante el horario de atención.',
         'selectLocationToContinue' => 'Por favor seleccione una ubicación para continuar.',
         'retryLocation' => 'Intentar de nuevo',
+        'closedForCheckInWithReason' => ':name no está disponible para registrarse en este momento: :reason',
+        'closedForCheckInWithoutReason' => ':name no está disponible para registrarse en este momento.',
+        'closedForCheckInToday' => ':name está cerrado para registros hoy. Por favor regrese durante el horario publicado.',
     ],
 
     'appointmentSelectLocation' => [
@@ -541,6 +551,8 @@ return [
         'closedToday' => 'Cerrado hoy',
         'invalidLocation' => 'Ubicación no válida.',
         'selectLocationToContinue' => 'Por favor seleccione una ubicación para continuar.',
+        'pageTitle' => 'Cita: elegir ubicación',
+        'genericError' => 'Algo salió mal. Por favor, inténtelo de nuevo.',
     ],
 
     'appointmentBooking' => [
@@ -553,6 +565,7 @@ return [
         'closedForAppointmentsOnDateWithoutReason' => ':name no acepta citas el :date. Por favor elija otra fecha.',
         'outsideBookingWindow' => 'Por favor elija una hora de cita disponible dentro de los próximos :days días.',
         'slotFull' => 'Ese horario se acaba de llenar. Por favor elija otro horario.',
+        'runsPastClosing' => 'Esta carga terminaría después del horario de cierre. Por favor elija una hora más temprana u otro día.',
     ],
 
     'purchaseOrders' => [
@@ -581,6 +594,7 @@ return [
         'driverLabel' => 'Conductor',
         'arrivalReminder' => 'Por favor llegue 5-10 minutos antes de la hora de su cita.',
         'needHelp' => '¿Necesita ayuda?',
+        'loadTypeLabel' => 'Tipo de carga',
     ],
 
     'checkInConfirmation' => [
@@ -629,6 +643,18 @@ return [
         'editButton' => 'Editar',
         'submitButton' => 'Confirmar y enviar',
         'open' => 'Abierto',
+        'loadTypeLabel' => 'Tipo de carga',
+        'loadTypeHint' => 'Elija el tipo de carga. Determina cuánto tiempo su cita ocupa un andén.',
+        'loadTypeRequired' => 'Por favor seleccione un tipo de carga.',
+        'loadTypeInvalid' => 'Ese tipo de carga ya no está disponible. Por favor elija otro.',
+        'durationMinutes' => ':minutes min',
+        'durationHours' => ':hours h',
+        'durationHoursMinutes' => ':hours h :minutes min',
+        'noTimesForLoad' => 'No hay horarios disponibles para este tipo de carga. Elija otro tipo de carga o vuelva a consultar más tarde.',
+        'selectDate' => 'Seleccione una fecha',
+        'morning' => 'Mañana',
+        'afternoon' => 'Tarde',
+        'evening' => 'Noche',
     ],
 
     'checkInForm' => [
@@ -735,6 +761,8 @@ return [
         'reviewTitle' => 'Revise su registro',
         'editButton' => 'Editar',
         'submitButton' => 'Confirmar y registrarse',
+        'licenseExpirationTooFar' => 'La fecha de vencimiento no puede ser más de 60 años a partir de hoy.',
+        'selectDate' => 'Seleccione una fecha',
     ],
 
     'verifyEmail' => [
@@ -783,4 +811,14 @@ return [
     'validation' => [
         'currentPassword' => 'Esa no es tu contraseña actual.',
     ],
+
+    'loadDirection' => [
+        'inbound' => 'Entrada',
+        'outbound' => 'Salida',
+    ],
+
+    'mailFooter' => [
+        'automated' => 'Esta es una notificación automática del sistema :app. Por favor no responda a este correo.',
+    ],
+
 ];

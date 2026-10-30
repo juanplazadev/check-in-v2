@@ -32,6 +32,7 @@ enum Permission: string
     case EditCheckInOptions = 'edit check-in options';
     case EditAppointmentOptions = 'edit appointment options';
     case ManageDocks = 'manage docks';
+    case ManageLoadTypes = 'manage load types';
     case ViewNotifications = 'view notifications';
     case SearchDashboard = 'search dashboard';
     case FilterCheckIns = 'filter check-ins';
@@ -154,6 +155,7 @@ enum Permission: string
             self::EditCheckInOptions,
             self::EditAppointmentOptions,
             self::ManageDocks,
+            self::ManageLoadTypes,
             self::PauseCheckIns,
             self::PauseAppointments,
             self::DeleteLocations,
@@ -231,6 +233,7 @@ enum Permission: string
             self::EditCheckInOptions => "Change a location's check-in settings.",
             self::EditAppointmentOptions => "Change a location's booking settings.",
             self::ManageDocks => "Add, edit and remove a location's docks and buildings.",
+            self::ManageLoadTypes => 'Add, edit and remove the load types drivers book at a location.',
             self::PauseCheckIns => 'Pause new check-ins at a location.',
             self::PauseAppointments => 'Pause new bookings at a location.',
             self::DeleteLocations => 'Delete a location.',

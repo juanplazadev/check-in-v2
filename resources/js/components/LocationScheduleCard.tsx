@@ -19,10 +19,12 @@ export default function LocationScheduleCard({
     location,
     todaysHoursLabel,
     openLabel,
+    openInMapsLabel = 'Open in Maps',
 }: {
     location: ScheduleCardLocation;
     openLabel: string;
     todaysHoursLabel: string;
+    openInMapsLabel?: string;
 }) {
     return (
         <div className="border-gray-150/50 overflow-hidden rounded-lg border bg-gray-100/50 dark:border-gray-900/50 dark:bg-gray-950/30">
@@ -50,7 +52,7 @@ export default function LocationScheduleCard({
                     href={`https://maps.google.com/?q=${encodeURIComponent(location.address)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label="Open in Maps"
+                    aria-label={openInMapsLabel}
                     className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-400 transition-colors hover:bg-gray-200/60 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700/40 dark:hover:text-gray-300"
                 >
                     <svg

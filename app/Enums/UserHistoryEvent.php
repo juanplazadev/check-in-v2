@@ -46,6 +46,7 @@ enum UserHistoryEvent: string
     case LocationClosureAdded = 'location-closure-added';
     case LocationClosureRemoved = 'location-closure-removed';
     case LocationDocksEdited = 'location-docks-edited';
+    case LocationLoadTypesEdited = 'location-load-types-edited';
     case AppointmentDockAssigned = 'appointment-dock-assigned';
     case CheckInDockAssigned = 'check-in-dock-assigned';
     case RolePermissionsEdited = 'role-permissions-edited';
@@ -105,6 +106,7 @@ enum UserHistoryEvent: string
             self::LocationClosureAdded => 'Added a closure',
             self::LocationClosureRemoved => 'Removed a closure',
             self::LocationDocksEdited => 'Edited docks or buildings',
+            self::LocationLoadTypesEdited => 'Edited load types',
             self::AppointmentDockAssigned => "Changed an appointment's dock",
             self::CheckInDockAssigned => "Changed a check-in's door",
             self::RolePermissionsEdited => 'Edited role permissions',

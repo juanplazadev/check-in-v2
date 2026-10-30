@@ -58,6 +58,7 @@ use App\Http\Controllers\Dashboard\LocationController as DashboardLocationContro
 use App\Http\Controllers\Dashboard\LocationDeleteController as DashboardLocationDeleteController;
 use App\Http\Controllers\Dashboard\LocationDetailsController as DashboardLocationDetailsController;
 use App\Http\Controllers\Dashboard\LocationDockController as DashboardLocationDockController;
+use App\Http\Controllers\Dashboard\LocationLoadTypeController as DashboardLocationLoadTypeController;
 use App\Http\Controllers\Dashboard\LocationRestoreController as DashboardLocationRestoreController;
 use App\Http\Controllers\Dashboard\LocationStatusController as DashboardLocationStatusController;
 use App\Http\Controllers\Dashboard\LocationUserController as DashboardLocationUserController;
@@ -457,6 +458,7 @@ Route::middleware('setLocale')->group(function (): void {
                     Route::get('/appointments/options', [DashboardLocationController::class, 'appointmentOptions'])->name('locations.appointmentOptions');
                     Route::get('/closures', [DashboardLocationController::class, 'closures'])->name('locations.closures');
                     Route::get('/docks', [DashboardLocationController::class, 'docks'])->name('locations.docks');
+                    Route::get('/load-types', [DashboardLocationController::class, 'loadTypes'])->name('locations.loadTypes');
                     Route::get('/history', [DashboardLocationController::class, 'history'])->name('locations.history');
 
                     Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::EditLocations)])
@@ -515,6 +517,13 @@ Route::middleware('setLocale')->group(function (): void {
                         Route::post('/buildings', [DashboardLocationBuildingController::class, 'store'])->name('locations.buildings.store');
                         Route::patch('/buildings/{buildingUuid}', [DashboardLocationBuildingController::class, 'update'])->whereUuid('buildingUuid')->name('locations.buildings.update');
                         Route::delete('/buildings/{buildingUuid}', [DashboardLocationBuildingController::class, 'destroy'])->whereUuid('buildingUuid')->name('locations.buildings.destroy');
+                    });
+
+                    // The loads drivers pick from when booking; each one's duration sets how long it holds a dock.
+                    Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::ManageLoadTypes)])->group(function (): void {
+                        Route::post('/load-types', [DashboardLocationLoadTypeController::class, 'store'])->name('locations.loadTypes.store');
+                        Route::patch('/load-types/{loadTypeUuid}', [DashboardLocationLoadTypeController::class, 'update'])->whereUuid('loadTypeUuid')->name('locations.loadTypes.update');
+                        Route::delete('/load-types/{loadTypeUuid}', [DashboardLocationLoadTypeController::class, 'destroy'])->whereUuid('loadTypeUuid')->name('locations.loadTypes.destroy');
                     });
 
                     // Attaching decides which locations a location-scoped user sees.

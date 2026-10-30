@@ -29,7 +29,7 @@ final readonly class CreateAppointmentAction
     ) {}
 
     /**
-     * @param  array<string, mixed>  $validated
+     * @param  array<string, mixed>  $validated  Validated input plus the resolved load_type_id and duration_minutes.
      *
      * @throws Throwable
      */
@@ -42,6 +42,8 @@ final readonly class CreateAppointmentAction
 
         throw_if(! $location instanceof Location, RuntimeException::class, 'Invalid location');
 
+        $scheduledFor = Date::parse($validated['datetime'], $location->timezone)->utc();
+
         // See CreateCheckInAction: check-then-insert is not atomic, so a
         // concurrent booking can collide on the index and needs a fresh draw.
         $appointment = retry(
@@ -51,7 +53,9 @@ final readonly class CreateAppointmentAction
                 'reference_number' => $this->references->generate(ReferenceType::Appointment),
                 'location_id' => $location->id,
                 'user_id' => $user?->id,
-                'scheduled_for' => Date::parse($validated['datetime'], $location->timezone)->utc(),
+                'scheduled_for' => $scheduledFor,
+                'load_type_id' => $validated['load_type_id'] ?? null,
+                'ends_at' => $scheduledFor->copy()->addMinutes($validated['duration_minutes']),
                 'drivers_name' => $validated['drivers_name'],
                 'drivers_cellphone' => $validated['drivers_cellphone'],
                 'locale' => $this->localeManager->getLocale(request()),

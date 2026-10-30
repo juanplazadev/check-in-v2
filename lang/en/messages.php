@@ -398,6 +398,7 @@ return [
         'statusScheduled' => 'Scheduled',
         'statusNoShow' => 'No show',
         'statusCheckedIn' => 'Checked in',
+        'loadType' => 'Load type',
     ],
 
     'accountProfile' => [
@@ -515,6 +516,12 @@ return [
         'privacyPolicy' => 'Privacy Policy',
         'termsOfService' => 'Terms of Service',
         'allRightsReserved' => 'All Rights Reserved',
+        'toggleMenu' => 'Toggle navigation menu',
+        'switchLanguage' => 'Switch to :language',
+        'themeToggle' => 'Switch to light / dark version',
+        'close' => 'Close',
+        'openInMaps' => 'Open in Maps',
+        'logoLabel' => ':app logo',
     ],
 
     // Modal displayed when selecting location for either check-in or appointment
@@ -565,18 +572,21 @@ return [
         'closedToday' => 'Closed today',
         'invalidLocation' => 'Invalid Location.',
         'selectLocationToContinue' => 'Please select a location to continue.',
+        'pageTitle' => 'Appointment: Select Location',
+        'genericError' => 'Something went wrong. Please try again.',
     ],
 
     'appointmentBooking' => [
         'closedForAppointmentsOnDate' => ':name is not available for appointments on :date. Please choose another day.',
         'pausedWithReason' => ':name is not taking new appointments right now (:reason). Please try again later.',
-        'closedForAppointmentsOnDateWithReason' => '::name is not available for appointments on :date (:reason). Please choose another day.',
+        'closedForAppointmentsOnDateWithReason' => ':name is not available for appointments on :date (:reason). Please choose another day.',
         'outsideSpecialHours' => ':name is not open at :time on :date. Special hours that day are :open - :close. Please choose another date or time.',
         'outsideRegularHours' => ':name is not open at :time on :date. Business hours that day are :open - :close. Please choose another date or time.',
         'notAvailableOnDay' => ':name is not available for appointments on :date. Please choose another day.',
         'closedForAppointmentsOnDateWithoutReason' => ':name is not accepting appointments on :date. Please choose another date.',
         'outsideBookingWindow' => 'Please choose an available appointment time within the next :days days.',
         'slotFull' => 'That time just filled up. Please choose another time.',
+        'runsPastClosing' => 'This load would run past closing time. Please choose an earlier time or another day.',
     ],
 
     'purchaseOrders' => [
@@ -605,6 +615,7 @@ return [
         'driverLabel' => 'Driver',
         'arrivalReminder' => 'Please arrive 5-10 minutes before your scheduled appointment time.',
         'needHelp' => 'Need help?',
+        'loadTypeLabel' => 'Load Type',
     ],
 
     'checkInConfirmation' => [
@@ -653,6 +664,18 @@ return [
         'editButton' => 'Edit',
         'submitButton' => 'Confirm & Submit',
         'open' => 'Open',
+        'loadTypeLabel' => 'Load Type',
+        'loadTypeHint' => 'Choose the kind of load. It sets how long your appointment holds a dock.',
+        'loadTypeRequired' => 'Please select a load type.',
+        'loadTypeInvalid' => 'That load type is no longer available. Please choose another.',
+        'durationMinutes' => ':minutes min',
+        'durationHours' => ':hours h',
+        'durationHoursMinutes' => ':hours h :minutes min',
+        'noTimesForLoad' => 'No times are open for this load type. Please choose another load type or check back later.',
+        'selectDate' => 'Select date',
+        'morning' => 'Morning',
+        'afternoon' => 'Afternoon',
+        'evening' => 'Evening',
     ],
 
     'checkInForm' => [
@@ -760,6 +783,7 @@ return [
         'reviewTitle' => 'Review Your Check-In',
         'editButton' => 'Edit',
         'submitButton' => 'Confirm & Check In',
+        'selectDate' => 'Select date',
     ],
 
     'verifyEmail' => [
@@ -812,4 +836,14 @@ return [
     'validation' => [
         'currentPassword' => 'That is not your current password.',
     ],
+
+    'loadDirection' => [
+        'inbound' => 'Inbound',
+        'outbound' => 'Outbound',
+    ],
+
+    'mailFooter' => [
+        'automated' => 'This is an automated notification from the :app system. Please do not reply to this email.',
+    ],
+
 ];

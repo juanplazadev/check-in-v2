@@ -33,7 +33,7 @@ dataset('role permissions', [
     'shipping manager' => [Role::ShippingManager, [
         ...$shipping,
         'reopen check-ins', 'unsync check-ins from erp', 'edit check-ins', 'reinstate check-ins', 'reinstate appointments',
-        'link check-in appointments', 'pause check-ins', 'edit location hours', 'manage docks', 'view analytics',
+        'link check-in appointments', 'pause check-ins', 'edit location hours', 'manage docks', 'manage load types', 'view analytics',
     ]],
     'shipping' => [Role::Shipping, $shipping],
     'sales' => [Role::Sales, [...$staffBasics, 'view all locations', 'view analytics']],

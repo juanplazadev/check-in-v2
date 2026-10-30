@@ -25,7 +25,8 @@ final readonly class HistoryRecordResolver
     public function checkIn(CheckIn $checkIn): array
     {
         $location = $checkIn->location;
-        $when = $checkIn->created_at->setTimezone($location->timezone);
+        // In the current locale, so a driver's email and PDF name the month in their language.
+        $when = $checkIn->created_at->setTimezone($location->timezone)->settings(['locale' => app()->getLocale()]);
 
         /** @var list<string> $purchaseOrders */
         $purchaseOrders = $checkIn->purchaseOrders->pluck('number')->all();
@@ -34,7 +35,7 @@ final readonly class HistoryRecordResolver
             'uuid' => $checkIn->uuid,
             'referenceNumber' => $checkIn->reference_number,
             'status' => $checkIn->status->value,
-            'date' => $when->format('M j, Y'),
+            'date' => $when->translatedFormat('M j, Y'),
             'time' => $when->format('g:i A T'),
             ...$this->locationContact($location),
             'customer' => $checkIn->customer,
@@ -65,8 +66,11 @@ final readonly class HistoryRecordResolver
     public function appointment(Appointment $appointment): array
     {
         $location = $appointment->location;
-        $when = $appointment->scheduled_for->setTimezone($location->timezone);
-        $cancelledAt = $appointment->cancelled_at?->setTimezone($location->timezone);
+        // In the current locale, so a driver's emails and PDF name the month in their language.
+        $locale = app()->getLocale();
+        $when = $appointment->scheduled_for->setTimezone($location->timezone)->settings(['locale' => $locale]);
+        $endsAt = $appointment->ends_at->setTimezone($location->timezone);
+        $cancelledAt = $appointment->cancelled_at?->setTimezone($location->timezone)->settings(['locale' => $locale]);
 
         /** @var list<string> $purchaseOrders */
         $purchaseOrders = $appointment->purchaseOrders->pluck('number')->all();
@@ -75,14 +79,16 @@ final readonly class HistoryRecordResolver
             'uuid' => $appointment->uuid,
             'referenceNumber' => $appointment->reference_number,
             'status' => $appointment->status->value,
-            'date' => $when->format('M j, Y'),
+            'date' => $when->translatedFormat('M j, Y'),
             'time' => $when->format('g:i A T'),
+            'timeRange' => sprintf('%s - %s', $when->format('g:i A'), $endsAt->format('g:i A T')),
+            'loadType' => $appointment->loadType?->name,
             'isUpcoming' => $appointment->scheduled_for->isFuture(),
             ...$this->locationContact($location),
-            'bookedOn' => $appointment->created_at->setTimezone($location->timezone)->format('M j, Y'),
+            'bookedOn' => $appointment->created_at->setTimezone($location->timezone)->settings(['locale' => $locale])->translatedFormat('M j, Y'),
             'driversName' => $appointment->drivers_name,
             'driversCellphone' => $this->phone->format($appointment->drivers_cellphone),
-            'cancelledAt' => $cancelledAt?->format('M j, Y'),
+            'cancelledAt' => $cancelledAt?->translatedFormat('M j, Y'),
             'cancelledReason' => $appointment->cancelled_reason,
             'purchaseOrders' => $purchaseOrders,
             'dock' => $appointment->dock?->label(),
@@ -161,6 +167,6 @@ final readonly class HistoryRecordResolver
     {
         return $date === null || $date === ''
             ? null
-            : Date::parse($date)->format('M j, Y');
+            : Date::parse($date)->settings(['locale' => app()->getLocale()])->translatedFormat('M j, Y');
     }
 }

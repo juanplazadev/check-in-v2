@@ -155,3 +155,19 @@ it('accepts a valid on-grid in-window slot and rejects invalid ones', function (
         ->and($resolver->isBookableSlot($location, $beforeFirst))->toBeFalse()
         ->and($resolver->isBookableSlot($location, $beyondHorizon))->toBeFalse();
 });
+
+it('accepts a load that finishes by closing time and rejects one that runs past it', function (): void {
+    $location = makeAppointmentLocation([
+        'max_booking_days_ahead' => 2,
+        'slot_interval_minutes' => 15,
+        'min_lead_time_minutes' => 60,
+        'buffer_before_close_minutes' => 30,
+    ]);
+
+    $resolver = resolve(AppointmentScheduleResolver::class);
+
+    $start = Date::parse('2026-06-17 16:00:00', 'UTC');
+
+    expect($resolver->isBookableSlot($location, $start, $start->copy()->addMinutes(60)))->toBeTrue()
+        ->and($resolver->isBookableSlot($location, $start, $start->copy()->addMinutes(75)))->toBeFalse();
+});

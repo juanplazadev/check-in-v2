@@ -1,14 +1,21 @@
-import logo from './../../images/logo.png'
+import logo from './../../images/logo.png';
 
 type LogoSize = 'sm' | 'md' | 'lg';
 
 interface LogoProps {
     size?: LogoSize;
     className?: string;
+    /** Alt text, in the page's language; defaults to "<app> Logo". */
+    label?: string;
 }
 
-export default function Logo({ size = 'md', className = '' }: LogoProps) {
+export default function Logo({
+    size = 'md',
+    className = '',
+    label,
+}: LogoProps) {
     const appName = import.meta.env.VITE_APP_NAME;
+    const altText = label ?? `${appName} Logo`;
 
     const sizeClasses = {
         sm: 'h-5',
@@ -21,8 +28,8 @@ export default function Logo({ size = 'md', className = '' }: LogoProps) {
             src={logo}
             className={`${sizeClasses[size] || sizeClasses.md} ${className}`}
             role="img"
-            aria-label={`${appName} Logo`}
-            alt={`${appName} Logo`}
+            aria-label={altText}
+            alt={altText}
         />
     );
 }

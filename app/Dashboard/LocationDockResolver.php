@@ -67,7 +67,7 @@ final readonly class LocationDockResolver
 
     /**
      * The dock picker on an appointment's page: the location's bookable
-     * docks, with those another booking holds at the same time marked taken.
+     * docks, with those another booking holds during this one marked taken.
      *
      * @return list<array{id: string, label: string, building: string|null, takenBy: string|null}>
      */
@@ -81,7 +81,8 @@ final readonly class LocationDockResolver
 
         $taken = Appointment::query()
             ->where('location_id', $appointment->location_id)
-            ->where('scheduled_for', $appointment->scheduled_for)
+            ->where('scheduled_for', '<', $appointment->ends_at)
+            ->where('ends_at', '>', $appointment->scheduled_for)
             ->whereKeyNot($appointment->id)
             ->whereNotNull('dock_id')
             ->whereIn('status', AppointmentSlotCapacity::OCCUPYING_STATUSES)
