@@ -15,9 +15,9 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Pushes an appointment's status or time change to the open dashboards of
- * staff who work its location, so it moves on or leaves the live queue's
- * arriving rail.
+ * Pushes an appointment's status, time, dock, length or details change to the
+ * open dashboards of staff who work its location, so it moves on the dock view,
+ * or moves on or leaves the live queue's arriving rail.
  */
 final class AppointmentUpdated implements ShouldBroadcast, ShouldDispatchAfterCommit
 {

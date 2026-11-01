@@ -138,7 +138,7 @@ final readonly class LocationDockResolver
      * @param  array<int, Dock>  $docks
      * @return Collection<int, Dock>
      */
-    private function naturalOrder(array $docks): Collection
+    public function naturalOrder(array $docks): Collection
     {
         usort($docks, fn (Dock $a, Dock $b): int => [
             $a->building->sort_order ?? PHP_INT_MAX,

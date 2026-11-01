@@ -59,6 +59,8 @@ it('has every driver flow string in the locale', function (array $groups, string
         'appointmentCopyEmail',
         'appointmentReminderEmail',
         'appointmentCancellationEmail',
+        'appointmentRescheduleEmail',
+        'appointmentRescheduleSms',
         'loadDirection',
         'mailFooter',
     ]],

@@ -68,6 +68,21 @@ final readonly class AppointmentSlotCapacity
     }
 
     /**
+     * The reference number of a booking holding the dock at some point between
+     * $start and $end, or null when the dock is free.
+     */
+    public function dockHolder(int $dockId, CarbonInterface $start, CarbonInterface $end, ?Appointment $ignore = null): ?string
+    {
+        return Appointment::query()
+            ->where('dock_id', $dockId)
+            ->where('scheduled_for', '<', $end->copy()->utc())
+            ->where('ends_at', '>', $start->copy()->utc())
+            ->when($ignore instanceof Appointment, fn (Builder $query): Builder => $query->whereKeyNot($ignore?->id))
+            ->whereIn('status', self::OCCUPYING_STATUSES)
+            ->value('reference_number');
+    }
+
+    /**
      * The start times in each window that have no room for a booking of each
      * length, keyed by length in minutes and then by the location's local
      * date: [90 => ['2026-11-02' => ['08:00:00', '08:30:00']]].

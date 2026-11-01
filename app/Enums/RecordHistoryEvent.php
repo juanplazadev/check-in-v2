@@ -59,4 +59,5 @@ enum RecordHistoryEvent: string
     case LoadTypeRemoved = 'load-type-removed';
     case DefaultLoadTypeChanged = 'default-load-type-changed';
     case LoadTypeChanged = 'load-type-changed';
+    case Rescheduled = 'rescheduled';
 }

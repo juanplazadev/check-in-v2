@@ -329,6 +329,20 @@ return [
         'body' => ':app: your appointment is canceled. Ref :reference. :url',
     ],
 
+    'appointmentRescheduleEmail' => [
+        'subject' => 'Moved: your appointment :reference at :location',
+        'preheader' => 'Your booking at :location has a new time.',
+        'eyebrow' => 'Rescheduled',
+        'title' => 'Your appointment has a new time',
+        'intro' => 'The facility moved your appointment. Your reference number stays the same. Please arrive at the new time below.',
+        'previousTime' => 'Previous time',
+    ],
+
+    'appointmentRescheduleSms' => [
+        'body' => ':app: your appointment moved to :date at :time. Ref :reference. :url',
+        'guestBody' => ':app: your appointment moved to :date at :time. Ref :reference.',
+    ],
+
     'appointmentCancel' => [
         'title' => 'Cancel this appointment',
         'body' => 'The slot will be released and the facility will be told. This cannot be undone.',

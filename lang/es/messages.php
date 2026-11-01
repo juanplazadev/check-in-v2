@@ -311,6 +311,20 @@ return [
         'body' => ':app: tu cita fue cancelada. Ref :reference. :url',
     ],
 
+    'appointmentRescheduleEmail' => [
+        'subject' => 'Cambio: tu cita :reference en :location',
+        'preheader' => 'Tu cita en :location tiene un nuevo horario.',
+        'eyebrow' => 'Reprogramada',
+        'title' => 'Tu cita tiene un nuevo horario',
+        'intro' => 'La instalación cambió tu cita. Tu número de referencia sigue siendo el mismo. Llega en el nuevo horario indicado abajo.',
+        'previousTime' => 'Horario anterior',
+    ],
+
+    'appointmentRescheduleSms' => [
+        'body' => ':app: tu cita cambió al :date a las :time. Ref :reference. :url',
+        'guestBody' => ':app: tu cita cambió al :date a las :time. Ref :reference.',
+    ],
+
     'appointmentCancel' => [
         'title' => 'Cancelar esta cita',
         'body' => 'El horario quedará libre y avisaremos a la instalación. Esto no se puede deshacer.',

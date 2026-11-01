@@ -265,6 +265,28 @@ export interface AppointmentRecord {
     history: RecordHistoryEntry[];
 }
 
+/** One location's day on the dock view. Minutes count from local midnight. */
+export interface DockViewDay {
+    date: string;
+    today: string;
+    timezone: string;
+    isClosed: boolean;
+    slotIntervalMinutes: number;
+    opensAtMinute: number | null;
+    closesAtMinute: number | null;
+    startMinute: number;
+    endMinute: number;
+}
+
+/** A column on the dock view. A closed dock only appears while it holds a booking. */
+export interface DockViewDock {
+    id: string;
+    name: string;
+    label: string;
+    building: string | null;
+    isOpen: boolean;
+}
+
 /** A location as the users pages show it: enough for a summary card. */
 export interface UserLocation extends LocationSummary {
     abbreviation: string;

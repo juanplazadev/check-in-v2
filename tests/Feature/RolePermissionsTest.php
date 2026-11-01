@@ -25,14 +25,14 @@ $shipping = [
     'complete check-ins', 'email check-in pdf', 'email appointment pdf', 'cancel check-ins', 'cancel appointments',
     'reveal driver licenses', 'archive check-ins', 'restore check-ins', 'archive appointments',
     'restore appointments', 'export check-ins view', 'export appointments view', 'assign appointment docks',
-    'change appointment load types', 'assign check-in docks',
+    'change appointment load types', 'reschedule appointments', 'assign check-in docks',
 ];
 
 dataset('role permissions', [
     'admin' => [Role::Admin, array_column(Permission::cases(), 'value')],
     'shipping manager' => [Role::ShippingManager, [
         ...$shipping,
-        'reopen check-ins', 'unsync check-ins from erp', 'edit check-ins', 'reinstate check-ins', 'reinstate appointments',
+        'reopen check-ins', 'unsync check-ins from erp', 'edit check-ins', 'edit appointments', 'reinstate check-ins', 'reinstate appointments',
         'link check-in appointments', 'pause check-ins', 'edit location hours', 'manage docks', 'manage load types', 'view analytics',
     ]],
     'shipping' => [Role::Shipping, $shipping],

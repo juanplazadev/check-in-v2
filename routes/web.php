@@ -19,11 +19,13 @@ use App\Http\Controllers\Dashboard\AppointmentDeleteController as DashboardAppoi
 use App\Http\Controllers\Dashboard\AppointmentDockController as DashboardAppointmentDockController;
 use App\Http\Controllers\Dashboard\AppointmentExportController as DashboardAppointmentExportController;
 use App\Http\Controllers\Dashboard\AppointmentLoadTypeController as DashboardAppointmentLoadTypeController;
+use App\Http\Controllers\Dashboard\AppointmentMoveController as DashboardAppointmentMoveController;
 use App\Http\Controllers\Dashboard\AppointmentNoteController as DashboardAppointmentNoteController;
 use App\Http\Controllers\Dashboard\AppointmentPdfController as DashboardAppointmentPdfController;
 use App\Http\Controllers\Dashboard\AppointmentPdfEmailController as DashboardAppointmentPdfEmailController;
 use App\Http\Controllers\Dashboard\AppointmentReinstateController as DashboardAppointmentReinstateController;
 use App\Http\Controllers\Dashboard\AppointmentRestoreController as DashboardAppointmentRestoreController;
+use App\Http\Controllers\Dashboard\AppointmentUpdateController as DashboardAppointmentUpdateController;
 use App\Http\Controllers\Dashboard\CheckInAppointmentController as DashboardCheckInAppointmentController;
 use App\Http\Controllers\Dashboard\CheckInArchiveController as DashboardCheckInArchiveController;
 use App\Http\Controllers\Dashboard\CheckInCancelController as DashboardCheckInCancelController;
@@ -42,6 +44,7 @@ use App\Http\Controllers\Dashboard\CheckInReopenController as DashboardCheckInRe
 use App\Http\Controllers\Dashboard\CheckInRestoreController as DashboardCheckInRestoreController;
 use App\Http\Controllers\Dashboard\CheckInUpdateController as DashboardCheckInUpdateController;
 use App\Http\Controllers\Dashboard\DeploymentController as DashboardDeploymentController;
+use App\Http\Controllers\Dashboard\DockViewController as DashboardDockViewController;
 use App\Http\Controllers\Dashboard\ErrorController as DashboardErrorController;
 use App\Http\Controllers\Dashboard\FailedJobController as DashboardFailedJobController;
 use App\Http\Controllers\Dashboard\JobCommandController as DashboardJobCommandController;
@@ -347,6 +350,7 @@ Route::middleware('setLocale')->group(function (): void {
 
             Route::middleware(PermissionMiddleware::using(Permission::ViewAppointments))->group(function (): void {
                 Route::get('/appointments', [DashboardAppointmentController::class, 'index'])->name('appointments');
+                Route::get('/dock-view', DashboardDockViewController::class)->name('dockView');
 
                 // Which of display and order may be saved is checked per key
                 // by AppointmentColumnsRequest.
@@ -389,6 +393,18 @@ Route::middleware('setLocale')->group(function (): void {
                     ->put('/appointments/{uuid}/load-type', [DashboardAppointmentLoadTypeController::class, 'update'])
                     ->whereUuid('uuid')
                     ->name('appointments.loadType.update');
+
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::EditAppointments)])
+                    ->patch('/appointments/{uuid}', DashboardAppointmentUpdateController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.update');
+
+                // A drop on the dock view. Which of the two permissions it needs
+                // depends on what changes; see AppointmentMoveRequest.
+                Route::middleware(['throttle:30,1', PermissionMiddleware::using([Permission::RescheduleAppointments, Permission::AssignAppointmentDocks])])
+                    ->patch('/appointments/{uuid}/move', DashboardAppointmentMoveController::class)
+                    ->whereUuid('uuid')
+                    ->name('appointments.move');
 
                 Route::middleware(['throttle:30,1', PermissionMiddleware::using(Permission::CancelAppointments)])
                     ->post('/appointments/{uuid}/cancel', DashboardAppointmentCancelController::class)

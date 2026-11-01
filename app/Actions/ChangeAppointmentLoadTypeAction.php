@@ -83,13 +83,7 @@ final readonly class ChangeAppointmentLoadTypeAction
             }
 
             if ($appointment->dock !== null) {
-                $holder = Appointment::query()
-                    ->where('dock_id', $appointment->dock_id)
-                    ->where('scheduled_for', '<', $end)
-                    ->where('ends_at', '>', $start)
-                    ->whereKeyNot($appointment->id)
-                    ->whereIn('status', AppointmentSlotCapacity::OCCUPYING_STATUSES)
-                    ->value('reference_number');
+                $holder = $this->capacity->dockHolder($appointment->dock->id, $start, $end, ignore: $appointment);
 
                 if ($holder !== null) {
                     throw ValidationException::withMessages([

@@ -8,7 +8,6 @@ use App\Enums\RecordHistoryEvent;
 use App\Enums\UserHistoryEvent;
 use App\Events\CheckInUpdated;
 use App\Models\CheckIn;
-use App\Models\PurchaseOrder;
 use App\Models\User;
 use BackedEnum;
 use Illuminate\Support\Arr;
@@ -33,6 +32,7 @@ final readonly class UpdateCheckInAction
     public function __construct(
         private RecordHistoryAction $recordHistory,
         private RecordUserHistoryAction $recordUserHistory,
+        private SyncPurchaseOrdersAction $syncPurchaseOrders,
     ) {}
 
     /**
@@ -66,7 +66,7 @@ final readonly class UpdateCheckInAction
                 ];
             }
 
-            $poChange = $this->syncPurchaseOrders($checkIn, $validated['po_numbers'] ?? null);
+            $poChange = $this->syncPurchaseOrders->handle($checkIn, $validated['po_numbers'] ?? null);
 
             if ($poChange !== null) {
                 $changes['po_numbers'] = $poChange;
@@ -89,49 +89,6 @@ final readonly class UpdateCheckInAction
 
             return $checkIn;
         });
-    }
-
-    /**
-     * Brings the purchase orders in line with the submitted list. Numbers are
-     * matched without regard to case or order, so re-saving the same list is
-     * not a change.
-     *
-     * @return array{from: list<string>, to: list<string>}|null Null when nothing changed.
-     */
-    private function syncPurchaseOrders(CheckIn $checkIn, mixed $submitted): ?array
-    {
-        if (! is_array($submitted)) {
-            return null;
-        }
-
-        /** @var list<string> $before */
-        $before = $checkIn->purchaseOrders->pluck('number')->all();
-        /** @var list<string> $after */
-        $after = array_values(array_map(strval(...), $submitted));
-
-        $key = mb_strtoupper(...);
-        $beforeKeys = array_map($key, $before);
-        $afterKeys = array_map($key, $after);
-
-        $removed = $checkIn->purchaseOrders->reject(
-            fn (PurchaseOrder $purchaseOrder): bool => in_array($key($purchaseOrder->number), $afterKeys, true),
-        );
-        $added = array_values(array_filter(
-            $after,
-            fn (string $number): bool => ! in_array($key($number), $beforeKeys, true),
-        ));
-
-        if ($removed->isEmpty() && $added === []) {
-            return null;
-        }
-
-        PurchaseOrder::query()->whereKey($removed->modelKeys())->delete();
-
-        $checkIn->purchaseOrders()->createMany(
-            array_map(fn (string $number): array => ['number' => $number], $added),
-        );
-
-        return ['from' => $before, 'to' => $after];
     }
 
     private function loggable(mixed $value): mixed
