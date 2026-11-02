@@ -252,7 +252,7 @@ export interface AppointmentRecord {
     /** When the booking stops holding its dock: scheduledFor plus the load type's duration. */
     endsAt: string;
     /** Null at a location with no load types. */
-    loadType: string | null;
+    loadType: { uuid: string; name: string } | null;
     purchaseOrders: string[];
     /** The dock staff placed this booking on; null until assigned. */
     dock: { uuid: string; label: string } | null;
@@ -263,6 +263,28 @@ export interface AppointmentRecord {
     /** When staff archived it, or null while it is live. */
     archivedAt: string | null;
     history: RecordHistoryEntry[];
+}
+
+/** One location's day on the dock view. Minutes count from local midnight. */
+export interface DockViewDay {
+    date: string;
+    today: string;
+    timezone: string;
+    isClosed: boolean;
+    slotIntervalMinutes: number;
+    opensAtMinute: number | null;
+    closesAtMinute: number | null;
+    startMinute: number;
+    endMinute: number;
+}
+
+/** A column on the dock view. A closed dock only appears while it holds a booking. */
+export interface DockViewDock {
+    id: string;
+    name: string;
+    label: string;
+    building: string | null;
+    isOpen: boolean;
 }
 
 /** A location as the users pages show it: enough for a summary card. */
@@ -399,6 +421,14 @@ export interface AppointmentDockOption {
     building: string | null;
     /** Reference number of the booking that holds this dock at the same time, if any. */
     takenBy: string | null;
+}
+
+/** One choice in an appointment's load type picker. Mirrors Dashboard\AppointmentController::loadTypeOptions(). */
+export interface AppointmentLoadTypeOption {
+    id: string;
+    name: string;
+    /** How long a booking of this type holds a dock. */
+    durationMinutes: number;
 }
 
 /** A date whose hours differ from the weekly schedule. Mirrors LocationRecordResolver::mergeClosures(). */

@@ -13,6 +13,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Dashboard\AppointmentIndexRequest;
 use App\Models\Appointment;
 use App\Models\AppointmentNote;
+use App\Models\LoadType;
 use App\Models\User;
 use App\Queries\DashboardAppointmentColumns;
 use App\Queries\DashboardAppointments;
@@ -76,6 +77,10 @@ final class AppointmentController extends Controller
             ->where('uuid', $uuid)
             ->firstOrFail();
 
+        // Only a live booking can be placed on a dock or change its load type, and only by those who may.
+        $isLive = ! $appointment->trashed()
+            && in_array($appointment->status, [AppointmentStatus::Scheduled, AppointmentStatus::CheckedIn], true);
+
         return inertia('Dashboard/Appointments/Show', [
             'appointment' => $resolver->record($appointment),
             'notes' => $appointment->notes->map(fn (AppointmentNote $note): array => [
@@ -84,15 +89,40 @@ final class AppointmentController extends Controller
                 'body' => $note->body,
                 'createdAt' => $note->created_at->toIso8601String(),
             ])->all(),
-            // Only a live booking can be placed on a dock, and only by those who may.
-            'dockOptions' => $user->can(Permission::AssignAppointmentDocks)
-                && ! $appointment->trashed()
-                && in_array($appointment->status, [AppointmentStatus::Scheduled, AppointmentStatus::CheckedIn], true)
-                    ? $docks->optionsFor($appointment)
-                    : null,
+            'dockOptions' => $user->can(Permission::AssignAppointmentDocks) && $isLive
+                ? $docks->optionsFor($appointment)
+                : null,
+            'loadTypeOptions' => $user->can(Permission::ChangeAppointmentLoadTypes) && $isLive
+                ? $this->loadTypeOptions($appointment)
+                : null,
             'deletionImpact' => $user->can(Permission::DeleteAppointments)
                 ? Inertia::optional(fn (): array => $impact->summary($appointment))
                 : null,
         ]);
+    }
+
+    /**
+     * The load type picker: the location's active load types, or null when it
+     * has none or no bookable docks, so the page shows the plain name.
+     *
+     * @return list<array{id: string, name: string, durationMinutes: int}>|null
+     */
+    private function loadTypeOptions(Appointment $appointment): ?array
+    {
+        if (! $appointment->location->hasBookableDocks()) {
+            return null;
+        }
+
+        $options = $appointment->location->loadTypes()
+            ->active()
+            ->get()
+            ->map(fn (LoadType $loadType): array => [
+                'id' => $loadType->uuid,
+                'name' => $loadType->name,
+                'durationMinutes' => $loadType->duration_minutes,
+            ])
+            ->all();
+
+        return $options === [] ? null : array_values($options);
     }
 }

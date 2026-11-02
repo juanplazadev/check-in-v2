@@ -151,6 +151,8 @@ enum Role: string
             Permission::ExportCheckInsView,
             Permission::ExportAppointmentsView,
             Permission::AssignAppointmentDocks,
+            Permission::ChangeAppointmentLoadTypes,
+            Permission::RescheduleAppointments,
             Permission::AssignCheckInDocks,
         ];
 
@@ -161,6 +163,7 @@ enum Role: string
                 Permission::ReopenCheckIns,
                 Permission::UnsyncCheckInsFromErp,
                 Permission::EditCheckIns,
+                Permission::EditAppointments,
                 Permission::LinkCheckInAppointments,
                 Permission::ReinstateCheckIns,
                 Permission::ReinstateAppointments,

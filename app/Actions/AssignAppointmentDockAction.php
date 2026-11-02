@@ -26,6 +26,7 @@ use Throwable;
 final readonly class AssignAppointmentDockAction
 {
     public function __construct(
+        private AppointmentSlotCapacity $capacity,
         private RecordHistoryAction $recordHistory,
         private RecordUserHistoryAction $recordUserHistory,
     ) {}
@@ -60,14 +61,8 @@ final readonly class AssignAppointmentDockAction
                 return $appointment;
             }
 
-            $holder = Appointment::query()
-                ->where('dock_id', $dock->id)
-                // Any booking on the dock that runs into this one, not only one starting at the same time.
-                ->where('scheduled_for', '<', $appointment->ends_at)
-                ->where('ends_at', '>', $appointment->scheduled_for)
-                ->whereKeyNot($appointment->id)
-                ->whereIn('status', AppointmentSlotCapacity::OCCUPYING_STATUSES)
-                ->value('reference_number');
+            // Any booking on the dock that runs into this one, not only one starting at the same time.
+            $holder = $this->capacity->dockHolder($dock->id, $appointment->scheduled_for, $appointment->ends_at, ignore: $appointment);
 
             if ($holder !== null) {
                 throw ValidationException::withMessages([

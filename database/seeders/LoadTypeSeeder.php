@@ -11,10 +11,13 @@ use Illuminate\Support\Str;
 
 /**
  * The same starter set of load types at every location, so booking shows the
- * load type step out of the box.
+ * load type step out of the box. One location is kept without any, removing
+ * those it already has, so the app can be compared with and without them.
  */
 final class LoadTypeSeeder extends Seeder
 {
+    public const string WITHOUT_LOAD_TYPES = 'sal';
+
     /**
      * @var list<array{name: string, direction: LoadDirection, duration_minutes: int}>
      */
@@ -27,7 +30,11 @@ final class LoadTypeSeeder extends Seeder
 
     public function run(): void
     {
-        $locationIds = DB::table('locations')->pluck('id');
+        DB::table('load_types')
+            ->whereIn('location_id', DB::table('locations')->where('abbreviation', self::WITHOUT_LOAD_TYPES)->select('id'))
+            ->delete();
+
+        $locationIds = DB::table('locations')->where('abbreviation', '!=', self::WITHOUT_LOAD_TYPES)->pluck('id');
         $now = now();
 
         $rows = [];

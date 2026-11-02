@@ -162,7 +162,7 @@ final class LocationController extends Controller
         return $this->section($user, $uuid, 'LoadTypes', fn (Location $location): array => [
             'loadTypes' => $loadTypes->loadTypes($location),
             'slotIntervalMinutes' => $location->appointmentSlotIntervalMinutes(),
-            // Null with no bookable docks: durations then block no slots, so the page warns about it.
+            // Null with no bookable docks: load types are then off, so the page warns about it.
             'dockCapacity' => $capacity->capacityFor($location),
             // Null when drivers choose the load type themselves.
             'defaultLoadTypeId' => $location->defaultLoadType?->uuid,

@@ -11,6 +11,7 @@ import {
     Link2,
     MessageSquare,
     MoreHorizontal,
+    Pencil,
     Printer,
     Trash2,
     Undo2,
@@ -24,6 +25,7 @@ import AppointmentPdfController from '@/actions/App/Http/Controllers/Dashboard/A
 import AppointmentPdfEmailController from '@/actions/App/Http/Controllers/Dashboard/AppointmentPdfEmailController';
 import AppointmentReinstateController from '@/actions/App/Http/Controllers/Dashboard/AppointmentReinstateController';
 import AppointmentRestoreController from '@/actions/App/Http/Controllers/Dashboard/AppointmentRestoreController';
+import EditAppointmentDialog from '@/components/dashboard/appointment/EditAppointmentDialog';
 import {
     CopyItem,
     DeleteRecordDialog,
@@ -54,6 +56,7 @@ import type { Permission } from '@/types/auth';
 
 export type AppointmentAction =
     | 'attach-check-in'
+    | 'edit'
     | 'view-pdf'
     | 'print-pdf'
     | 'email-pdf'
@@ -71,6 +74,7 @@ export type AppointmentAction =
  */
 const ACTION_PERMISSIONS: Record<AppointmentAction, Permission | null> = {
     'attach-check-in': 'link check-in appointments',
+    edit: 'edit appointments',
     'view-pdf': 'view appointment pdf',
     'print-pdf': 'print appointment pdf',
     'email-pdf': 'email appointment pdf',
@@ -84,12 +88,13 @@ const ACTION_PERMISSIONS: Record<AppointmentAction, Permission | null> = {
 
 /**
  * The one place the toolbar's unwired actions run. None of them reach the backend yet; wire each
- * case here (or in the toolbar) once its route exists. The PDF view, print and email, cancel,
+ * case here (or in the toolbar) once its route exists. The edit, PDF view, print and email, cancel,
  * reinstate, archive, restore and delete are wired in the toolbar itself.
  */
 export function performAction(
     action: Exclude<
         AppointmentAction,
+        | 'edit'
         | 'view-pdf'
         | 'print-pdf'
         | 'email-pdf'
@@ -123,6 +128,7 @@ export default function AppointmentToolbar({
     };
 
     const [copied, setCopied] = useState<CopyTarget | null>(null);
+    const [editOpen, setEditOpen] = useState(false);
     const [cancelOpen, setCancelOpen] = useState(false);
     const [reinstateOpen, setReinstateOpen] = useState(false);
     const [archiveOpen, setArchiveOpen] = useState(false);
@@ -305,6 +311,7 @@ export default function AppointmentToolbar({
         appointment.checkIn === null &&
         !archived &&
         can('attach-check-in');
+    const showEdit = !archived && can('edit');
     const showCancel = scheduled && !archived && can('cancel');
     const showReinstate =
         appointment.status === 'cancelled' && !archived && can('reinstate');
@@ -328,6 +335,17 @@ export default function AppointmentToolbar({
                 >
                     <Link2 className="size-4" />
                     Attach to check-in
+                </button>
+            )}
+
+            {showEdit && (
+                <button
+                    type="button"
+                    onClick={() => setEditOpen(true)}
+                    className={SECONDARY_BUTTON}
+                >
+                    <Pencil className="size-4 text-gray-400 dark:text-gray-500" />
+                    Edit
                 </button>
             )}
 
@@ -485,6 +503,13 @@ export default function AppointmentToolbar({
                 </DropdownMenuContent>
             </DropdownMenu>
 
+            {showEdit && (
+                <EditAppointmentDialog
+                    open={editOpen}
+                    onOpenChange={setEditOpen}
+                    appointment={appointment}
+                />
+            )}
             <ReasonDialog
                 open={cancelOpen}
                 onOpenChange={changeCancelOpen}

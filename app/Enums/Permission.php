@@ -52,9 +52,12 @@ enum Permission: string
     case EmailAppointmentPdf = 'email appointment pdf';
     case CancelCheckIns = 'cancel check-ins';
     case ReinstateCheckIns = 'reinstate check-ins';
+    case EditAppointments = 'edit appointments';
     case CancelAppointments = 'cancel appointments';
     case ReinstateAppointments = 'reinstate appointments';
     case AssignAppointmentDocks = 'assign appointment docks';
+    case ChangeAppointmentLoadTypes = 'change appointment load types';
+    case RescheduleAppointments = 'reschedule appointments';
     case WriteCheckInNotes = 'write check-in notes';
     case WriteAppointmentNotes = 'write appointment notes';
     case RevealDriverLicenses = 'reveal driver licenses';
@@ -124,9 +127,12 @@ enum Permission: string
             self::DeleteCheckIns => PermissionGroup::CheckIns,
             self::ViewAppointments,
             self::FilterAppointments,
+            self::EditAppointments,
             self::CancelAppointments,
             self::ReinstateAppointments,
             self::AssignAppointmentDocks,
+            self::ChangeAppointmentLoadTypes,
+            self::RescheduleAppointments,
             self::WriteAppointmentNotes,
             self::ArchiveAppointments,
             self::RestoreAppointments,
@@ -202,9 +208,12 @@ enum Permission: string
             self::DeleteCheckIns => 'Delete a check-in for good.',
             self::ViewAppointments => 'Open the appointments table and each appointment.',
             self::FilterAppointments => 'Filter the appointments table.',
+            self::EditAppointments => "Change an appointment's driver name, cellphone and purchase orders.",
             self::CancelAppointments => 'Cancel an appointment.',
             self::ReinstateAppointments => 'Reinstate a canceled appointment.',
             self::AssignAppointmentDocks => 'Place an appointment on a dock or move it.',
+            self::ChangeAppointmentLoadTypes => "Change an appointment's load type, which changes how long it holds a dock.",
+            self::RescheduleAppointments => 'Move an appointment to a new time on the dock view. The driver is told.',
             self::WriteAppointmentNotes => 'Add notes to an appointment.',
             self::ArchiveAppointments => 'Move an appointment to the archive.',
             self::RestoreAppointments => 'Bring an appointment back from the archive.',

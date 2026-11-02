@@ -168,6 +168,15 @@ final class Location extends Model
     }
 
     /**
+     * Whether any active dock takes appointments. Load types only apply while
+     * one does: with no capacity to protect, a booking's length changes nothing.
+     */
+    public function hasBookableDocks(): bool
+    {
+        return $this->docks()->bookable()->exists();
+    }
+
+    /**
      * Staff edits and attachments on this location, newest first. Shares
      * record_history with check-ins and appointments; see {@see CheckIn::history()}.
      *

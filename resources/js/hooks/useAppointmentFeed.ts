@@ -33,8 +33,9 @@ interface AppointmentFeedOptions {
 }
 
 /**
- * Subscribes to the staff appointment feed: new bookings, and status or time changes to existing
- * ones. Only the live queue's arriving rail listens; bookings raise no alert of their own.
+ * Subscribes to the staff appointment feed: new bookings, and status, time, dock or length changes
+ * to existing ones. The live queue's arriving rail and the dock view listen; bookings raise no
+ * alert of their own.
  */
 export function useAppointmentFeed({
     onEvent,

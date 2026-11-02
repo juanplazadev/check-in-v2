@@ -7,6 +7,7 @@ namespace Database\Factories;
 use App\Enums\AppointmentStatus;
 use App\Enums\ReferenceType;
 use App\Models\Appointment;
+use App\Models\Dock;
 use App\Models\LoadType;
 use App\Models\Location;
 use App\Models\User;
@@ -110,6 +111,18 @@ final class AppointmentFactory extends Factory
     {
         return $this->state([
             'ends_at' => fn (array $attributes): CarbonInterface => Date::parse($attributes['scheduled_for'])->addMinutes($minutes),
+        ]);
+    }
+
+    /**
+     * Place the booking on a dock at the dock's location.
+     */
+    public function onDock(Dock $dock): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'location_id' => $dock->location_id,
+            'dock_id' => $dock->id,
+            'dock_assigned_at' => Date::now(),
         ]);
     }
 

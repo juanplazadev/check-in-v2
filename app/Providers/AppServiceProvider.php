@@ -247,14 +247,15 @@ final class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Push status and time changes to the live queue's arriving rail, so a
-     * cancelled, missed or arrived booking leaves it. Misses mass
+     * Push status, time, dock and length changes to open dashboards, so a
+     * cancelled, missed or arrived booking leaves the live queue's arriving
+     * rail and a moved one moves on the dock view. Misses mass
      * Query::update() for the same reason as above.
      */
     private function broadcastAppointmentChanges(): void
     {
         Appointment::updated(static function (Appointment $appointment): void {
-            if ($appointment->wasChanged(['status', 'scheduled_for'])) {
+            if ($appointment->wasChanged(['status', 'scheduled_for', 'ends_at', 'dock_id', 'load_type_id'])) {
                 event(new AppointmentUpdated($appointment));
             }
         });

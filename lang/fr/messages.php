@@ -311,6 +311,20 @@ return [
         'body' => ':app: votre rendez-vous est annulé. Réf :reference. :url',
     ],
 
+    'appointmentRescheduleEmail' => [
+        'subject' => 'Modifié : votre rendez-vous :reference à :location',
+        'preheader' => 'Votre rendez-vous à :location a un nouvel horaire.',
+        'eyebrow' => 'Reprogrammé',
+        'title' => 'Votre rendez-vous a un nouvel horaire',
+        'intro' => 'Le site a déplacé votre rendez-vous. Votre numéro de référence reste le même. Veuillez arriver au nouvel horaire ci-dessous.',
+        'previousTime' => 'Horaire précédent',
+    ],
+
+    'appointmentRescheduleSms' => [
+        'body' => ':app: votre rendez-vous est déplacé au :date à :time. Réf :reference. :url',
+        'guestBody' => ':app: votre rendez-vous est déplacé au :date à :time. Réf :reference.',
+    ],
+
     'appointmentCancel' => [
         'title' => 'Annuler ce rendez-vous',
         'body' => 'Le créneau sera libéré et le site sera prévenu. Cette action est irréversible.',

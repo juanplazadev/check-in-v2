@@ -11,6 +11,7 @@ import BackLink from '@/components/dashboard/BackLink';
 import NotesCard from '@/components/dashboard/NotesCard';
 import type {
     AppointmentDockOption,
+    AppointmentLoadTypeOption,
     AppointmentRecord,
     CheckInNote,
 } from '@/components/dashboard/types';
@@ -21,12 +22,15 @@ export default function AppointmentShow({
     appointment,
     notes,
     dockOptions,
+    loadTypeOptions,
 }: {
     appointment: AppointmentRecord;
     /** Internal staff notes, newest first. */
     notes: CheckInNote[];
     /** Null when the viewer may not assign docks, or the booking is not live. */
     dockOptions: AppointmentDockOption[] | null;
+    /** Null when the viewer may not change load types, the booking is not live, or the location has none. */
+    loadTypeOptions: AppointmentLoadTypeOption[] | null;
 }) {
     const backHref = dashboardRoutes.appointments.url();
     // Owned here so both the hero's button and the side rail's link open the same dialog.
@@ -51,6 +55,7 @@ export default function AppointmentShow({
                     <AppointmentBookingCard
                         appointment={appointment}
                         dockOptions={dockOptions}
+                        loadTypeOptions={loadTypeOptions}
                     />
                     <NotesCard
                         key={appointment.uuid}
